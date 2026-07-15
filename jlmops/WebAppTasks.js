@@ -4,37 +4,33 @@
  * It contains reusable functions for fetching and preparing task data from the
  * backend services (e.g., TaskService) for consumption by UI View Controllers.
  *
- * PERFORMANCE: Implements in-memory caching with 60-second TTL to reduce
- * expensive spreadsheet reads during dashboard loading.
+ * PERFORMANCE: Caches the open-tasks list via CacheService (60-second TTL) to reduce
+ * expensive spreadsheet reads during dashboard loading. A prior module-level-variable
+ * cache here never actually worked — each google.script.run call runs in a fresh, cold
+ * execution context, so the "cache" was always empty and every call re-read SysTasks in
+ * full (confirmed live: WebAppProducts_getManagerWidgetData taking ~15s, same anti-pattern
+ * Session J found in LookupService/ProductService's lookup caches). CacheService actually
+ * persists across calls; the tradeoff is its 100KB-per-value cap, handled below by simply
+ * not caching (falling back to today's always-uncached behavior) when the open-tasks list
+ * is too large to fit, rather than failing.
  */
 
 // eslint-disable-next-line no-unused-vars
 const WebAppTasks = (() => {
-  // ===== CACHING LAYER =====
-  let taskCache = null;
-  let taskCacheTime = null;
-  const CACHE_TTL_MS = 60000; // 60 seconds
+  const OPEN_TASKS_CACHE_KEY = 'openTasks_v1';
+  const OPEN_TASKS_CACHE_TTL_SEC = 60;
 
   /**
    * Invalidates the task cache. Should be called after any task modification.
    */
   const invalidateCache = () => {
-    taskCache = null;
-    taskCacheTime = null;
-    LoggerService.info('WebAppTasks', 'invalidateCache', 'Task cache invalidated.');
-  };
-
-  /**
-   * Checks if the cache is still valid.
-   * @returns {boolean} True if cache exists and is not expired.
-   */
-  const isCacheValid = () => {
-    if (!taskCache || !taskCacheTime) {
-      return false;
+    try {
+      CacheService.getScriptCache().remove(OPEN_TASKS_CACHE_KEY);
+    } catch (e) {
+      // Best-effort; a missed invalidation just means the next read is stale for up to
+      // the remaining TTL, not incorrect forever.
     }
-    const now = Date.now();
-    const age = now - taskCacheTime;
-    return age < CACHE_TTL_MS;
+    LoggerService.info('WebAppTasks', 'invalidateCache', 'Task cache invalidated.');
   };
 
   /**
@@ -81,16 +77,21 @@ const WebAppTasks = (() => {
 
   /**
    * Retrieves all tasks that are not in a 'Done' or 'Cancelled' state.
-   * Uses an in-memory cache with 60-second TTL to improve performance.
+   * Uses a CacheService-backed cache (60-second TTL) to avoid re-reading all of SysTasks
+   * on every call.
    * @param {boolean} forceRefresh - If true, bypasses cache and fetches fresh data.
    * @returns {Array<Object>} An array of open task objects, where each object is a map of header names to values.
    */
   const getOpenTasks = (forceRefresh = false) => {
     try {
-      // Check cache first
-      if (!forceRefresh && isCacheValid()) {
-        LoggerService.info('WebAppTasks', 'getOpenTasks', 'Returning cached tasks.', { cacheAge: Date.now() - taskCacheTime });
-        return taskCache;
+      const cache = CacheService.getScriptCache();
+
+      if (!forceRefresh) {
+        const cached = cache.get(OPEN_TASKS_CACHE_KEY);
+        if (cached) {
+          LoggerService.info('WebAppTasks', 'getOpenTasks', 'Returning CacheService-cached tasks.');
+          return JSON.parse(cached);
+        }
       }
 
       // Cache miss or expired - fetch from sheet
@@ -109,9 +110,15 @@ const WebAppTasks = (() => {
         return dateB - dateA;
       });
 
-      // Update cache
-      taskCache = openTasks;
-      taskCacheTime = Date.now();
+      // Cache for next call — CacheService caps values at 100KB; if the open-tasks list
+      // is too large to fit, skip caching rather than fail (same as today's always-uncached
+      // behavior, not a regression).
+      try {
+        cache.put(OPEN_TASKS_CACHE_KEY, JSON.stringify(openTasks), OPEN_TASKS_CACHE_TTL_SEC);
+      } catch (cacheErr) {
+        LoggerService.warn('WebAppTasks', 'getOpenTasks',
+          `Could not cache open tasks (likely exceeds CacheService's 100KB limit): ${cacheErr.message}`);
+      }
 
       return openTasks;
     } catch (e) {
@@ -387,7 +394,7 @@ function WebAppTasks_updateTaskDates(taskId, startDate, dueDate) {
 /**
  * Updates multiple task fields at once.
  * @param {string} taskId The task ID.
- * @param {Object} updates The fields to update: { status, priority, assignedTo, startDate, dueDate, notes }
+ * @param {Object} updates The fields to update: { status, priority, assignedTo, startDate, dueDate, doneDate, notes, linkedEntityId, title, taskTypeId, entityId, entityType, detailSnapshot }
  * @returns {Object} { error: string|null, success: boolean }
  */
 function WebAppTasks_updateTask(taskId, updates) {
@@ -470,6 +477,10 @@ function WebAppTasks_updateTask(taskId, updates) {
     if (updates.entityType !== undefined) {
       const entityTypeCol = headers.indexOf('st_EntityType');
       if (entityTypeCol > -1) row[entityTypeCol] = updates.entityType || '';
+    }
+    if (updates.detailSnapshot !== undefined) {
+      const detailSnapshotCol = headers.indexOf('st_DetailSnapshot');
+      if (detailSnapshotCol > -1) row[detailSnapshotCol] = updates.detailSnapshot ? JSON.stringify(updates.detailSnapshot) : '';
     }
 
     // Write back the row

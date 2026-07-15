@@ -4,6 +4,26 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-15 (cont'd) — Product-detail load performance shipped end-to-end (@492-@498), smoke-tested clean
+
+- **Product Detail Snapshot Phase 1+2 shipped (@492-@493).** Independent review found the plan's core premise didn't hold for validation-created tasks (each rule only captures the 2 sheets it compares, not the full WebDetM/WebDetS/CmxProdM trio) — re-scoped: add path is genuinely free (data already in `acceptProductSuggestion`), vintage-drift path pays one extra read at creation, verify-conversion (`passVerifyToManager`) pays three reads at conversion (nothing was in memory there). New `st_DetailSnapshot` column + shared `ProductService.getWebDetailRows` reader (no duplicated read logic between the two call sites). Storage went with a new schema column over marker-in-notes per the review (notes are admin-editable, would silently destroy a marker).
+- **Verify Detail Speedup shipped (@494).** The read-only verify batch-walk was calling `getVerifyDetail` per SKU per step, each doing 2 full uncached sheet reads. Now bulk-prefetched once at walk-start (`getVerifyDetailsBulk`); confirmed live at 0.7s.
+- **Two regressions found live and fixed same session:** `loadProductEditorData` was made to always do a full `SysTasks` scan to check for a snapshot (@495 fix: `TextFinder`-scoped single-row lookup instead) — and, unrelated to today's work but found via the same live timing logs, `WebAppTasks.getOpenTasks`'s "60-second cache" was a module-level variable that never actually persisted across `google.script.run` calls, so it was always doing a full uncached `SysTasks` read (@496 fix: real `CacheService` caching, same anti-pattern Session J found in `LookupService`).
+- **Category-stock health moved to housekeeping (@497 removed live, @498 moved properly per user's preference).** `getManagerWidgetData` was doing a live CmxProdM scan + creating `task.deficiency.category_stock` tasks (each paying a full SysTasks de-dup scan) on every widget load — confirmed live at ~13-15s. Now computed by `HousekeepingService.checkCategoryStockHealth` on the frequent-maintenance cadence, cached in new SysConfig key `system.category_stock.health`; the widget just reads the cache.
+- User smoke-tested the full @479-@498 run and confirmed clean. Both plans graduated to system docs (`jlmops/docs/WORKFLOWS.md` §16, `DATA_MODEL.md` `st_DetailSnapshot`) and archived.
+- Next: nothing pending from this thread. Session J's remaining items (F/H/I) and the SysTasks-size question (now confirmed large enough to make full scans costly — worth a broader look if more slow spots turn up) are open for a future session.
+
+---
+
+## 2026-07-15 — Validation false-positive gating + Admin Tasks product-name display (@490-@491); product-detail-snapshot plan drafted + independently reviewed
+
+- **New-product false positives fixed (@490).** New products triggered spurious `status_mismatch` and `translation_missing` tasks on every add (manually deleted each time) — neither rule was gated to published products, so both fired during the normal pre-sync staging lag. Same shape as the 2026-06-24 draft-flagging bug; same fix — added `source_filter: wpm_PostStatus,publish` to both rules in `config/validation.json`. User ran `rebuildSysConfigFromSource()` after deploy.
+- **Admin Tasks missing product name fixed (@491).** `st_LinkedEntityName` was populated but `AdminTasksView.html:1271` only put it in a tooltip, showing the SKU as the visible text. Admin Products' Detail-Updates card showed the same tasks correctly, which isolated this to a display bug, not a data gap. Fixed per user's direction: task-title column now shows "Title — ProductName" together; entity cell/tooltip unchanged (still SKU).
+- **Product Detail Snapshot plan** (`jlmops/plans/PRODUCT_DETAIL_SNAPSHOT_PLAN.md`) drafted — idea: capture product-detail rows as JSON on the task at creation time (validation/onboarding code already holds the data then) instead of live-reading on every editor open, since the user confirmed staleness between creation and open is a non-issue. An independent review agent found the plan's core premise doesn't hold for the validation-task family (each rule only captures the 2 sheets *it* compares, not the full WebDetM/WebDetS/CmxProdM trio the editor needs) — only the add-product/onboarding path is genuinely free as described. Review also resolved the plan's open storage-location question: use a new `st_DetailSnapshot` schema column via the existing `TaskService.createTask` `options.entityType/entityId` precedent, not marker-in-notes (which has a real data-loss risk via the admin notes-textarea edit path). Plan not yet revised to reflect this — next session should re-scope it before implementation.
+- Next: manager smoke-tests @479-@491 (full 2026-07-14/15 run); revise the snapshot plan per the review before starting any implementation.
+
+---
+
 ## 2026-07-14 (cont'd 2) — Dashboard cleanup, Loyalty Rewards Phase 1, export button consistency (@483-@489)
 
 - Admin Products: added an open-manager-verification-tasks card (@483) and a spinner on Accept Suggestion (@484). Admin Dashboard: dropped the unused Projects card, merged Integrations into the freed row (@485/@486).

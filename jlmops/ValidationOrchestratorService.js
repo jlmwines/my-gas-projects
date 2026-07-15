@@ -180,7 +180,22 @@ const ValidationOrchestratorService = (function() {
       const notes = `${baseNotes}\nDetails: ${discrepancy.details}`;
       const entityName = discrepancy.name || '';
 
-      TaskService.createTask(rule.on_failure_task_type, entityId, entityName, finalTitle, notes, sessionId);
+      // Product-detail snapshot (jlmops/plans/PRODUCT_DETAIL_SNAPSHOT_PLAN.md, Phase 1
+      // "update" path) — scoped to the one rule that feeds the shared product editor via
+      // this task type. discrepancy.data already has the CmxProdM (cpm_*) fields this rule
+      // compares; WebDetM/WebDetS aren't part of that data, so they need one extra read here.
+      let taskOptions = undefined;
+      if (rule.on_failure_task_type === 'task.validation.vintage_mismatch' &&
+          rule.sheet_A === 'CmxProdM' && rule.sheet_B === 'CmxProdS') {
+          const comaxSnapshot = {};
+          Object.keys(discrepancy.data || {}).forEach(k => {
+              if (k.indexOf('cpm_') === 0) comaxSnapshot[k] = discrepancy.data[k];
+          });
+          const detail = ProductService.getWebDetailRows(entityId);
+          taskOptions = { detailSnapshot: { master: detail.master, staging: detail.staging, comax: comaxSnapshot } };
+      }
+
+      TaskService.createTask(rule.on_failure_task_type, entityId, entityName, finalTitle, notes, sessionId, taskOptions);
 
       // Track newly created task so later rules in this run can skip too
       if (skipEntityKeys) {

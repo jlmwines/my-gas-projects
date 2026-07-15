@@ -1264,6 +1264,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var entityId = t.entityId != null ? String(t.entityId) : '';
       var entityName = t.entityName || '';
       var isUrl = entityId.indexOf('http') === 0;
+      var titleWithEntity = entityName ? title + ' — ' + entityName : title;
 
       // Show full entity ID (not truncated) - user needs to see/copy UPC codes
       var entityHtml = isUrl
@@ -1289,7 +1290,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       return '<div class="border-bottom py-1 px-2 task-row' + (isSelected ? ' bg-info text-white' : '') + rowClass + '" data-id="' + id + '">' +
         '<div class="task-col-check"><input type="checkbox" class="task-checkbox" data-id="' + id + '"' + (isChecked ? ' checked' : '') + '></div>' +
         '<div class="task-col-wide-only task-col-session text-truncate" title="' + TaskWidgets.escape(t.projectId || '') + '">' + TaskWidgets.escape(t.projectId || '') + '</div>' +
-        '<div class="task-col-title text-truncate" style="cursor:pointer;">' + TaskWidgets.escape(title) + '</div>' +
+        '<div class="task-col-title text-truncate" style="cursor:pointer;" title="' + TaskWidgets.escape(titleWithEntity) + '">' + TaskWidgets.escape(titleWithEntity) + '</div>' +
         '<div class="task-col-hideable task-col-entity text-truncate">' + entityHtml + '</div>' +
         '<div class="task-col-wide-only task-col-entity-id text-truncate">' + entityIdHtml + '</div>' +
         '<div class="task-col-hideable task-col-assignee">' + assigneeSelect + '</div>' +

@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-14. jlmops @489 live, stable; today's fixes mostly pending live smoke-test confirmation.
+**Updated:** 2026-07-15. jlmops @498 live, stable; @479-@498 (2026-07-14/15 fixes: product-editor load time, submit/verify races, validation false-positives, Admin Tasks product-name display, product-detail load performance) smoke-tested and confirmed clean.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @489, stable; several fixes today (see Next Action) pending smoke-test (`jlmops/plans/BUG_FIX_SEQUENCE.md`).
+- **jlmops** (GAS backend) — live @498, stable; 2026-07-14/15 fixes smoke-tested and confirmed clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`, `jlmops/docs/WORKFLOWS.md` §16).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30; Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-07-14 |
+| Last Active | 2026-07-15 |
 | Revenue | Steady |
-| Deploy Version | jlmops @489 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-14 · theme 2026-07-09 |
+| Deploy Version | jlmops @498 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-07-15 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -39,13 +39,12 @@ The live "what now" — daily review reads these first.
 5. **Galilee region post (Slot B, due 2026-08-11, see `content/REGION_POSTS_PLAN.md`)** — in progress; drafted + registered in the library (`blog-region-galilee-en`, state `draft`).
 6. **Central Mountains region post (Slot C) — body drafted through Image Prompts, 2026-07-09.** Calendar row staged (`blog-region-central-mountains`, cal_Date 2026-08-25, pending "Apply Pending Updates"); Drive doc placed at the canonical library path (`blog-region-central-mountains-en 26-07-09-12-05`); git source at `content/regions/central-mountains/central-mountains-en.post.md`. Remaining: winery verification (Gvaot/Tura not yet confirmed against JLM's carried wineries), Canva images, HE translation, library registration, WP push — same checklist as Galilee (`content/REGION_POSTS_PLAN.md`).
 7. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
-8. **Manager needs to live-smoke-test today's jlmops changes (@479-@489).** Product-editor load time, submit/verify modal races, dashboard cleanup, sync widget cosmetics, and the new export Open File/Copy Filename buttons (Detail Update, New Product, Comax Inventory) all shipped today; none except Loyalty Rewards confirmed live yet. See `jlmops/plans/BUG_FIX_SEQUENCE.md` Session J.
 
 ## Active Plans
 
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
-- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E and G resolved. Session J (product-editor load time + manager submit/verify hang) root-caused and fixed today (@479-@482), pending live smoke-test. Still pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
+- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E and G resolved. Session J (product-editor load time + manager submit/verify hang) root-caused and fixed @479-@482, smoke-tested and confirmed clean 2026-07-15 along with the follow-on product-detail load-performance work (@490-@498, `jlmops/docs/WORKFLOWS.md` §16). Still pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
 - **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — Phases 2–4 (click-through shows entity details before a task, status filter, search repositioned) shipped live 2026-07-09 @461. Phase 3 (status filter) smoke-tested and confirmed working; Phases 2 and 4 still unsmoked. Phase 1 (refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks") investigated, root cause still open — needs a live repro.
@@ -69,6 +68,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Correct Product Name tool** — live (Admin → Products → SKU Management → Correct Product Name); edits WebProdM/WebDetM name fields and logs to Recent SKU Updates. Not yet smoke-tested from /dev. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - **New-product Products-view UX** — shipped, archived, and smoke-tested/validated by the user 2026-07-09 (`jlmops/plans/_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`); current behavior documented in `jlmops/docs/WORKFLOWS.md` §14. Accept Suggestion modal field order (EN name → Woo Post ID → HE name) and its required Comax "Sold Online" confirmation checkbox smoke-tested 2026-07-10. Closes the smoke-test gate the PROJ-CONTENT Inbox item was waiting on.
 - **Product verification** — fully shipped end-to-end. Manager review surface + reverted-task admin handling (Close / Pass to manager / Task-modal edit-note-and-close-normally) live and smoke-tested. Count-flow strip also complete — Manager Inventory's Counts tab no longer does inline vintage/comment editing or spawns `vintage_mismatch` tasks (that's now verification-only). Plan → `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`.
+- **Product-detail load performance** — live and smoke-tested clean. Product-editor tasks (add/vintage-drift/verify-conversion) read a creation-time snapshot instead of live sheets; the verify batch-walk bulk-prefetches once at walk-start instead of per step; category-stock health is computed by housekeeping and cached, not live on widget load; `WebAppTasks.getOpenTasks` is genuinely cached now (was a module-level variable that never persisted across calls). System doc → `jlmops/docs/DATA_MODEL.md` (`st_DetailSnapshot`), `jlmops/docs/WORKFLOWS.md` §16; plans archived (`jlmops/plans/_archive/PRODUCT_DETAIL_SNAPSHOT_PLAN.md`, `_archive/VERIFY_DETAIL_SPEEDUP_PLAN.md`).
 - **SKU management** — Vendor SKU Update and Trim Safety not yet tested; Product Replacement tested and working, though its product search reads dead WebProdM columns (`.claude/bugs.md`).
 - **UI T4.3 count-entry modal** — shipped, unsmoked; verify on a phone when count tasks next appear.
 - **`st_DoneDate` set without `st_Status='Done'`** — at least one Manager-assigned row carries a done date while still Assigned, so it surfaces as open. Watch whether the pattern spreads; if so, fix the write path or the dashboard filter.

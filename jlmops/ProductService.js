@@ -178,6 +178,33 @@ const ProductService = (function() {
   }
 
   /**
+   * Catalog-wide reference lists for the product editor form — same for every SKU,
+   * so callers with a per-SKU detail snapshot (jlmops/plans/PRODUCT_DETAIL_SNAPSHOT_PLAN.md)
+   * still need this instead of re-deriving it themselves.
+   */
+  function _getStaticLookups() {
+    const abvOptions = [];
+    for (let i = 12.0; i <= 14.5; i += 0.5) {
+        abvOptions.push(i.toFixed(1));
+    }
+    return {
+      regions: _getCachedRegions(),
+      grapes: _getCachedGrapes(),
+      kashrut: _getCachedKashrut(),
+      abvOptions: abvOptions
+    };
+  }
+
+  /**
+   * Public accessor for _getStaticLookups, for callers (e.g. a product editor open
+   * backed by a task's detail snapshot) that need the lookups without paying for
+   * getProductDetails' per-SKU sheet reads.
+   */
+  function getProductLookups() {
+    return JSON.stringify(_getStaticLookups());
+  }
+
+  /**
    * Invalidate all product data caches.
    * Called after data modifications (submit/accept).
    */
@@ -1083,6 +1110,40 @@ const ProductService = (function() {
     return skus;
   }
 
+  /**
+   * Live WebDetM + WebDetS rows for one SKU, keyed exactly like getProductDetails'
+   * master/staging shape. Shared by callers building a detail snapshot at task-creation
+   * time who don't already have this data in memory (jlmops/plans/PRODUCT_DETAIL_SNAPSHOT_PLAN.md):
+   * ValidationOrchestratorService (vintage-drift path, comax already in hand from the
+   * discrepancy) and WebAppProducts_passVerifyToManager (verify-conversion path, nothing
+   * in hand — also does its own CmxProdM read).
+   */
+  function getWebDetailRows(sku) {
+    const allConfig = ConfigService.getAllConfig();
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
+    const sheetNames = allConfig['system.sheet_names'];
+
+    const readRow = (sheetName, schemaKey, keyCol) => {
+      const schema = allConfig[schemaKey];
+      const sheet = spreadsheet.getSheetByName(sheetName);
+      if (!sheet || sheet.getLastRow() < 2) return null;
+      const headers = schema.headers.split(',');
+      const data = sheet.getDataRange().getValues();
+      const keyIdx = headers.indexOf(keyCol);
+      if (keyIdx === -1) return null;
+      const row = data.find((r, i) => i > 0 && String(r[keyIdx]).trim() === String(sku).trim());
+      if (!row) return null;
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = row[i]);
+      return obj;
+    };
+
+    return {
+      master: readRow(sheetNames.WebDetM, 'schema.data.WebDetM', 'wdm_SKU'),
+      staging: readRow(sheetNames.WebDetS, 'schema.data.WebDetS', 'wds_SKU')
+    };
+  }
+
   function getProductDetails(sku) {
     const startTime = new Date();
     try {
@@ -1234,15 +1295,7 @@ const ProductService = (function() {
       }
 
       // Use cached lookup helpers for better performance
-      const regions = _getCachedRegions();
-      const grapes = _getCachedGrapes();
-      const kashrut = _getCachedKashrut();
-
-      // Generate ABV options
-      const abvOptions = [];
-      for (let i = 12.0; i <= 14.5; i += 0.5) {
-          abvOptions.push(i.toFixed(1));
-      }
+      const { regions, grapes, kashrut, abvOptions } = _getStaticLookups();
 
       const result = {
         master: masterData,
@@ -1752,11 +1805,15 @@ const ProductService = (function() {
       // 1. Complete the suggestion task
       TaskService.completeTask(suggestionTaskId); // TaskService needs sessionId too
 
-      // 2. Create the onboarding task
+      // 2. Task title/notes — task is created below in step 6, once the snapshot data is in hand.
       const title = `Add New Product: ${suggestedNameEn} (${sku})`;
       const notes = `Approved suggestion. \nEN Name: ${suggestedNameEn}\nHE Name: ${suggestedNameHe}`;
-      TaskService.createTask('task.onboarding.add_product', sku, suggestedNameEn, title, notes, sessionId); // TaskService needs sessionId too
-      
+      const _rowToObj = (headers, arr) => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = arr[i]);
+        return obj;
+      };
+
       // 3. Pre-populate WebDetS with the approved names to save the manager time
       // We can reuse submitProductDetails logic or just write directly. 
       // Let's use a lightweight direct write to WebDetS for efficiency.
@@ -1802,6 +1859,7 @@ const ProductService = (function() {
       const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
       const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
       let cmxPrice = '', cmxStock = '';
+      let comaxSnapshot = null;
       if (cmxSheet) {
         const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
         const cmxPriceIdx = cmxHeaders.indexOf('cpm_Price');
@@ -1813,8 +1871,10 @@ const ProductService = (function() {
           const cmxRow = cmxData[cmxRowIdx];
           cmxPrice = cmxRow[cmxPriceIdx] || '';
           cmxStock = cmxRow[cmxStockIdx] || '';
+          comaxSnapshot = _rowToObj(cmxHeaders, cmxRow);
           if (cmxIsWebIdx > -1) {
             cmxSheet.getRange(cmxRowIdx + 1, cmxIsWebIdx + 1).setValue(true);
+            comaxSnapshot.cpm_IsWeb = true;
           }
         }
       }
@@ -1870,7 +1930,17 @@ const ProductService = (function() {
       }
       logger.info(serviceName, functionName, `Seeded WebDetM row for SKU ${sku}`, { sessionId: sessionId, sku: sku });
 
-      // 6. Seed WebXltM row to close translation validation gap at accept time (Track C)
+      // 6. Create the onboarding task, snapshotting the {master, staging, comax} rows just
+      // seeded above so the editor can open instantly without re-reading these sheets
+      // (jlmops/plans/PRODUCT_DETAIL_SNAPSHOT_PLAN.md).
+      const detailSnapshot = {
+        master: _rowToObj(masterHeaders, newMasterRow),
+        staging: _rowToObj(stagingHeaders, rowData),
+        comax: comaxSnapshot
+      };
+      TaskService.createTask('task.onboarding.add_product', sku, suggestedNameEn, title, notes, sessionId, { detailSnapshot: detailSnapshot });
+
+      // 7. Seed WebXltM row to close translation validation gap at accept time (Track C)
       if (wpmId) {
         try {
           const enProduct = WooApiService.fetchProductById(wpmId);
@@ -3076,20 +3146,25 @@ const ProductService = (function() {
   }
 
   /**
-   * Per-SKU web/Comax facts for the read-only verification modal: the live web
-   * image (first src of wpm_Images) + the comma-joined web category list, shown
-   * beside the Comax Division/Group for one-glance human comparison. The two
-   * empty-value flags (Division missing; Group missing on wine) are derived
+   * Web/Comax facts for the read-only verification modal, for every SKU in the manager's
+   * batch-walk queue in one call (jlmops/plans/VERIFY_DETAIL_SPEEDUP_PLAN.md) — CmxProdM and
+   * WebProdM are each read once here regardless of list size, replacing what used to be a
+   * fresh full read of both sheets per SKU per walk step. Live web image (first src of
+   * wpm_Images) + web category, shown beside Comax Division/Group for one-glance comparison.
+   * The two empty-value flags (Division missing; Group missing on wine) are derived
    * client-side from cmxDivision/cmxGroup/isWine. No automated category compare.
-   * @param {string} sku
-   * @returns {Object} { sku, imageUrl, webCategory, cmxDivision, cmxGroup, isWine } or { error }
+   * @param {Array<string>} skus
+   * @returns {Object} { [sku]: { sku, imageUrl, webCategory, cmxDivision, cmxGroup, isWine } } or { error }
    */
-  function getVerifyDetail(sku) {
+  function getVerifyDetailsBulk(skus) {
     const serviceName = 'ProductService';
-    const functionName = 'getVerifyDetail';
+    const functionName = 'getVerifyDetailsBulk';
     try {
-      const cleanSku = String(sku || '').trim();
-      if (!cleanSku) return { error: 'SKU is required.' };
+      const cleanSkus = (Array.isArray(skus) ? skus : [])
+        .map(s => String(s || '').trim())
+        .filter(Boolean);
+      const result = {};
+      if (!cleanSkus.length) return result;
 
       const allConfig = ConfigService.getAllConfig();
       const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
@@ -3098,24 +3173,42 @@ const ProductService = (function() {
       const cmxObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxHeaders, 'cpm_SKU');
       const webObj = ConfigService._getSheetDataAsMap('WebProdM', webHeaders, 'wpm_SKU');
 
-      const cmx = cmxObj.map.get(cleanSku) || {};
-      const web = webObj.map.get(cleanSku) || {};
+      cleanSkus.forEach(cleanSku => {
+        const cmx = cmxObj.map.get(cleanSku) || {};
+        const web = webObj.map.get(cleanSku) || {};
 
-      const rawImages = web.wpm_Images || '';
-      const imageUrl = rawImages ? String(rawImages).split(',')[0].trim() : '';
+        const rawImages = web.wpm_Images || '';
+        const imageUrl = rawImages ? String(rawImages).split(',')[0].trim() : '';
 
-      return {
-        sku: cleanSku,
-        imageUrl: imageUrl,
-        webCategory: web.wpm_TaxProductCat || '',
-        cmxDivision: (cmx.cpm_Division !== undefined && cmx.cpm_Division !== null) ? String(cmx.cpm_Division) : '',
-        cmxGroup: (cmx.cpm_Group !== undefined && cmx.cpm_Group !== null) ? String(cmx.cpm_Group) : '',
-        isWine: String(cmx.cpm_Division || '').trim() === '1'
-      };
+        result[cleanSku] = {
+          sku: cleanSku,
+          imageUrl: imageUrl,
+          webCategory: web.wpm_TaxProductCat || '',
+          cmxDivision: (cmx.cpm_Division !== undefined && cmx.cpm_Division !== null) ? String(cmx.cpm_Division) : '',
+          cmxGroup: (cmx.cpm_Group !== undefined && cmx.cpm_Group !== null) ? String(cmx.cpm_Group) : '',
+          isWine: String(cmx.cpm_Division || '').trim() === '1'
+        };
+      });
+
+      return result;
     } catch (e) {
-      LoggerService.error(serviceName, functionName, `Could not load verify detail for SKU '${sku}': ${e.message}`, e);
+      LoggerService.error(serviceName, functionName, `Could not load bulk verify details: ${e.message}`, e);
       return { error: e.message };
     }
+  }
+
+  /**
+   * Single-SKU convenience wrapper over getVerifyDetailsBulk — kept for any caller that
+   * only has one SKU (e.g. a one-off check outside the batch walk).
+   * @param {string} sku
+   * @returns {Object} { sku, imageUrl, webCategory, cmxDivision, cmxGroup, isWine } or { error }
+   */
+  function getVerifyDetail(sku) {
+    const cleanSku = String(sku || '').trim();
+    if (!cleanSku) return { error: 'SKU is required.' };
+    const bulk = getVerifyDetailsBulk([cleanSku]);
+    if (bulk.error) return bulk;
+    return bulk[cleanSku] || { error: `No data found for SKU '${cleanSku}'.` };
   }
 
   /**
@@ -3283,12 +3376,15 @@ const ProductService = (function() {
     exportWebInventory: exportWebInventory,
     getVerifyPlanningData: getVerifyPlanningData,
     getVerifyDetail: getVerifyDetail,
+    getVerifyDetailsBulk: getVerifyDetailsBulk,
     createVerifyTasksBulk: createVerifyTasksBulk,
     getOpenVerifyTasks: getOpenVerifyTasks,
     completeVerifyTask: completeVerifyTask,
     updateLastDetailAudit: updateLastDetailAudit,
     getProductWebIdBySku: getProductWebIdBySku,
     getProductDetails: getProductDetails,
+    getProductLookups: getProductLookups,
+    getWebDetailRows: getWebDetailRows,
     submitProductDetails: submitProductDetails,
     acceptProductDetails: acceptProductDetails,
     generateDetailExport: generateDetailExport,

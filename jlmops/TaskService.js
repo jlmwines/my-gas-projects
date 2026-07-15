@@ -222,6 +222,10 @@ const TaskService = (function() {
         const entityIdIdx = headers.indexOf('st_EntityId');
         if (entityIdIdx > -1) newRow[entityIdIdx] = options.entityId;
       }
+      if (options.detailSnapshot) {
+        const detailSnapshotIdx = headers.indexOf('st_DetailSnapshot');
+        if (detailSnapshotIdx > -1) newRow[detailSnapshotIdx] = JSON.stringify(options.detailSnapshot);
+      }
       if (options.startDate) {
         const startDateIdx = headers.indexOf('st_StartDate');
         if (startDateIdx > -1) newRow[startDateIdx] = options.startDate;

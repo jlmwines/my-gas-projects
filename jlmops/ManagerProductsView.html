@@ -662,6 +662,9 @@
     ManagerProductsView.verifyQueue = [];
     ManagerProductsView.verifyIndex = -1;
     ManagerProductsView.verifyListCache = [];
+    // Bulk-prefetched at walk-start (jlmops/plans/VERIFY_DETAIL_SPEEDUP_PLAN.md) — one
+    // server call for the whole queue instead of one per step. Keyed by SKU.
+    ManagerProductsView.verifyDetailCache = {};
 
     // --- Initialization ---
     ManagerProductsView.refreshView = function() {
@@ -1409,6 +1412,25 @@
       }).WebAppProducts_getSuggestionTasks();
     };
 
+    // Bulk-prefetch verify details for the whole queue before starting the walk
+    // (jlmops/plans/VERIFY_DETAIL_SPEEDUP_PLAN.md) — one server call instead of one per
+    // step. Proceeds with the walk even if the prefetch fails; loadVerifyDetail() falls
+    // back to a live single-SKU call on a cache miss.
+    ManagerProductsView._prefetchVerifyDetails = function(queue, onReady) {
+      const skus = (queue || []).map(t => t.sku).filter(Boolean);
+      if (!skus.length) { onReady(); return; }
+      google.script.run
+        .withSuccessHandler(map => {
+          ManagerProductsView.verifyDetailCache = (map && !map.error) ? map : {};
+          onReady();
+        })
+        .withFailureHandler(() => {
+          ManagerProductsView.verifyDetailCache = {};
+          onReady();
+        })
+        .WebAppProducts_getVerifyDetailsBulk(skus);
+    };
+
     // Start the read-only walk at a chosen list row, using the rendered list as the
     // queue so the requested index maps to what the manager sees. Confirm & close
     // then advances through the remainder via advanceVerify().
@@ -1417,7 +1439,7 @@
       if (!list.length) { ManagerProductsView.loadVerifyList(); return; }
       ManagerProductsView.verifyQueue = list;
       ManagerProductsView.verifyIndex = index - 1; // advanceVerify pre-increments
-      ManagerProductsView.advanceVerify();
+      ManagerProductsView._prefetchVerifyDetails(list, () => ManagerProductsView.advanceVerify());
     };
 
     // Entry point: load the manager's open verify queue and walk it.
@@ -1430,7 +1452,7 @@
             TaskWidgets.toast('No open verification tasks.', 'info');
             return;
           }
-          ManagerProductsView.advanceVerify();
+          ManagerProductsView._prefetchVerifyDetails(ManagerProductsView.verifyQueue, () => ManagerProductsView.advanceVerify());
         })
         .withFailureHandler(err => TaskWidgets.toast('Could not load verification queue: ' + (err && err.message), 'error'))
         .WebAppProducts_getOpenVerifyTasks();
@@ -1449,7 +1471,31 @@
       ManagerProductsView.openEditor(next.taskId, { sku: next.sku });
     };
 
-    // Fetch + render the verify-only panel (image, web category, empty-value flags).
+    // Renders the verify-only panel (image, web category, empty-value flags) from an
+    // already-fetched detail object — shared by the cache-hit and live-fallback paths.
+    ManagerProductsView._renderVerifyDetail = function(d) {
+      const img = document.getElementById('verify-image');
+      const none = document.getElementById('verify-image-none');
+      const cat = document.getElementById('verify-web-category');
+      const flags = document.getElementById('verify-flags');
+      if (!d || d.error) { if (cat) cat.textContent = (d && d.error) || 'Error'; return; }
+      if (d.imageUrl && img) {
+        img.src = d.imageUrl;
+        img.style.display = 'block';
+        if (none) none.style.display = 'none';
+      } else if (none) {
+        none.style.display = 'block';
+      }
+      if (cat) cat.textContent = d.webCategory || '(none)';
+      let f = '';
+      if (!d.cmxDivision) f += '<div class="verify-flag">* Comax Division missing</div>';
+      if (d.isWine && !d.cmxGroup) f += '<div class="verify-flag">* Comax Group missing on wine</div>';
+      if (flags) flags.innerHTML = f;
+    };
+
+    // Renders from the walk-start bulk prefetch (jlmops/plans/VERIFY_DETAIL_SPEEDUP_PLAN.md)
+    // when available — no server call per step. Falls back to a live single-SKU call on a
+    // cache miss (e.g. prefetch failed, or this SKU wasn't in the queue it was built from).
     ManagerProductsView.loadVerifyDetail = function(sku) {
       const img = document.getElementById('verify-image');
       const none = document.getElementById('verify-image-none');
@@ -1459,22 +1505,15 @@
       if (none) none.style.display = 'none';
       if (cat) cat.textContent = '…';
       if (flags) flags.innerHTML = '';
+
+      const cached = ManagerProductsView.verifyDetailCache && ManagerProductsView.verifyDetailCache[sku];
+      if (cached) {
+        ManagerProductsView._renderVerifyDetail(cached);
+        return;
+      }
+
       google.script.run
-        .withSuccessHandler(d => {
-          if (!d || d.error) { if (cat) cat.textContent = (d && d.error) || 'Error'; return; }
-          if (d.imageUrl && img) {
-            img.src = d.imageUrl;
-            img.style.display = 'block';
-            if (none) none.style.display = 'none';
-          } else if (none) {
-            none.style.display = 'block';
-          }
-          if (cat) cat.textContent = d.webCategory || '(none)';
-          let f = '';
-          if (!d.cmxDivision) f += '<div class="verify-flag">* Comax Division missing</div>';
-          if (d.isWine && !d.cmxGroup) f += '<div class="verify-flag">* Comax Group missing on wine</div>';
-          if (flags) flags.innerHTML = f;
-        })
+        .withSuccessHandler(d => ManagerProductsView._renderVerifyDetail(d))
         .withFailureHandler(err => { if (cat) cat.textContent = 'Error: ' + (err && err.message); })
         .WebAppProducts_getVerifyDetail(sku);
     };

@@ -837,6 +837,14 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "system.category_stock.health",
+        "Cached category stock-health status (VERIFY_DETAIL_SPEEDUP_PLAN follow-on, 2026-07-15). JSON {allCategories:[{category,current,min,status}], deficientCategories:[...], deficientCategoriesCount, ts} — recomputed each frequent-maintenance housekeeping run (HousekeepingService.checkCategoryStockHealth, also creates/dedupes task.deficiency.category_stock tasks for Low categories). Moved out of the live WebAppProducts_getManagerWidgetData path, which used to do this full CmxProdM scan + per-category task-creation on every widget load (confirmed live at ~13-15s). Runtime-written; empty default.",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "system.crm.last_refresh",
         "Tracks last CRM contact refresh timestamp",
         "stable",

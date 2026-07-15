@@ -615,7 +615,8 @@ function HousekeepingService() {
 
     const tasks = [
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
-      { name: 'createPendingPaymentFollowups', fn: () => this.createPendingPaymentFollowups() }
+      { name: 'createPendingPaymentFollowups', fn: () => this.createPendingPaymentFollowups() },
+      { name: 'checkCategoryStockHealth', fn: () => this.checkCategoryStockHealth() }
     ];
 
     for (const task of tasks) {
@@ -1439,6 +1440,113 @@ function HousekeepingService() {
       return { count: pushCount };
     } catch (e) {
       logger.error('HousekeepingService', functionName, `refreshBundlePushStatus failed: ${e.message}`, e);
+      throw e;
+    }
+  };
+
+  /**
+   * Recompute + cache category stock-health status (VERIFY_DETAIL_SPEEDUP_PLAN follow-on,
+   * 2026-07-15). Used to run live inside WebAppProducts_getManagerWidgetData on every
+   * manager-widget load — a full CmxProdM scan plus one full SysTasks de-dup scan per
+   * deficient category via TaskService.createTask, confirmed live at ~13-15s. Moved here:
+   * recomputed on the frequent-maintenance cadence instead, cached in
+   * system.category_stock.health as {allCategories, deficientCategories,
+   * deficientCategoriesCount, ts}. Staleness up to one housekeeping cycle is fine — this
+   * only feeds the new-product-suggestion tool's category filter badges.
+   */
+  this.checkCategoryStockHealth = function() {
+    const functionName = 'checkCategoryStockHealth';
+    try {
+      const stockHealthConfig = ConfigService.getConfig('StockHealth');
+      const result = { allCategories: [], deficientCategories: [], deficientCategoriesCount: 0 };
+      if (!stockHealthConfig) {
+        ConfigService.setConfig('system.category_stock.health', 'value', JSON.stringify(
+          Object.assign({}, result, { ts: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss') })
+        ));
+        return result;
+      }
+
+      // Hardcoded Division map for the current fixed category set (same as the prior
+      // live implementation — ConfigService's simple key/value map doesn't expose a third
+      // config param per row, so this isn't sourced from StockHealth's own config rows).
+      const divisionMap = {
+        'ליקר': '3',
+        'אביזרים': '5',
+        'פריטי מתנה': '9'
+      };
+
+      const minRules = [];
+      for (const [key, value] of Object.entries(stockHealthConfig)) {
+        if (key.startsWith('MinCat.')) {
+          const catName = key.replace('MinCat.', '');
+          minRules.push({
+            category: catName,
+            min: parseInt(value, 10),
+            targetDivision: divisionMap[catName] || null
+          });
+        }
+      }
+
+      if (minRules.length > 0) {
+        const cmxDataMap = ConfigService._getSheetDataAsMap('CmxProdM', ConfigService.getConfig('schema.data.CmxProdM').headers.split(','), 'cpm_CmxId');
+        const categoryCounts = {};
+
+        cmxDataMap.map.forEach(product => {
+          const isActive = String(product.cpm_IsActive || '').trim();
+          const isWeb = String(product.cpm_IsWeb || '').trim();
+          const activeCheck = (isActive !== '');
+          const webCheck = (isWeb === '1' || isWeb.toLowerCase() === 'true' || isWeb === 'כן');
+
+          if (activeCheck && webCheck) {
+            const prodGroup = String(product.cpm_Group || '').trim();
+            const prodDiv = String(product.cpm_Division || '').trim();
+            const stock = parseInt(product.cpm_Stock, 10) || 0;
+
+            if (stock > 0) {
+              let matchedCategory = null;
+              for (const rule of minRules) {
+                if (rule.targetDivision && rule.targetDivision === prodDiv) {
+                  matchedCategory = rule.category;
+                  break;
+                }
+              }
+              if (!matchedCategory) matchedCategory = prodGroup;
+              if (matchedCategory) categoryCounts[matchedCategory] = (categoryCounts[matchedCategory] || 0) + 1;
+            }
+          }
+        });
+
+        minRules.forEach(rule => {
+          const currentCount = categoryCounts[rule.category] || 0;
+          const status = currentCount < rule.min ? 'Low' : 'OK';
+          const catData = { category: rule.category, current: currentCount, min: rule.min, status: status };
+          result.allCategories.push(catData);
+
+          if (status === 'Low') {
+            result.deficientCategoriesCount++;
+            result.deficientCategories.push(catData);
+            try {
+              TaskService.createTask(
+                'task.deficiency.category_stock',
+                rule.category,
+                rule.category,
+                `Low stock: ${rule.category}`,
+                `Category "${rule.category}" has ${currentCount} products (minimum: ${rule.min}).`,
+                null
+              );
+            } catch (taskError) {
+              logger.warn('HousekeepingService', functionName, `Could not create deficiency task for ${rule.category}: ${taskError.message}`);
+            }
+          }
+        });
+      }
+
+      const payload = Object.assign({}, result, { ts: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss') });
+      ConfigService.setConfig('system.category_stock.health', 'value', JSON.stringify(payload));
+      logger.info('HousekeepingService', functionName, `Category stock health cached: ${result.deficientCategoriesCount} of ${result.allCategories.length} categories low.`);
+      return result;
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `checkCategoryStockHealth failed: ${e.message}`, e);
       throw e;
     }
   };

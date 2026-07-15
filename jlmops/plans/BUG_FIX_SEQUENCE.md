@@ -180,7 +180,7 @@ Item 3 (LockService/concurrency-on-`SysTasks` theory) and the iframe-bridge theo
 
    Same deploy also restored the pre-@208 auto-walk-to-next-task behavior on verification submit, at the user's explicit request — the manual close-then-reopen flow this forced was itself a major contributor to how often the loading-window gap got hit. `confirmVerify()`'s success handler now calls `advanceVerify()` instead of `closeModal()`/`refreshView()`. **Note:** @208 (2026-06-02) removed this exact behavior because the button was labeled "Confirm & close" while actually auto-walking — a label/behavior mismatch, not a rejection of auto-walk itself. Avoided recreating that mismatch by relabeling the button "Done & Next" (was "Done") rather than restoring the behavior silently under an unchanged label.
 
-Not yet smoke-tested live.
+Confirmed smoke-tested clean 2026-07-15, alongside the follow-on product-detail load-performance work (`jlmops/docs/WORKFLOWS.md` §16, `jlmops/plans/_archive/PRODUCT_DETAIL_SNAPSHOT_PLAN.md`).
 
    a. **In-flight flag.** Add `ManagerProductsView._submitInFlight = false` (module-level state, alongside `currentTaskId`/`currentSku`). Set it `true` at the start of `submitChanges()` (~line 1806), `confirmVerify()` (~line 1454), and `doRevert()` (~line 1495) — the same point each already disables its button. Set it back to `false` in *every* terminal branch of each: both `withSuccessHandler` and `withFailureHandler` outcomes, for all `google.script.run` calls in the chain (`doRevert()` chains two calls before reaching a terminal state — the flag must stay `true` until the second call resolves, not the first).
 

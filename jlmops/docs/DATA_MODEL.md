@@ -473,6 +473,7 @@ This system provides a flexible, configurable way to manage all user and system-
     *   `st_Notes`
     *   `st_EntityType`: **Polymorphic entity type.** Names what kind of thing the task is attached to — a Content Library content type (`blog`, `news`, `email`, etc.) or a *virtual entity type* (`customer`, `order`, `project`).
     *   `st_EntityId`: **Polymorphic foreign key**, resolved by `st_EntityType`. For library content types it is a `SysLibrary.slb_Slug`; for virtual entity types it points at the source sheet's row id (`SysContacts.sc_Email`, an order id, or a `SysProjects.spro_ProjectId`). Distinct from `st_LinkedEntityId` (the older free-form subject/asset link). See `plans/CONTENT_LIBRARY_PLAN.md` §7 (virtual entity types).
+    *   `st_DetailSnapshot`: **Product detail snapshot (JSON).** Populated on product-detail tasks (`task.onboarding.add_product`, `task.validation.vintage_mismatch`) at creation/conversion time — `{ master, staging, comax }`, shaped exactly like `ProductService.getProductDetails`'s per-SKU parts. Lets the manager product editor open instantly by reading this instead of live WebDetM/WebDetS/CmxProdM/WebProdM sheets; falls back to a live read when absent (older tasks, or task types outside this mechanism). See `jlmops/docs/WORKFLOWS.md` §16.
 
 ## CRM Data Model
 

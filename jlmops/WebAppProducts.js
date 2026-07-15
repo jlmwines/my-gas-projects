@@ -223,30 +223,80 @@ function WebAppProducts_getManagerProductTasks() {
 }
 
 /**
+ * Finds one SysTasks row by taskId without reading the whole sheet — SysTasks has grown
+ * large enough that a full-sheet scan (the pattern used elsewhere, e.g.
+ * ConfigService._getSheetDataAsMap) costs multiple seconds on its own (confirmed live,
+ * WebAppProducts_getManagerWidgetData's ~15s is dominated by exactly this same read via
+ * WebAppTasks.getOpenTasks() — its "cache" is a module-level variable that's always cold
+ * on a fresh google.script.run call, same anti-pattern Session J found elsewhere). Uses a
+ * TextFinder scoped to just the st_TaskId column (a single-column range) so Sheets does
+ * the search server-side instead of pulling every row into the script, then reads only the
+ * one matching row.
+ * @returns {Object|null} Task row keyed by header name, or null if not found.
+ */
+function _findTaskRowFast(taskId) {
+  const allConfig = ConfigService.getAllConfig();
+  const headers = allConfig['schema.data.SysTasks'].headers.split(',');
+  const taskIdCol = headers.indexOf('st_TaskId');
+  const spreadsheet = SheetAccessor.getDataSpreadsheet();
+  const sheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].SysTasks);
+  if (!sheet || sheet.getLastRow() < 2) return null;
+
+  const idRange = sheet.getRange(2, taskIdCol + 1, sheet.getLastRow() - 1, 1);
+  const found = idRange.createTextFinder(String(taskId)).matchEntireCell(true).findNext();
+  if (!found) return null;
+
+  const rowValues = sheet.getRange(found.getRow(), 1, 1, headers.length).getValues()[0];
+  const task = {};
+  headers.forEach((h, i) => task[h] = rowValues[i]);
+  return task;
+}
+
+/**
  * Fetches product details (master and staging) for the editor.
- * Client passes the known SKU to skip a SysTasks lookup; also returns
- * initial preview HTML so the modal can render without a second round-trip.
+ * Always looks up the task row (needed to check for a detail snapshot — see below);
+ * client-passed sku just skips deriving it from the task. Also returns initial preview
+ * HTML so the modal can render without a second round-trip.
  * @param {string} taskId The ID of the task.
- * @param {string} [sku] Optional SKU. If omitted, falls back to SysTasks lookup.
+ * @param {string} [sku] Optional SKU. If omitted, derived from the task row.
  * @returns {object} An object containing master/staging/comax data, lookups, and initial preview HTML.
  */
 function WebAppProducts_loadProductEditorData(taskId, sku) {
   try {
+    const task = _findTaskRowFast(taskId);
     if (!sku) {
-      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-      const headers = taskSchema.headers.split(',');
-      const allTasks = ConfigService._getSheetDataAsMap('SysTasks', headers, 'st_TaskId').map;
-      const task = allTasks.get(taskId);
       if (!task) throw new Error(`Task with ID ${taskId} not found.`);
       sku = task.st_LinkedEntityId;
     }
 
-    const productDetailsJson = ProductService.getProductDetails(sku);
-    const productDetails = JSON.parse(productDetailsJson);
+    // Product Detail Snapshot (jlmops/plans/PRODUCT_DETAIL_SNAPSHOT_PLAN.md, Phase 1):
+    // when the task was created with a detail snapshot, skip the live WebDetM/WebDetS/
+    // CmxProdM/WebProdM reads entirely — parse the snapshot and pull only the still-shared
+    // lookup lists (regions/grapes/kashrut/abvOptions) fresh. Falls back to the live read
+    // for any task without a snapshot (pre-existing tasks, or types outside Phase 1 scope).
+    let master, staging, comax, lookups;
+    const snapshotRaw = task && task.st_DetailSnapshot;
+    if (snapshotRaw) {
+      try {
+        const snapshot = JSON.parse(snapshotRaw);
+        master = snapshot.master || {};
+        staging = snapshot.staging || null;
+        comax = snapshot.comax || null;
+        lookups = JSON.parse(ProductService.getProductLookups());
+      } catch (snapshotErr) {
+        LoggerService.warn('WebAppProducts', 'loadProductEditorData',
+          `Failed to parse detail snapshot for task ${taskId}, falling back to live read: ${snapshotErr.message}`);
+      }
+    }
 
-    const master = productDetails.master || {};
-    const staging = productDetails.staging || null;
-    const comax = productDetails.comax || null;
+    if (!lookups) {
+      const productDetailsJson = ProductService.getProductDetails(sku);
+      const productDetails = JSON.parse(productDetailsJson);
+      master = productDetails.master || {};
+      staging = productDetails.staging || null;
+      comax = productDetails.comax || null;
+      lookups = productDetails;
+    }
 
     // Build initial form data (same rule as client-side getFormData: staging overrides master)
     // so the preview renders as the modal would on first display.
@@ -269,10 +319,10 @@ function WebAppProducts_loadProductEditorData(taskId, sku) {
       masterData: master,
       stagingData: staging,
       comaxData: comax,
-      regions: productDetails.regions,
-      abvOptions: productDetails.abvOptions,
-      grapes: productDetails.grapes,
-      kashrut: productDetails.kashrut,
+      regions: lookups.regions,
+      abvOptions: lookups.abvOptions,
+      grapes: lookups.grapes,
+      kashrut: lookups.kashrut,
       htmlEn: htmlEn,
       htmlHe: htmlHe
     };
@@ -464,135 +514,21 @@ function WebAppProducts_getManagerWidgetData() {
       });
     }
 
-    // 2. Calculate Category Health
-    const stockHealthConfig = ConfigService.getConfig('StockHealth');
-    if (stockHealthConfig) {
-        // Parse the flattened config structure: Key="MinCat.CategoryName"
-        const minRules = [];
-        
-        // In ConfigService's current implementation for multi-row configs sharing SettingName,
-        // it returns an object where keys are scf_P01.
-        // For our structure: 
-        // Key (scf_P01): "MinCat.CategoryName"
-        // Value (scf_P02): "MinCount"
-        // However, we added scf_P03 (FilterRule). ConfigService DOES NOT currently return P03 in the simple object map.
-        // It only returns P01: P02.
-        
-        // Workaround: We must read the raw sheet or fix ConfigService.
-        // Since I cannot fix ConfigService, I will read the raw sheet here to get P03.
-        // This is inefficient but necessary without changing ConfigService.
-        
-        const configDataMap = ConfigService._getSheetDataAsMap('SysConfig', ['scf_SettingName', 'scf_P01', 'scf_P02', 'scf_P03'], 'scf_P01'); 
-        // Wait, SysConfig isn't keyed by P01 globally. It's a list.
-        // ConfigService._getSheetDataAsMap uses a key column.
-        
-        // Better approach: ConfigService.getAllConfig() returns the cached object.
-        // If ConfigService doesn't expose P03 for generic settings, I can't get it easily.
-        
-        // Let's assume for now I can infer the Division from the Category Name or hardcode the mapping logic 
-        // momentarily if I can't change ConfigService.
-        // OR, I can use the fact that I know the new categories:
-        // 'ליקר' -> Div 3
-        // 'אביזרים' -> Div 5
-        // 'פריטי מתנה' -> Div 9
-        
-        // I will hardcode this mapping map temporarily to proceed without modifying ConfigService core logic 
-        // which might be risky.
-        
-        const divisionMap = {
-            'ליקר': '3',
-            'אביזרים': '5',
-            'פריטי מתנה': '9'
-        };
-
-        for (const [key, value] of Object.entries(stockHealthConfig)) {
-            if (key.startsWith('MinCat.')) {
-                const catName = key.replace('MinCat.', '');
-                minRules.push({
-                    category: catName,
-                    min: parseInt(value, 10),
-                    targetDivision: divisionMap[catName] || null // Use hardcoded map for now
-                });
-            }
-        }
-
-        if (minRules.length > 0) {
-            const cmxDataMap = ConfigService._getSheetDataAsMap('CmxProdM', ConfigService.getConfig('schema.data.CmxProdM').headers.split(','), 'cpm_CmxId');
-            const categoryCounts = {};
-            let debugLogCount = 0;
-
-            // Aggregate current stock
-            cmxDataMap.map.forEach(product => {
-                // Filter for Active and Web products
-                const isActive = String(product.cpm_IsActive || '').trim();
-                const isWeb = String(product.cpm_IsWeb || '').trim();
-                const activeCheck = (isActive !== '');
-                const webCheck = (isWeb === '1' || isWeb.toLowerCase() === 'true' || isWeb === 'כן');
-
-                if (activeCheck && webCheck) {
-                    const prodGroup = String(product.cpm_Group || '').trim();
-                    const prodDiv = String(product.cpm_Division || '').trim();
-                    const stock = parseInt(product.cpm_Stock, 10) || 0;
-
-                    if (stock > 0) {
-                        // Find matching rule
-                        // Priority: Division Match -> Group Match
-                        let matchedCategory = null;
-                        
-                        // 1. Check Division Rules
-                        for (const rule of minRules) {
-                            if (rule.targetDivision && rule.targetDivision === prodDiv) {
-                                matchedCategory = rule.category;
-                                break; 
-                            }
-                        }
-                        
-                        // 2. If no division match, use Group (implied Div 1 or default)
-                        if (!matchedCategory) {
-                             matchedCategory = prodGroup;
-                        }
-
-                        if (matchedCategory) {
-                             categoryCounts[matchedCategory] = (categoryCounts[matchedCategory] || 0) + 1;
-                        }
-                    }
-                }
-            });
-            
-            // Compare against rules
-            minRules.forEach(rule => {
-                const currentCount = categoryCounts[rule.category] || 0;
-                const status = currentCount < rule.min ? 'Low' : 'OK';
-                
-                const catData = {
-                    category: rule.category,
-                    current: currentCount,
-                    min: rule.min,
-                    status: status
-                };
-                
-                result.allCategories.push(catData);
-
-                if (status === 'Low') {
-                    result.deficientCategoriesCount++;
-                    result.deficientCategories.push(catData);
-
-                    // Create deficiency task (de-duplication handled by TaskService)
-                    try {
-                      TaskService.createTask(
-                        'task.deficiency.category_stock',
-                        rule.category,
-                        rule.category,
-                        `Low stock: ${rule.category}`,
-                        `Category "${rule.category}" has ${currentCount} products (minimum: ${rule.min}).`,
-                        null
-                      );
-                    } catch (taskError) {
-                      LoggerService.warn('WebAppProducts', 'getManagerWidgetData', `Could not create deficiency task: ${taskError.message}`);
-                    }
-                }
-            });
-        }
+    // Category-stock health — used to run live here on every widget load (a full uncached
+    // CmxProdM scan, plus one full SysTasks de-dup scan per deficient category via
+    // TaskService.createTask), confirmed live as a dominant cost of this endpoint's
+    // ~13-15s load time. Moved to housekeeping (HousekeepingService.checkCategoryStockHealth,
+    // runs on the frequent-maintenance cadence) — this just reads the cached result.
+    try {
+      const cached = ConfigService.getConfig('system.category_stock.health');
+      if (cached && cached.value) {
+        const parsed = JSON.parse(cached.value);
+        result.allCategories = parsed.allCategories || [];
+        result.deficientCategories = parsed.deficientCategories || [];
+        result.deficientCategoriesCount = parsed.deficientCategoriesCount || 0;
+      }
+    } catch (cacheErr) {
+      LoggerService.warn('WebAppProducts', 'getManagerWidgetData', `Could not read cached category stock health: ${cacheErr.message}`);
     }
 
     LoggerService.info('WebAppProducts', 'getManagerWidgetData', `Returning data: ${JSON.stringify(result)}`);
@@ -1177,6 +1113,21 @@ function WebAppProducts_getVerifyDetail(sku) {
 }
 
 /**
+ * Verify details for every SKU in the manager's batch-walk queue, one call
+ * (jlmops/plans/VERIFY_DETAIL_SPEEDUP_PLAN.md). Called once at walk-start instead of once
+ * per step.
+ * @param {Array<string>} skus
+ */
+function WebAppProducts_getVerifyDetailsBulk(skus) {
+  try {
+    return ProductService.getVerifyDetailsBulk(skus);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getVerifyDetailsBulk', `Error: ${e.message}`, e);
+    return { error: e.message };
+  }
+}
+
+/**
  * Creates task.product.verify tasks in bulk for a pre-filtered list of SKUs.
  * @param {Array<string>} skus
  * @param {string} [note]
@@ -1270,13 +1221,35 @@ function WebAppProducts_getManagerVerifyTasks() {
  * path, reassign to Manager, reset to New. The findings note is left untouched (already on
  * the row). Reuses task.validation.vintage_mismatch by decision (2026-06-17): vintage
  * mismatch is the reason, detail update is the action — same manager edit flow.
+ *
+ * Also builds a detail snapshot at this conversion moment (jlmops/plans/PRODUCT_DETAIL_SNAPSHOT_PLAN.md,
+ * Phase 2) — this is a task.product.verify task becoming editable for the first time, so
+ * unlike Phase 1's paths nothing is already in memory; all three reads (WebDetM, WebDetS,
+ * CmxProdM) happen here, once, instead of on every manager open.
  */
 function WebAppProducts_passVerifyToManager(taskId) {
   try {
+    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+    const headers = taskSchema.headers.split(',');
+    const allTasks = ConfigService._getSheetDataAsMap('SysTasks', headers, 'st_TaskId').map;
+    const task = allTasks.get(taskId);
+    const sku = task ? String(task.st_LinkedEntityId || '').trim() : '';
+
+    let detailSnapshot = undefined;
+    if (sku) {
+      const detail = ProductService.getWebDetailRows(sku);
+      const allConfig = ConfigService.getAllConfig();
+      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+      const cmxObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxHeaders, 'cpm_SKU');
+      const comax = cmxObj.map.get(sku) || null;
+      detailSnapshot = { master: detail.master, staging: detail.staging, comax: comax };
+    }
+
     return WebAppTasks_updateTask(taskId, {
       taskTypeId: 'task.validation.vintage_mismatch',
       assignedTo: 'Manager',
-      status: 'New'
+      status: 'New',
+      detailSnapshot: detailSnapshot
     });
   } catch (e) {
     LoggerService.error('WebAppProducts', 'passVerifyToManager', `Error: ${e.message}`, e);

@@ -277,3 +277,29 @@ The generator's fill/top-up/down-pass loops keep their own internal bookkeeping 
 ### 15.5 Export gate
 
 Nothing reaches the website until Export. Export selects every bundle whose serialized ops composition differs from the current web `woosb_ids` (a token/order/text-agnostic product-multiset comparison) — covering both "changed this session" and "already drifted, unnoticed" cases in one test. Delivered as a CSV (EN/HE `woosb_ids` cells) pasted into WPClever manually. Un-exported edits are volatile by design — the next Update Composition re-derives from master and, if the edit was never exported, it's gone; this is accepted (ops-as-source-of-truth, publish-or-lost).
+
+## 16. Product Detail Task Load Performance
+
+Three fixes, one theme: read-heavy per-open sheet scans replaced with either a one-time snapshot (where staleness genuinely doesn't matter) or a housekeeping-cadence cache (where it's fine but the data still needs to stay roughly current).
+
+### 16.1 Product-detail snapshot (add / vintage-drift / verify-conversion)
+
+The manager's product editor (`ManagerProductsView.html`, backed by `ProductService.getProductDetails`) used to read WebDetM, WebDetS, CmxProdM, WebProdM live on every open — slow, and repeated on every click. Since product-detail data only changes on three triggers (new product added, annual vintage change, failed verification) and staleness between task-creation and manager-open doesn't matter (the physical product label is the real source of truth, not the on-screen reference), each of those three moments now writes a `{ master, staging, comax }` snapshot to the task's `st_DetailSnapshot` column instead:
+
+- **Add** (`task.onboarding.add_product`) — `ProductService.acceptProductSuggestion` builds the snapshot from data it already gathers onboarding the product; no extra read.
+- **Vintage-drift** (`task.validation.vintage_mismatch`, created by `ValidationOrchestratorService._createIndividualTask` off the `validation.comax.vintage_mismatch` rule) — the rule's own discrepancy data only covers CmxProdM/CmxProdS, so this path does one extra `ProductService.getWebDetailRows(sku)` read (WebDetM + WebDetS) at creation — paid once per validation pass, not per manager open.
+- **Verification-fail conversion** (`WebAppProducts_passVerifyToManager`, converting an existing `task.product.verify` task onto `task.validation.vintage_mismatch` per the 2026-06-17 decision) — nothing was in memory at this point, so all three reads (WebDetM, WebDetS, CmxProdM) happen once here, at conversion.
+
+`WebAppProducts_loadProductEditorData` checks the task's `st_DetailSnapshot` first; if present, it skips the live sheet reads entirely (still fetching the catalog-wide lookup lists — regions/grapes/kashrut/abvOptions, via `ProductService.getProductLookups` — since those aren't per-product). Falls back to a live `getProductDetails` read when absent (tasks created before this shipped). Task-row lookup itself uses a `TextFinder` scoped to the `st_TaskId` column (`WebAppProducts._findTaskRowFast`) rather than reading all of `SysTasks` — that sheet has grown large enough that a full scan costs multiple seconds on its own.
+
+### 16.2 Verify batch-walk bulk-prefetch
+
+The read-only verification modal (`ManagerProductsView.loadVerifyDetail`, backed by `ProductService.getVerifyDetail`) needs *current* Comax/Web data — it's checking for live drift, so a creation-time snapshot would defeat the point. Instead, since the manager's batch walk (`startVerifyWalk`/`startVerifyAt`) already knows its full SKU list before stepping through it, `ProductService.getVerifyDetailsBulk(skus)` reads CmxProdM + WebProdM once for the whole queue at walk-start; each step then reads from that client-side cache (`ManagerProductsView.verifyDetailCache`) instead of a fresh round-trip, falling back to a live single-SKU call on a cache miss.
+
+### 16.3 Category-stock health moved to housekeeping
+
+`WebAppProducts_getManagerWidgetData` used to compute category stock-health live on every widget load (full CmxProdM scan) and create `task.deficiency.category_stock` tasks inline — each creation also paying a full `SysTasks` de-dup scan. Feeds the new-product-suggestion tool's category filter badges, which tolerate staleness fine. Moved to `HousekeepingService.checkCategoryStockHealth`, run on the frequent-maintenance cadence, cached in `system.category_stock.health` (`{ allCategories, deficientCategories, deficientCategoriesCount, ts }`) — the widget just reads the cache.
+
+### 16.4 `WebAppTasks.getOpenTasks` cache fix
+
+Its "60-second cache" was a module-level variable — always cold on a fresh `google.script.run` call (each call runs in a new execution context), so it silently did a full uncached `SysTasks` read every time despite the comment claiming caching. Replaced with `CacheService` (60s TTL), which actually persists across calls; if the open-tasks payload is too large to fit `CacheService`'s 100KB cap, it's simply not cached (same as the prior always-uncached behavior) rather than failing.
