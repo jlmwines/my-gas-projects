@@ -113,7 +113,10 @@
       "WebFetch(domain:tushia.co.il)",
       "Bash(git mv *)",
       "Bash(mv UI_T2_4_content_stream_modal.md _archive/UI_T2_4_content_stream_modal.md)",
-      "Bash(awk 'NR==214,NR==900' AdminInventoryView.html)"
+      "Bash(awk 'NR==214,NR==900' AdminInventoryView.html)",
+      "Bash(rm \"C:/Users/B/projects/jlmwines/.claude/SESSION_SUMMARY.md\" \\\\ *)",
+      "Bash(rm -r \"C:/Users/B/projects/jlmwines/jlmops/.claude\" && echo \"removed duplicate jlmops/.claude/ \\(last-cleanup.md was a stale duplicate; settings.local.json's clasp permissions are already superseded by the broader global allow-list\\)\")",
+      "Bash(TESTFILE=C:/Users/B/projects/jlmwines/plans/STATUS.md node -e ' *)"
     ],
     "deny": [
       "Bash(git -C:*)",

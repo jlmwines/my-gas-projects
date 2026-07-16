@@ -10,7 +10,7 @@
 
 The CRM data layer already exists:
 - ContactService, ContactImportService, ContactEnrichmentService, CrmIntelligenceService all run nightly
-- 548 contacts enriched with bilingual preferences (categories, wineries, grapes, kashrut)
+- Contacts enriched with bilingual preferences (categories, wineries, grapes, kashrut) — current count → `plans/STATUS.md` Current State ("CRM enrichment")
 - Activity history backfill complete (18,788 records)
 - Daily refresh updates lifecycle status and days-since-order
 - Suggestion generation produces task records for cooling customers
