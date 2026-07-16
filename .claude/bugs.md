@@ -3,101 +3,83 @@
 Known bugs across all projects. Use `/bug [project] description` to add.
 Projects: jlmops, web, marketing, content
 
+One line per item: date + symptom + pointer to the plan doc holding the analysis, where one exists. The analysis itself lives in the plan doc, a git commit, or `.claude/session-log.md` — not here.
+
 ---
 
 ## jlmops
 
 ### Open
 
-- [ ] 2026-07-16: **Dashboard "Schema Validation" indicator doesn't refresh when re-run from Admin Dev.** Admin Dev's "Validate Schema" button (`DevelopmentView.html:78` → `validateDatabaseSchemaFromUI()` → `ValidationLogic.validateDatabaseSchema()`) is read-only — it displays a fresh result inline but never writes anywhere. The dashboard's Schema Validation row instead reads `hk.schema_status`/`hk.schema_critical` from the `task.system.health_status` singleton task's notes (`WebAppDashboardV2.js:198-201`), which only get written by `performDailyMaintenance` (nightly trigger, or the separate "Run Daily Housekeeping" button). Surfaced 2026-07-16: after manually adding the missing `st_DetailSnapshot` column to SysTasks and re-running "Validate Schema" (reported PASSED), the dashboard kept showing the earlier schema error until a full "Run Daily Housekeeping" pass. Fix shape: either have `validateDatabaseSchemaFromUI` also refresh the health-status task's `schema_status`/`schema_critical`/`timestamp`, or label the button as diagnostic-only / not reflected on the dashboard until the next housekeeping run.
-
-- [ ] 2026-07-16: **"System Health Status" task's displayed date is frozen at original creation, not last-run.** The singleton task (`task.system.health_status`) is updated via `TaskService.upsertSingletonTask` → `updateTaskNotes` (`TaskService.js:557-582`), which only ever writes `st_Notes` — never `st_CreatedDate`. Any task-list view that surfaces this task's Created Date as its "last checked" indicator will show the date it was first created (observed 2026-07-16 as December 17), regardless of how recently housekeeping actually ran. Not evidence the daily trigger stopped — the dashboard widget's own per-metric rows (Housekeeping/Schema/Validation/Unit Tests) read `hk.timestamp` from the same notes and do update every run; cross-check those before assuming a stalled trigger. Fix shape: either surface `notes.last_housekeeping.timestamp` instead of `st_CreatedDate` wherever this task's date is shown, or exclude singleton system tasks from views that imply Created Date = last activity.
-
-- [ ] 2026-07-16: **Woo Orders integration heartbeat shows red every day before ~08:00 IL, by design mismatch rather than a real fault.** `performFrequentMaintenance`'s business-hours cadence guard (`HousekeepingService.js:580-594`: Sun-Thu 08:00-20:00, Fri 08:00-13:00, Sat off) skips the Woo order pull entirely outside that window, so the `woo.orders_last_pull` heartbeat goes stale overnight. The integrations widget's staleness threshold defaults to 60 min (`WebAppDashboardV2.js:126`, `hb.orders_threshold_min` fallback), which isn't business-hours-aware, so it flags red every night/early morning until the first pull after 08:00 (observed 2026-07-16: red "6 hours ago" at 7:39am). Fix shape: either widen the threshold to span the overnight gap, or make the widget's staleness check skip/gray-out outside the same business-hours window the pull itself respects.
-
-- [ ] 2026-07-09: **Calendar tab doesn't refresh after actions that change its state.** Confirmed for two triggers: "Apply Pending Updates" and "Create Content Tasks." Investigated 2026-07-09 (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1) — client refresh calls and server reads/writes all traced clean, no defect found in the code; needs a live repro to go further, not more static reading.
-
-- [x] 2026-07-03: **Unit-test suites deliberately feed adapters malformed input to verify error handling, but the adapters' own `logger.error()` calls wrote those expected failures into the production `SysLog`** — surfaced in `jlmops-status.md`'s "Recent errors" as if last night's Comax/Woo product import had broken (`SCHEMA MISMATCH: Comax file has 3 columns`, `Input CSV is missing required headers: Stock`), when in fact `ComaxAdapterTest.js`/`WebAdapterTest.js` were correctly exercising `ComaxAdapter.processProductCsv`/`WebAdapter.processProductCsv`'s reject-malformed-input paths (`Unit tests: 15/15` passing = working as intended). No real file, no real import failure, no data corruption — confirmed the same day's real interactive Comax sync applied real inventory changes with no warnings. **Fixed @440:** added `LoggerService.setTestSuppression(on)` (still logs to the Apps Script execution log via `console.log`, just skips the `SysLog` sheet write while suppressed); `TestRunner.runAllTests()` wraps its suite loop in suppress-on/suppress-off (`finally`-guarded) so any current or future test suite gets this for free without touching the adapters themselves.
-
-- [ ] 2026-07-02: **`ConfigService.loadConfig` silently drops the second (P03/P04) key-value pair for any non-schema setting.** `ConfigService.js` only parses P03/P04 (row[5]/row[6]) into the config object when the setting name starts with `schema.data.` or `schema.log.` — for every other setting (including all `system.*` two-param entries like `id`/`data_tab` pairs), only P01/P02 (row[3]/row[4]) loads; the second pair is silently ignored. Discovered building the GA4 audience-report reader: `system.sheet.ga4_audience_report`'s `data_tab` never resolved, `cfg.data_tab` was always `undefined`. The sibling `system.sheet.ga4_report` entry has the identical two-param shape and appeared to work purely by luck — `StatusReportService._readGa4` has a `if (!sheet) sheet = ss.getSheets()[0]` fallback, and "JLM GA4 Weekly" happens to be that workbook's first tab, so it's been silently reading the fallback sheet, never actually resolving `data_tab`, this whole time. **Worked around for now:** split `ga4_audience_report` into two single-param entries (`ga4_audience_report_id` + `ga4_audience_report_tab`), matching what `ConfigService` actually supports. **Real fix (not done):** extend `loadConfig`'s P03/P04 parsing to all settings, not just `schema.data.*`/`schema.log.*` — additive change (currently-ignored data would just start loading), but touches shared config-loading code every setting depends on, so treat as its own careful pass. Worth checking whether any *other* existing two-param non-schema entries are also silently missing their second value.
-
-- [x] 2026-06-24: **Draft products flagged as unexpected by ops validation.** Fixed @368 (rule 17 gated to `wpm_PostStatus=publish`) + @370 (accept modal now requires Woo Post ID so WebProdM is always seeded with a real `wpm_ID` — eliminates the empty-key row that `clearContent` wiped on every sync). @371: `cpm_IsWeb` also set at accept time (was only in retired hotlink).
-
-- [ ] 2026-06-16: **Product Replacement reads dead WebProdM columns — examine + repair if needed.** `ProductService.searchWebProducts` and `lookupProductBySku` do `indexOf('wpm_WebIdEn')`/`indexOf('wpm_WebIdHe')` on WebProdM, but the live sheet (confirmed against 2026-06-16 export) has no such columns — EN post id is `wpm_ID`, HE post id is WebXltM `wxm_ID`. So both reads return `-1` → blank `webIdEn`/`webIdHe`. Visible symptom: Product Replacement panel "Web IDs" line (`AdminProductsView.html:1105/1113`) shows empty. STATUS lists Product Replacement as "tested, working", so the swap may run off SKU and the blanks be cosmetic — OR the sheets were restructured after that test. NOT yet traced through the actual reassign step (`webProductReassign` takes `webProductId`); trace whether the blanks break the swap or are harmless display before fixing. Related to latent note at the @148 resolved entry ("webProductReassign still misses some sheets").
-
-- [ ] 2026-06-14: **Web inventory export silently dropped — "no changes" reported while a real CSV was created** (SERIOUS, data-loss class; confirmed in SysLog 7:50:01–7:50:46). Concurrency lost-update on `system.sync.state`: `exportWebInventory` created `Inv-Web-06-14-07-50.csv` with real stock/price changes, but a concurrent `setSyncState`/triple `_checkAndAdvanceSyncState` clobbered `webExportFilename`; `generateWebExportBackend` re-read empty → declared no changes → COMPLETE → orphaned the file (user applied it by hand). **Silent-loss leg FIXED + DEPLOYED @289 2026-06-14** (`RELIABILITY_AUDIT.md` §1.4 — caller branches on the return value + clobber detector; pending live smoke). **Underlying race still open** → §1.3 (LockService + atomic read-modify-write + idempotent advance).
-
-
-
-- [ ] 2026-05-28: **Mailchimp campaign sends not written to per-contact activity log.** `CampaignService.pullRecentCampaigns()` (runs daily via `performDailyMaintenance`) pulls campaign-level aggregates (recipients, opens, clicks, bounces, ecommerce) and upserts the campaign sheet — but does NOT iterate per-recipient and write `comm.campaign` rows to `SysContactActivity`. Result: contact activity timeline shows order events + lifecycle changes + pending-payment auto-emails, but a campaign recipient has no record on their own activity log that they received the send. The `comm.campaign` activity type exists as a concept (used as pre-seeded value in segment-export CSVs for post-send manual fill — `CampaignService.js:890-895`) but the automated per-recipient write was deferred when Manager CRM Half 1 shipped (STATUS queued item: "campaign-recipient activity rows on contacts (post Half 1)"). Fix shape: when `pullRecentCampaigns` upserts a campaign, also pull Mailchimp's recipient list endpoint (`/reports/{id}/sent-to` or `/campaigns/{id}/content` + audience lookup), iterate, and write one `ContactService.createActivity({sca_Email, sca_Type: 'comm.campaign', sca_Summary: <campaign title>, sca_Details: {campaignId, sendDate}})` per recipient. Idempotency by (campaignId, email) to avoid duplicates on re-pull. Consider rate-limiting / pagination — popular campaigns have 500+ recipients.
-
-- [ ] 2026-05-04: **Sync state-machine hardening** (bundle). Tracked in `jlmops/plans/SYNC_HARDENING_PLAN.md`. Status:
-  - Generate web export button visible/clickable before the action can fire (orig 2026-01-28) — pending staging repro; backend looks clean
-  - Export button stays visible after export step starts (orig 2025-12-29) — pending staging repro; backend looks clean
-  - Sync widget doesn't show Comax product import stage when order export is skipped without a refresh (orig 2025-12-31) — pending staging repro; backend looks clean
-  - **Generate button stays after export completes — file is generated and named, but button doesn't reset (orig 2026-03-17). FIX DEPLOYED 2026-05-05 as @80** — root cause was stuck-`PROCESSING` job in SysJobQueue (zombie killer only ran on hourly trigger, not polls). Inline reaper added to `_checkAndAdvanceSyncState` for all three async stages (IMPORTING_COMAX, VALIDATING, GENERATING_WEB_EXPORT) with 8-min threshold. Stuck spinner now caps at ~8 min instead of up to 60.
-  - **Failed Comax import recovery — RESOLVED.** Verified 2026-05-28 Session A: `WebAppSync.js:646-647` has the `IMPORTING_COMAX → WAITING_COMAX_IMPORT` special case alongside the `PUSHING_WEB_INVENTORY → WAITING_WEB_CONFIRM` precedent. Fix matches the originally-planned shape. Bug entry was stale — fix had been applied but never marked done.
-
-- [ ] 2026-05-04: **Audit timestamps + date formats system-wide** (folds in 2025-12-26 task-creation Israel-time bug + 2026-01-21 inconsistent date display). Walk every place dates/times are stored or rendered: task creation, sync log, order export, dashboard, manager/admin views. Standardize on Israel time for storage and 3-letter-month universal format for display ("21 Jan 2026"). Future step, not urgent.
-
-- [ ] 2026-05-04: **Audit on-demand count-task creation** (folds in 2025-12-26 master/detail dedupe check). Walk the path that creates verification count tasks: confirm no duplicates, confirm correct-user assignment, and split data-validation tasks from count-validation tasks so they run as separate paths (don't require a count to do a data review). Future step.
+- [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh when re-run from Admin Dev — only a nightly/manual housekeeping run updates the dashboard's cached status.
+- [ ] 2026-07-16: "System Health Status" task's displayed date is frozen at original creation, not last-run — any view surfacing its Created Date misrepresents last-check time.
+- [ ] 2026-07-16: Woo Orders integration heartbeat shows red every morning before ~08:00 IL — the staleness threshold isn't business-hours-aware like the pull cadence it's checking.
+- [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates" or "Create Content Tasks" — no defect found in code, needs a live repro. `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
+- [ ] 2026-07-02: `ConfigService.loadConfig` silently drops the second (P03/P04) key-value pair for any non-schema setting — worked around for `ga4_audience_report`; systemic fix not done, other two-param entries unaudited.
+- [ ] 2026-06-16: Product Replacement reads dead WebProdM columns (`wpm_WebIdEn`/`wpm_WebIdHe`) — not yet traced whether this breaks the reassign step or is cosmetic.
+- [ ] 2026-06-14: Web inventory export sync-state race (concurrency, not the silent-loss leg — that's fixed). `jlmops/plans/RELIABILITY_AUDIT.md` §1.3.
+- [ ] 2026-05-28: Mailchimp campaign sends not written to per-contact activity log — `pullRecentCampaigns` doesn't write `comm.campaign` rows to `SysContactActivity`.
+- [ ] 2026-05-04: Sync state-machine hardening (bundle, 3 items pending staging repro). `jlmops/plans/SYNC_HARDENING_PLAN.md`.
+- [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
+- [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
 
 ### Resolved (recent)
 
 _One line each; full root-cause analysis lives in the git commit + `.claude/session-log.md`._
 
-- [x] 2026-07-16: Admin Inventory failed to load live (SyntaxError inside the app shell's script-execution helper, no matching defect found in source, unaffected by redeploys/reauth/cache clears/different devices) — isolated by progressively disabling each card's markup+JS until the failure disappeared, narrowing it to the Comax Sync card. That card's only recent change was the 2026-07-14 "Open File/Copy Filename" buttons (`@489`); no textual defect found even after isolating it, but reverting `AdminInventoryView.html` to its pre-`@489` version (`@507`) confirmed clean. Root mechanism still not understood. Not yet checked: whether the same-shaped buttons on Detail Update/New Product export (`AdminProductsView.html`, same commit) carry the same latent issue.
-- [x] 2026-07-15: Manager product-editor loads (15-18s) and the submit/verify modal race (stuck spinner, silent product-swap, stale data) — both from Session J (`BUG_FIX_SEQUENCE.md`), fixed @479-@482, now confirmed clean by a full live smoke pass alongside the follow-on product-detail load-performance work. See `jlmops/docs/WORKFLOWS.md` §16.
-- [x] 2026-07-15: New products triggered spurious `status_mismatch` and `translation_missing` warnings on every add, manually deleted each time. Neither rule was gated to published products, so both fired during the normal staging-lag window every new product passes through before its next sync (same shape as the 2026-06-24 draft-flagging bug). Fixed @490 — added `source_filter, wpm_PostStatus,publish` to `validation.web.publish_status_mismatch` and `validation.master.web_missing_translation` (`config/validation.json`). Confirmed smoke-tested clean.
-- [x] 2026-07-15: Admin Tasks view showed no product name for entity-linked tasks (e.g. vintage-mismatch), though `st_LinkedEntityName` was populated — confirmed by Admin Products' own Detail-Updates card showing the same tasks correctly, isolating this to a display bug. Root cause: `AdminTasksView.html:1271`'s non-URL entity-cell branch rendered the SKU as visible text and put the product name only in the `title` tooltip attribute. Fixed @491 — task-title column now shows "Title — ProductName" together; entity cell/tooltip unchanged. Confirmed smoke-tested clean.
-- [x] 2026-07-15: Product-editor open still slow (10s) after the Session J cache fix — root cause was a *new* regression: `loadProductEditorData` had been made to always do a full uncached `SysTasks` scan (`ConfigService._getSheetDataAsMap`) to check for a detail snapshot, on a sheet confirmed live to now be large enough that a full scan alone costs multiple seconds. Fixed @495 — replaced with a `TextFinder` search scoped to the `st_TaskId` column instead of reading every row.
-- [x] 2026-07-15: `WebAppTasks.getOpenTasks`'s "60-second cache" never actually worked — it was a module-level variable, always cold on a fresh `google.script.run` call (each runs in its own execution context), so every call did a full uncached `SysTasks` read despite the comment claiming caching. Confirmed live via `WebAppProducts_getManagerWidgetData` taking ~15s. Fixed @496 — replaced with `CacheService` (60s TTL), gracefully skipping the cache (not failing) if the payload exceeds the 100KB cap.
-- [x] 2026-07-15: `WebAppProducts_getManagerWidgetData` computed category-stock health live on every widget load (full uncached CmxProdM scan) and created `task.deficiency.category_stock` tasks inline, each paying a full `SysTasks` de-dup scan — confirmed live at ~13-15s even after the above two fixes. Moved to `HousekeepingService.checkCategoryStockHealth` on the frequent-maintenance cadence, cached in new SysConfig key `system.category_stock.health` (@498); the widget just reads the cache now.
-- [x] 2026-07-14: Admin "Accept Suggestion" (new-product onboarding) had no loading feedback on submit, despite taking long enough to worry the admin it hadn't registered the click → @484. Added the standard disable+spinner pattern to `submitSuggestionApproval()`, restoring the button on error; also closes a latent double-submit gap (button couldn't be re-clicked while a request was in flight).
-- [x] 2026-07-10: "Failed jobs" health metric reported only the oldest failure's age, no way to see a job that just failed → @476. `checkFailedJobs()` now also computes `newestAgeDays`; surfaced in the daily health-status task and `StatusReportService._dataQualityBlock`.
-- [x] 2026-07-14: Admin Dashboard + Manager Dashboard task-detail modal always showed the assignee dropdown as "- Unassigned -" regardless of actual assignee → @477. Same root cause as the 2026-07-14 `AdminProductsView.html` fix: `TaskDetail.html`'s assignee `<select>` is built entirely from the host view's `getAssignees()` list, and both dashboards had it stubbed to `return [];` — with no options to match against, the real `assignedTo` value never rendered. Fixed both to return the canonical `['Administrator', 'Manager']` role list. Audited the other 4 `TaskDetail`-wired views (`AdminTasksView`, `LibraryView`, `PublishingView`, `AdminProductsView`) — all already return real values, no further instances.
-- [x] 2026-07-03: `SysKPISummary.sk_Period` closed-month values silently converted to Date objects by Sheets, breaking the string dedup match on any re-run of an already-closed month → @476. `_upsertRow` now sets the `sk_Period` cell to plain-text format before writing; both comparison sites (`_upsertRow` dedup, `closeMonth` prior-month lookup) normalize Date-typed cells via a new `_asPeriodKey` helper. Bonus: this also fixes MoM subscriber-growth calc, which silently failed for any already-closed prior month via the same bug.
-- [x] 2026-07-10: Admin Tasks/Publishing/Library task lists showed no SKU (or the wrong id) for product-topic validation tasks (e.g. "Comax Name Changed") → @468. `WebAppLibrary._deriveEntityId` checked `st_ProjectId` before `st_LinkedEntityId`; any task type auto-routed to a project (e.g. topic "Products" → `PROJ-SYS_PRODUCT`) had its real linked entity (the SKU) silently discarded in favor of the project id. Swapped priority — linked entity always wins, project id is a last-resort fallback only.
-- [x] 2026-07-10: Admin Dashboard task-detail "Done" button appeared to do nothing → @463. `AdminDashboardView_v2.html` used `TaskPacks`/`TaskDetail` (and called `TaskWidgets.toast` directly) without including `TaskWidgets.html` itself — the only view doing so. `TaskWidgets.confirm()`'s popup depends entirely on a CSS class defined in that include; without it the dialog rendered unstyled and out of flow, invisible without scrolling. Fixed by adding the missing include, matching every other `TaskDetail`-consuming view.
-- [x] 2026-06-01: Bundles view N+1 sheet reads (100s+ load) → @228/@229 (ctx hoist + transitive caller fix). `PERFORMANCE_OPTIMIZATION_PLAN.md` "Bundles Health Check" section.
-- [x] 2026-07-06: `attachExistingDoc` never transferred Drive ownership to admin → resolved 2026-07-08 (`file.setOwner(adminEmail)` added generally, `createTranslationDraft` now relies on it). `jlmops/docs/DATA_MODEL.md` Content Library §"Doc ownership vs. folder placement".
-- [x] 2026-07-06: Admin Bundles message strip never closed, always visible even empty on load → @441. Root cause: `#bundle-mgmt-msg` combined an inline `style="display:none"` with Bootstrap's `.d-flex` utility class, whose `display: flex !important` always won over any `style.display` toggle (open or close). Fixed by moving the flex layout out of the class into inline style and toggling `display` between `'none'`/`'flex'` with no competing `!important` class.
-- [x] 2026-07-06: `createTranslationDraft`'s HE Doc copy owned by whoever clicked the button (manager), unopenable by admin → @442. Root cause: `executeAs: USER_ACCESSING` means `DriveApp...makeCopy()` is owned by the accessing user; `attachExistingDoc`'s later `file.moveTo` only reparents the file, never transfers access. Fixed by adding `copy.setOwner(TaskService.getUserByRole('admin'))` right after the copy is made. Forward-looking only — does not retroactively fix already-created docs (the existing Negev-HE doc still needs a manual share from the manager). The same gap remains open in the generic `attachExistingDoc` path (see Open, above).
-- [x] 2026-06-08: Admin Products view "Failed to load" (getAdminViewData timeout) → @273 lazy-load redesign (mount loads only Card 1; Cards 2-4 lazy on expand).
-- [x] 2026-06-08: Admin Products no loading state on mount → @271 spinner paint (superseded by @273 lazy-load).
-- [x] 2026-06-08: Accepted blank-`st_Status` tasks invisible → NO ACTION (not reproducible; root cause already fixed 2026-06-01, orphans cleared, user confirmed none exist).
-- [x] 2026-06-07: `task.order.packing_available` orphaned at 0 Ready → @274 (`processStagedOrders` closes at sync drain + one-shot `reconcilePackingAvailableTask()`).
-- [x] 2026-06-04: Bundle price calc counted qty=0 as qty=1 → @227 calc fix + @230 three slot-write `||1` guards (BUNDLE_PLAN Stage 0).
-- [x] 2026-06-04: Sync view rendered literal `<?!= include('TaskWidgets') ?>` → @223 (moved include to template-evaluated `AdminSyncView` line 1).
-- [x] 2026-06-02: `task.order.packing_available` reads as overdue → demoted to no-due nudge (`due_pattern: manual`, per PACKING_SLIP_REPRINT_PLAN).
-- [x] 2026-06-01: Accepted tasks reappear as "New" after admin close → @191 (`confirmWebUpdates` now passes `'Done'` to `updateTaskStatus`).
-- [x] 2026-05-29: `reconciliation.sys_contacts.write_verify` High on immaterial drift → @201 self-heal (zero aggregates for contacts absent from the qualifying union). Relates to RELIABILITY_AUDIT Tier 3.4.
-- [x] 2026-05-29: Brurya autocomplete "Argument too large" → @169 (dropped duplicate lowercase fields + try/catch around `cache.put`).
-- [x] 2026-05-28: Contact summary aggregates ≠ order list → @151/@152 (archive-merge in `updateContactsFromOrders` + `syncRecentOrderActivity` for the timeline).
-- [x] 2026-05-27: `validateDeployment` false positives / un-closeable → resolved at root 2026-06-03 (pinned-ID wrapper; detector removed; orphans undeployed). RELIABILITY_AUDIT §2.1.
-- [x] 2026-05-27: SKU Replacement leaves web-side orphans → @148 new `Fix Orphan SKU` action. (Latent: `webProductReassign` still misses some sheets — deferred.)
-- [x] 2026-05-17: No admin UI for lookup values → @121 Card 4 (Grapes/Kashrut/Texts), LOOKUP_ADMIN_UI_PLAN.
-- [x] 2026-05-15: `backfillOrderTotals` destructive → removed (no callers).
-- [x] 2026-05-15: ManagerContactView search latency → @165 load-once + client filter (closes BUG_FIX_SEQUENCE Session G).
-- [x] 2026-05-15: Admin Projects task delete leaves records → @149 atomic bulk `WebAppTasks_deleteTasks`.
-- [x] 2026-05-12: Project task creation broken → @90/@91/@92 (registered `task.project.custom`, added `WebAppTasks_createTask`, fixed modal + whitelist).
-- [x] 2026-05-04: Comax export includes bundle parent SKU → verified already fixed (`OrderService` bundleSkus filter); entry was stale.
-- [x] 2026-05-04: CRM cleanup (bundle) → @150 (war-support dead code removed; gift rule + correction script verified in place).
-- [x] 2026-03-10: Decanting field treats 0 as empty → manager can now pick "0" (customer render still hides on 0).
+- [x] 2026-07-16: Admin Inventory failed to load live (Comax Sync card's file-link buttons) — reverted to pre-@489 state @507; root mechanism never found.
+- [x] 2026-07-15: Manager product-editor slow load (15-18s) + submit/verify modal race — fixed @479-@482. `jlmops/docs/WORKFLOWS.md` §16.
+- [x] 2026-07-15: New products triggered spurious `status_mismatch`/`translation_missing` warnings — fixed @490 (publish-status source filter).
+- [x] 2026-07-15: Admin Tasks view showed SKU instead of product name for entity-linked tasks — fixed @491.
+- [x] 2026-07-15: Product-editor still slow (10s) after Session J cache fix — new regression, uncached full `SysTasks` scan — fixed @495.
+- [x] 2026-07-15: `WebAppTasks.getOpenTasks`'s "60-second cache" never worked (module-level var, cold every call) — fixed @496 (real `CacheService`).
+- [x] 2026-07-15: `getManagerWidgetData` computed category-stock health live on every load (~13-15s) — moved to housekeeping cadence + cache @498.
+- [x] 2026-07-14: Admin "Accept Suggestion" had no loading feedback on submit — fixed @484.
+- [x] 2026-07-14: Admin/Manager Dashboard task-detail modal always showed assignee as unassigned — fixed @477.
+- [x] 2026-07-10: "Failed jobs" health metric only reported oldest failure's age — fixed @476.
+- [x] 2026-07-10: Admin Tasks/Publishing/Library task lists showed no/wrong SKU for product-topic validation tasks — fixed @468.
+- [x] 2026-07-10: Admin Dashboard task-detail "Done" button appeared to do nothing — fixed @463 (missing `TaskWidgets.html` include).
+- [x] 2026-07-06: `attachExistingDoc` never transferred Drive ownership to admin — resolved 2026-07-08.
+- [x] 2026-07-06: Admin Bundles message strip never closed — fixed @441.
+- [x] 2026-07-06: `createTranslationDraft`'s HE Doc copy unopenable by admin — fixed @442.
+- [x] 2026-07-03: Unit-test suites' expected failures were logged into production SysLog, looking like real sync errors — fixed @440 (`LoggerService.setTestSuppression`).
+- [x] 2026-06-24: Draft products flagged as unexpected by ops validation — fixed @368/@370/@371.
+- [x] 2026-06-08: Admin Products view "Failed to load" (timeout) — fixed @273 (lazy-load redesign).
+- [x] 2026-06-08: Admin Products no loading state on mount — fixed @271 (superseded by @273).
+- [x] 2026-06-08: Accepted blank-`st_Status` tasks invisible — not reproducible, no action taken.
+- [x] 2026-06-07: `task.order.packing_available` orphaned at 0 Ready — fixed @274.
+- [x] 2026-06-04: Bundle price calc counted qty=0 as qty=1 — fixed @227/@230.
+- [x] 2026-06-04: Sync view rendered literal include tag — fixed @223.
+- [x] 2026-06-02: `task.order.packing_available` reads as overdue — demoted to no-due nudge.
+- [x] 2026-06-01: Accepted tasks reappear as "New" after admin close — fixed @191.
+- [x] 2026-06-01: Bundles view N+1 sheet reads (100s+ load) — fixed @228/@229.
+- [x] 2026-05-29: Contact reconciliation false-positive on immaterial drift — fixed @201.
+- [x] 2026-05-29: Brurya autocomplete "Argument too large" — fixed @169.
+- [x] 2026-05-28: Contact summary aggregates ≠ order list — fixed @151/@152.
+- [x] 2026-05-27: `validateDeployment` false positives / un-closeable — resolved 2026-06-03 (pinned-ID wrapper).
+- [x] 2026-05-27: SKU Replacement leaves web-side orphans — fixed @148 (`Fix Orphan SKU` action; `webProductReassign` gap remains, tracked as an open item above).
+- [x] 2026-05-17: No admin UI for lookup values — fixed @121.
+- [x] 2026-05-15: `backfillOrderTotals` destructive — removed (no callers).
+- [x] 2026-05-15: ManagerContactView search latency — fixed @165.
+- [x] 2026-05-15: Admin Projects task delete leaves records — fixed @149.
+- [x] 2026-05-12: Project task creation broken — fixed @90/@91/@92.
+- [x] 2026-05-04: Comax export includes bundle parent SKU — verified already fixed; entry was stale.
+- [x] 2026-05-04: CRM cleanup (bundle) — fixed @150.
+- [x] 2026-03-10: Decanting field treats 0 as empty — manager can now pick "0".
 
 ### Resolved
 
-- [x] 2026-05-04: 2026-02-09 manager orders view requires refresh to reload → verified in code: `ManagerOrdersView.html:172-174` self-executes `loadPackingSlipsData()` + `loadOpenOrdersData()` on view render, plus manual Refresh Orders button.
-- [x] 2026-05-04: 2026-01-28 inventory count task — manager date / admin SKU+name → admin view shows Date/SKU/Name (c1af348, 2026-03-09); manager-view date column declared not needed.
-- [x] 2026-05-04: 2026-01-20 accepted inventory counts not appearing in Comax sync → resolved per user.
-- [x] 2026-05-04: 2025-12-29 changed Woo coupon plugin auto-apply URL pattern → WON'T FIX. Auto-apply coupons not worth UX downsides (silent application, URL-sharing leaks). Marketing emails surface the code as plain text instead.
-- [x] 2026-05-04: 2025-12-29 new coupon plugin accepts comma-separated emails → N/A. Coupon plugin removed; first-purchase restriction is native theme code.
-- [x] 2026-05-04: Gift detection keyword logic → WON'T FIX. Simpler rule decided (different shipping address + note ⇒ gift); folded into CRM cleanup verification.
-- [x] 2026-05-04: War-support detection wrong field → N/A. Feature retired; remove dead code in CRM cleanup.
-- [x] 2026-01-26: Bundle export to Comax (inventory) → bundleSkus filter added to generateComaxInventoryExport().
-- [x] 2026-01-20: Brurya days showing 999 → RESOLVED 2026-01-23. Code fix was correct, SysConfig row had empty value from pre-fix runs, manually set scf_P02.
-- [x] 2026-05-12: Brurya days showing 999 recurred → root cause identified + STRUCTURAL FIX shipped 2026-05-12 as @93. The recurrence was triggered by `rebuildSysConfigFromSource()` clearing the SysConfig sheet (intended) and overwriting predeclared rows back to empty (unintended for runtime-written values). Eight runtime-mutable keys were vulnerable to the same wipe, including the live `system.sync.state` JSON. @93 wraps the rebuild with snapshot + restore around the destructive write. User manually restored the April 14 timestamp post-deploy; future rebuilds will preserve runtime values automatically. See `TECH_DEBT_AUDIT.md §5.2` — this addresses it.
-- [x] 2025-12-29: Packing slips bundle count → VERIFIED. PrintService.js excludes bundle products.
+- [x] 2026-05-04: 2026-02-09 manager orders view requires refresh to reload — verified in code, self-executing load + manual refresh button both present.
+- [x] 2026-05-04: 2026-01-28 inventory count task — manager date / admin SKU+name — resolved (c1af348).
+- [x] 2026-05-04: 2026-01-20 accepted inventory counts not appearing in Comax sync — resolved per user.
+- [x] 2026-05-04: 2025-12-29 changed Woo coupon plugin auto-apply URL pattern — WON'T FIX.
+- [x] 2026-05-04: 2025-12-29 new coupon plugin accepts comma-separated emails — N/A, plugin removed.
+- [x] 2026-05-04: Gift detection keyword logic — WON'T FIX, simpler rule adopted.
+- [x] 2026-05-04: War-support detection wrong field — N/A, feature retired.
+- [x] 2026-01-26: Bundle export to Comax (inventory) — fixed (bundleSkus filter).
+- [x] 2026-01-20: Brurya days showing 999 — resolved 2026-01-23.
+- [x] 2026-05-12: Brurya days showing 999 recurred — structural fix @93 (SysConfig rebuild no longer wipes runtime-mutable keys). `jlmops/plans/TECH_DEBT_AUDIT.md` §5.2.
+- [x] 2025-12-29: Packing slips bundle count — verified, PrintService excludes bundle products.
 - [x] 2025-12-23: Sync confirmation button not appearing after order export.
 - [x] 2025-12-23: Need confirmation dialog before confirming sync steps.
 - [x] 2025-12-23: Sync importing full order history (832 orders).
@@ -112,21 +94,16 @@ _One line each; full root-cause analysis lives in the git commit + `.claude/sess
 
 ### Open
 
-- [ ] 2026-06-16: **Gift + accessory descriptions blanked on jlmwines.com** — the ops description overlay wrote empty descriptions onto non-wine SKUs (no tasting attributes → formatter emits empty, and nothing stored in WebDetM). Originals found in old files; user restoring manually. **Recurrence prevention:** restored text must land in WebDetM `wdm_DescriptionEn/He` (the formatter inserts that freeform field verbatim — verified `WooCommerceFormatter.js:213`), not just the live WC site, else the next overlay re-blanks it.
-
-- [ ] 2026-05-11: **Auto-push short URL redirects to RankMath** (deferred) — Campaign Service generates short codes and writes to `SysShortUrls`, but RankMath redirect rules are created manually in wp-admin. Acceptable at low volume (5–10 URLs/month). Build trigger: when monthly volume makes manual paste a real friction. Implementation: small WP mu-plugin exposing `POST /wp-json/jlmops/v1/redirect` that writes to `wp_rank_math_redirections` directly; jlmops `_pushToRankMath` in `MarketingCampaignService.js` calls it. RankMath's own `/wp-json/rankmath/v1/updateRedirection` is not usable — it only attaches redirects to existing WP objects, not arbitrary source paths.
+- [ ] 2026-06-16: Gift + accessory descriptions blanked on jlmwines.com — restored text must land in WebDetM `wdm_DescriptionEn/He`, not just the live site, or the next overlay re-blanks it.
+- [ ] 2026-05-11: Auto-push short URL redirects to RankMath (deferred) — manual paste acceptable at current volume (5-10/month); build trigger noted.
 
 ### Resolved
 
-- [x] 2026-07-01: **Homepage tracked as two separate URLs in Search Console** — investigated: `curl -I http://jlmwines.com/` confirmed a clean single-hop 301 → `https://jlmwines.com/` (200, no further redirect) — HTTPS enforcement itself is correct and has been for a while. The GSC split is residual index history from before the redirect existed / before Google fully consolidated, not a live technical gap. `http://www.jlmwines.com/` takes an extra hop (http→https on www, then a second hop dropping www) — minor, not broken. Investigation led directly to the real, bigger bug below.
-
-- [x] 2026-05-11: **Mixed-content HTTP images on EN + HE homepages — FIXED 2026-07-01.** Original ticket undersold the scope: it wasn't one image on the HE homepage, it was **9 images referenced via `http://` on both homepages** (EN Page 9019 `home-elegant`, HE Page 64199), each in 2 sizes — `value-speical-sq`, `value-reds-sq-1`, `value-white-and-rose-sq-1`, `value-premium-sq`, `shabbat-shalom`, `cheese-please-02`, `al-ha-aish`, `red-wine-lover`, `evyatar-cohen-10.png`. Fixed via WP REST API: protocol-only string replace (`http://jlmwines.com/wp-content/uploads/` → `https://`) on both pages' content, leaving the unrelated `http://www.w3.org/2000/svg` namespace strings untouched. Verified zero remaining `http://` image refs both in the saved content and on the live public pages (no cache issue).
-
-- [x] 2026-05-08: **Remove "Magnums" product category — SHIPPED 2026-05-18.** Magnums not actually in bundles (earlier framing was wrong); just gifts-page section + category term. Template fix `4b630c9` deployed via v1.2.26 FTP push; EN+HE `product_cat` term pair + WPML translation deleted by user same day.
-
-- [x] 2026-05-11: **WC admin SKU display + search gone.** RESOLVED in theme v1.2.20. Root cause: `inc/woocommerce.php:22` used `add_filter('wc_product_sku_enabled', '__return_false')` to hide SKU from customer-facing pages, but the filter is global — it also killed the admin product-list column, admin search-by-SKU, and the SKU field on the product edit screen. Fix: gate the callback on `!is_admin()` so SKU stays visible in admin while remaining hidden on the storefront.
-
-- [x] 2026-05-03: deploy-theme.ps1 didn't delete orphan files. RESOLVED: added `Delete-File` helper + orphan detection (manifest keys absent from local tree). Script now reports orphan count in the deploy header and deletes per file with retry; FTP 550 (already gone) treated as success.
+- [x] 2026-07-01: Homepage tracked as two separate URLs in GSC — investigated, redirect confirmed correct; residual index history, not a live bug.
+- [x] 2026-05-11: Mixed-content HTTP images on EN+HE homepages — fixed 2026-07-01 (9 images across both pages).
+- [x] 2026-05-08: Removed "Magnums" product category — shipped 2026-05-18.
+- [x] 2026-05-11: WC admin SKU display + search gone — resolved in theme v1.2.20 (hide-SKU filter gated to `!is_admin()`).
+- [x] 2026-05-03: deploy-theme.ps1 didn't delete orphan files — fixed (orphan detection + delete).
 
 ## marketing
 
@@ -136,7 +113,7 @@ _One line each; full root-cause analysis lives in the git commit + `.claude/sess
 
 ### Resolved
 
-- [x] 2026-06-22: PublishingView Calendar shows library entities as holiday-style rows → resolved as a side effect of `CALENDAR_LIBRARY_LOOP_PLAN` (2026-07-07/08): `_loadHolidays()` now reads a dedicated `system.calendar.sheet_id` holidays sheet, not `JLMops_Publishing`; `refreshCalendarExport()` (the wipe-and-rebuild that caused the duplication) was replaced (`WebAppSystem.js:589`).
+- [x] 2026-06-22: PublishingView Calendar showed library entities as holiday-style rows — resolved via `CALENDAR_LIBRARY_LOOP_PLAN`.
 
 ## content
 
