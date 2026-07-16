@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-16 — Admin Inventory live-load failure isolated and fixed (@499-@507); STATUS drift fix; status-hygiene-guard hardened
+
+- **STATUS.md drift found + fixed**: jlmwines.com's theme version disagreed between At-a-glance/Metrics/Current State; portfolio `STATUS.md` was 6 days stale on JLM's headline row. Both corrected. Extended `~/.claude/hooks/status-hygiene-guard.js` to block a version-number mismatch across STATUS.md's own governed zones going forward.
+- **Admin Inventory outage**: page failed to load live (parse-time SyntaxError inside the app shell, zero matching defect in source; survived redeploys, OAuth revoke/reinstate, different browsers/devices/cache clears). Isolated by progressively disabling each card's markup+JS until the failure disappeared — narrowed to the Comax Sync card, whose only recent change was the 2026-07-14 "Open File/Copy Filename" buttons (`@489`). No textual defect ever found even in isolation; reverted `AdminInventoryView.html` to its pre-`@489` state (`@507`), confirmed clean live. Root mechanism remains unexplained.
+- Also shipped along the way (kept, not reverted): `WebAppInventory.js` per-card error isolation in `getAdminInventoryViewData` (a failure building one card's data can no longer blank another) — live but not yet read by the client, since the client was rolled back.
+- **Next**: safely re-attempt the Comax file-link fix; check whether `AdminProductsView.html`'s same-pattern buttons (same commit) have the same latent issue; consider wiring the client to the new error fields.
+- **Process lesson**: for "this used to work" reports, `git log` the specific file first — saved to memory (`feedback_check_git_log_first.md`), took hours of live debugging to arrive at what a git-log check would have shown immediately.
+
 ## 2026-07-15 (cont'd) — Product-detail load performance shipped end-to-end (@492-@498), smoke-tested clean
 
 - **Product Detail Snapshot Phase 1+2 shipped (@492-@493).** Independent review found the plan's core premise didn't hold for validation-created tasks (each rule only captures the 2 sheets it compares, not the full WebDetM/WebDetS/CmxProdM trio) — re-scoped: add path is genuinely free (data already in `acceptProductSuggestion`), vintage-drift path pays one extra read at creation, verify-conversion (`passVerifyToManager`) pays three reads at conversion (nothing was in memory there). New `st_DetailSnapshot` column + shared `ProductService.getWebDetailRows` reader (no duplicated read logic between the two call sites). Storage went with a new schema column over marker-in-notes per the review (notes are admin-editable, would silently destroy a marker).

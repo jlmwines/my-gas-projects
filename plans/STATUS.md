@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-15. jlmops @498 live, stable; @479-@498 (2026-07-14/15 fixes: product-editor load time, submit/verify races, validation false-positives, Admin Tasks product-name display, product-detail load performance) smoke-tested and confirmed clean.
+**Updated:** 2026-07-16. jlmops @507 live, stable; Admin Inventory live-load failure root-caused (Comax Sync file-link buttons) and resolved by reverting to the last known-good version.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-15 |
 | Revenue | Steady |
-| Deploy Version | jlmops @498 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-15 · theme 2026-07-09 |
+| Deploy Version | jlmops @507 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-07-16 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -48,6 +48,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — Phases 2–4 (click-through shows entity details before a task, status filter, search repositioned) shipped live 2026-07-09 @461. Phase 3 (status filter) smoke-tested and confirmed working; Phases 2 and 4 still unsmoked. Phase 1 (refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks") investigated, root cause still open — needs a live repro.
+- **Admin Inventory Comax file-link buttons** — reverted (see Current State); needs a safe re-implementation attempt, plus a check of whether the same buttons on Detail Update/New Product export (`AdminProductsView.html`) have the same latent issue.
 
 ## Current State
 
@@ -70,6 +71,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Product verification** — fully shipped end-to-end. Manager review surface + reverted-task admin handling (Close / Pass to manager / Task-modal edit-note-and-close-normally) live and smoke-tested. Count-flow strip also complete — Manager Inventory's Counts tab no longer does inline vintage/comment editing or spawns `vintage_mismatch` tasks (that's now verification-only). Plan → `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`.
 - **Product-detail load performance** — live and smoke-tested clean. Product-editor tasks (add/vintage-drift/verify-conversion) read a creation-time snapshot instead of live sheets; the verify batch-walk bulk-prefetches once at walk-start instead of per step; category-stock health is computed by housekeeping and cached, not live on widget load; `WebAppTasks.getOpenTasks` is genuinely cached now (was a module-level variable that never persisted across calls). System doc → `jlmops/docs/DATA_MODEL.md` (`st_DetailSnapshot`), `jlmops/docs/WORKFLOWS.md` §16; plans archived (`jlmops/plans/_archive/PRODUCT_DETAIL_SNAPSHOT_PLAN.md`, `_archive/VERIFY_DETAIL_SPEEDUP_PLAN.md`).
 - **SKU management** — Vendor SKU Update and Trim Safety not yet tested; Product Replacement tested and working, though its product search reads dead WebProdM columns (`.claude/bugs.md`).
+- **Admin Inventory** — live and confirmed working @507, after reverting the Comax Sync card's file-link buttons that were causing a live parse failure invisible in source (`.claude/bugs.md`). Server-side error isolation for the review/manager-queue cards shipped alongside but isn't yet read by the client. Same-shaped file-link buttons on other export flows are unverified.
 - **UI T4.3 count-entry modal** — shipped, unsmoked; verify on a phone when count tasks next appear.
 - **`st_DoneDate` set without `st_Status='Done'`** — at least one Manager-assigned row carries a done date while still Assigned, so it surfaces as open. Watch whether the pattern spreads; if so, fix the write path or the dashboard filter.
 - **Manager-dashboard pack types** — contact / confirmation / content-publish packs still unexercised (no such tasks have appeared yet); smoke each type's actions when one next shows up.
