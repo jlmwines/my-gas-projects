@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-16 (cont'd) — View-loading indicator shipped; Comax Sync file buttons re-implemented (@508)
+
+- **View-loading indicator (wishlist 2026-06-10) shipped.** Shell-level spinner next to the view title in `AppView.html` — `loadView()` drives a shared `ViewLoading` begin/end counter around the view-fetch, so every admin/manager view gets basic coverage with zero per-view changes. Admin Inventory's 4 mount/lazy-load calls also wired individually as the finer-grained pilot (spinner stays up until that view's own async loads finish, not just the shell fetch). Live-confirmed by user. Extending card-level wiring to other views is optional, mechanical follow-up.
+- **Comax Sync Open File/Copy Filename buttons re-implemented (@508)**, replacing the @489 version reverted yesterday. Rebuilt by copying `AdminProductsView._renderFileActions`'s exact proven pattern instead of restoring the version that broke — same container/createElement/addEventListener shape, `type="button"` set. View-load confirmed clean live. The buttons themselves aren't yet tested (no active Comax export/confirmation task) — user will advise when one appears. The original failure's root mechanism was never found (investigated: no non-ASCII/hidden-character check completed, no GAS scriptlet collision found, ES6-syntax theory ruled out since `AdminProductsView` uses the same constructs live) — this is the safest available reimplementation, not a confirmed fix.
+- **Process note:** user flagged two recurring session failures this session — needless `cd` before scoped commands (memory `feedback_no_redundant_cd_prefix.md` updated to cover this pattern explicitly) and a reminder that live deploy is wrapper-only. Also flagged that memory hasn't reliably prevented repeat mistakes; real fix floated (not built) is a deterministic PreToolUse hook, same pattern as `status-hygiene-guard.js`, rather than relying on session recall.
+- Next: user to smoke-test the Comax file buttons once a live export/confirmation task appears; consider building the cd/deploy-guard hook if the pattern recurs again.
+
+---
+
 ## 2026-07-16 — Admin Inventory live-load failure isolated and fixed (@499-@507); STATUS drift fix; status-hygiene-guard hardened
 
 - **STATUS.md drift found + fixed**: jlmwines.com's theme version disagreed between At-a-glance/Metrics/Current State; portfolio `STATUS.md` was 6 days stale on JLM's headline row. Both corrected. Extended `~/.claude/hooks/status-hygiene-guard.js` to block a version-number mismatch across STATUS.md's own governed zones going forward.

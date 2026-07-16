@@ -46,6 +46,12 @@
             margin-right: 4px;
             white-space: nowrap;
         }
+        #view-loading-indicator {
+            display: none;
+            align-items: center;
+            margin-left: 8px;
+            color: #6c757d;
+        }
         .main-body {
             display: flex;
             flex-grow: 1;
@@ -251,6 +257,7 @@
             </select>
         </div>
         <span id="view-title" class="view-title-label"></span>
+        <span id="view-loading-indicator"><span class="spinner-border spinner-border-sm" role="status"></span></span>
     </div>
 
     <div class="main-body">
@@ -296,6 +303,28 @@
         const contentDiv = document.getElementById('content');
         contentDiv.innerHTML = `<div class="alert alert-danger">An error occurred: ${err.message}</div>`;
       }
+
+      /**
+       * Shared per-view loading indicator (header, next to the view title).
+       * loadView() calls begin()/end() around the view-fetch itself, so every
+       * view gets basic coverage automatically. A view's own mount script can
+       * call ViewLoading.begin()/end() around its own google.script.run calls
+       * (e.g. per-card data loads) for finer-grained "still loading" coverage —
+       * opt-in per view, not required.
+       */
+      const ViewLoading = (function() {
+        let pending = 0;
+        function render() {
+          const el = document.getElementById('view-loading-indicator');
+          if (!el) return;
+          el.style.display = pending > 0 ? 'inline-flex' : 'none';
+        }
+        return {
+          begin: function() { pending++; render(); },
+          end: function() { pending = Math.max(0, pending - 1); render(); },
+          reset: function() { pending = 0; render(); }
+        };
+      })();
 
       /**
        * Executes scripts found within an HTML string.
@@ -384,12 +413,18 @@
 
         if (activeLink) activeLink.classList.add('active');
 
+        ViewLoading.reset();
+        ViewLoading.begin();
         google.script.run
           .withSuccessHandler(html => {
             viewContent.innerHTML = html;
             executeScriptsInElement(viewContent);
+            ViewLoading.end();
           })
-          .withFailureHandler(showError)
+          .withFailureHandler(err => {
+            ViewLoading.end();
+            showError(err);
+          })
           .getView(viewName);
       }
       

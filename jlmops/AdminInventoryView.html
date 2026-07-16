@@ -47,6 +47,7 @@
                 </table>
             </div>
             <div id="comax-inventory-message-area" style="margin-bottom: 0.5rem;"></div>
+            <span id="comax-file-actions" class="mr-2"></span>
             <button id="btn-comax-export" class="btn btn-light" disabled>Comax Export</button>
             <button id="btn-comax-updated" class="btn btn-light ml-2" disabled>Comax Updated</button>
         </div>
@@ -220,9 +221,10 @@
    */
   function loadAdminViewData() {
     reviewContainer.innerHTML = '<p class="text-center"><em>Loading review tasks...</em></p>';
+    ViewLoading.begin();
     google.script.run
-      .withSuccessHandler(renderAdminView)
-      .withFailureHandler(handleError)
+      .withSuccessHandler(data => { ViewLoading.end(); renderAdminView(data); })
+      .withFailureHandler(err => { ViewLoading.end(); handleError(err); })
       .WebAppInventory_getAdminInventoryViewData();
   }
 
@@ -482,8 +484,10 @@
     el.preview.innerHTML = '<p class="text-muted small mb-0">Loading product data…</p>';
     el.summary.textContent = '';
     el.createBtn.disabled = true;
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(res => {
+        ViewLoading.end();
         if (res && res.error) {
           el.preview.innerHTML = `<p class="text-danger small mb-0">${res.error}</p>`;
           return;
@@ -497,6 +501,7 @@
         applyFilters();
       })
       .withFailureHandler(err => {
+        ViewLoading.end();
         el.preview.innerHTML = `<p class="text-danger small mb-0">Failed to load: ${err.message}</p>`;
       })
       .WebAppInventory_getCountPlanningData();
@@ -652,9 +657,10 @@
 
   function loadCostMarginData() {
     costMarginSummary.textContent = 'Loading…';
+    ViewLoading.begin();
     google.script.run
-      .withSuccessHandler(renderCostMargin)
-      .withFailureHandler(handleError)
+      .withSuccessHandler(data => { ViewLoading.end(); renderCostMargin(data); })
+      .withFailureHandler(err => { ViewLoading.end(); handleError(err); })
       .WebAppInventory_getProductCostStatus();
   }
 
@@ -741,10 +747,35 @@
    * Loads data specifically for the Comax Sync card.
    */
   function loadComaxSyncData() {
+      ViewLoading.begin();
       google.script.run
-          .withSuccessHandler(renderComaxSyncCard)
-          .withFailureHandler(handleError)
+          .withSuccessHandler(data => { ViewLoading.end(); renderComaxSyncCard(data); })
+          .withFailureHandler(err => { ViewLoading.end(); handleError(err); })
           .WebAppInventory_getAdminComaxSyncData();
+  }
+
+  // Same shape as AdminProductsView._renderFileActions: "Open File" + "Copy
+  // Filename" buttons rendered into containerId, next to the card's action
+  // buttons. Pass fileUrl falsy to clear the container.
+  function renderComaxFileActions(containerId, fileUrl, fileName) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '';
+    if (!fileUrl) return;
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'btn btn-light mr-2';
+    openBtn.textContent = 'Open File';
+    openBtn.addEventListener('click', () => window.open(fileUrl, '_blank'));
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'btn btn-light mr-2';
+    copyBtn.textContent = 'Copy Filename';
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(fileName || '').then(() => TaskWidgets.toast('Filename copied.', 'success'));
+    });
+    el.appendChild(openBtn);
+    el.appendChild(copyBtn);
   }
 
   /**
@@ -761,8 +792,9 @@
     comaxExportBtn.disabled = true;
     comaxConfirmBtn.disabled = true;
     comaxMessageArea.innerHTML = '';
-    comaxExportBtn.className = 'btn btn-light'; 
+    comaxExportBtn.className = 'btn btn-light';
     comaxConfirmBtn.className = 'btn btn-light ml-2';
+    renderComaxFileActions('comax-file-actions', null);
     tableBody.innerHTML = ''; // Clear table
 
     if (data.error) {
@@ -796,6 +828,9 @@
         comaxMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.openComaxInventoryConfirmationTask.notes}</div>`;
         comaxConfirmBtn.disabled = false;
         comaxConfirmBtn.onclick = function() { handleComaxConfirmClick(data.openComaxInventoryConfirmationTask.id); };
+        const t = data.openComaxInventoryConfirmationTask;
+        const fileUrl = t.fileId ? `https://drive.google.com/file/d/${t.fileId}/view` : null;
+        renderComaxFileActions('comax-file-actions', fileUrl, t.fileName);
     } else if (data.comaxInventoryExportCount > 0) {
         // comaxMessageArea.innerHTML = `<p>${data.comaxInventoryExportCount} items ready for export.</p>`; // Redundant with table
         comaxExportBtn.disabled = false;

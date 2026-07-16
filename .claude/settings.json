@@ -14,6 +14,19 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/cd-guard.js"
+            ],
+            "statusMessage": "Checking for chained cd"
+          }
+        ]
+      },
+      {
         "matcher": "mcp__claude_ai_Google_Drive__create_file|mcp__claude_ai_Google_Drive__copy_file",
         "hooks": [
           {
@@ -23,6 +36,27 @@
               "C:/Users/B/projects/jlmwines/.claude/hooks/require-data-model-read.js"
             ],
             "statusMessage": "Checking DATA_MODEL.md was read this session"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/claude-dir-whitelist.js"
+            ],
+            "statusMessage": "Checking .claude/ file whitelist"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/stray-doc-guard.js"
+            ],
+            "statusMessage": "Checking for stray doc filenames"
           }
         ]
       }
@@ -50,6 +84,20 @@
             "command": "if [ -n \"$(git status --porcelain 2>/dev/null)\" ]; then git add -A && git commit -q --no-verify -m \"chore(auto): session checkpoint - leave a clean tree for the next session\" >/dev/null 2>&1; fi",
             "timeout": 30,
             "statusMessage": "Auto-committing uncommitted changes"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/cleanup-trigger-check.js"
+            ],
+            "statusMessage": "Checking cleanup triggers"
           }
         ]
       }
