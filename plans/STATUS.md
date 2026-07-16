@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-16. jlmops @508 live, stable; view-loading indicator shipped (every admin/manager view), Comax Sync file-link buttons re-implemented and view-load confirmed clean, buttons themselves pending a live test.
+**Updated:** 2026-07-16. jlmops @509 live, stable; Publishing view Calendar-tab crash fixed and confirmed both roles; view-loading indicator only covers shell view-fetch (not per-view data loads, still open); Comax Sync file-link buttons re-implemented and view-load confirmed clean, buttons themselves pending a live test.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-15 |
 | Revenue | Steady |
-| Deploy Version | jlmops @508 · theme v1.2.31 |
+| Deploy Version | jlmops @509 · theme v1.2.31 |
 | Deploy Date | jlmops 2026-07-16 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -49,7 +49,8 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — Phases 2–4 (click-through shows entity details before a task, status filter, search repositioned) shipped live 2026-07-09 @461. Phase 3 (status filter) smoke-tested and confirmed working; Phases 2 and 4 still unsmoked. Phase 1 (refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks") investigated, root cause still open — needs a live repro.
 - **Admin Inventory Comax file-link buttons** — re-implemented @508 by copying `AdminProductsView._renderFileActions`'s proven pattern (`containerId`/`fileUrl`/`fileName`) rather than restoring the version that broke. View-load confirmed clean live 2026-07-16. The buttons themselves (Open File/Copy Filename) are not yet tested — no active Comax export/confirmation task to test against; user will advise when one appears. Original failure's root mechanism was never found, so this is the safest available reimplementation, not a guaranteed fix. Same-shaped buttons on Detail Update/New Product export (`AdminProductsView.html`, same @489 commit) remain unverified but unaffected by this change.
-- **View-loading indicator** — shell-level spinner next to the view title (`AppView.html`) shipped @508; live-confirmed 2026-07-16. Covers every admin/manager view automatically on view-switch, no per-view changes needed. Admin Inventory's 4 card-level loads also wired as the finer-grained pilot (spinner stays up until that view's own async loads finish, not just the shell fetch). Extending the same card-level wiring to other views is optional, mechanical follow-up — not yet done. Closes the core ask behind the 2026-06-10 `.claude/wishlist.md` item.
+- **View-loading indicator** — shell-level spinner next to the view title (`AppView.html`) shipped @508; live-confirmed 2026-07-16, but only covers the initial view-switch fetch, not each view's own data loads. Admin Inventory's 4 card-level loads were wired as a pilot; every other view (Dashboard, Tasks, Sync, Orders, Products, Bundles, Contacts, Publishing, Development, Manager Inventory/Orders/Products) still has no spinner over its own `google.script.run` calls. **Does not close the 2026-06-10 wishlist ask** — user confirmed 2026-07-16 the spec was every admin/manager view, not shell-only. Remaining: wire `ViewLoading.begin()/end()` around each view's own load calls.
+- **Publishing view Calendar-tab crash** — fixed @509 2026-07-16, confirmed working live both roles. `renderCalendar()`'s task-grouping loop had no content-type filter (unlike `renderTasks()`), so non-content tasks with numeric entityIds — exposed by the 2026-07-10 `_deriveEntityId` priority fix — reached `.slice()` unguarded and crashed the whole view. Also fixed: `_loadCampaignsAndProjects()`'s failure path now clears the Calendar tab's own container, not just the Campaigns tab's. See `.claude/bugs.md`.
 
 ## Current State
 

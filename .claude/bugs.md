@@ -27,6 +27,7 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 _One line each; full root-cause analysis lives in the git commit + `.claude/session-log.md`._
 
+- [x] 2026-07-16: Publishing view Calendar tab crashed on load for both roles ("slug.slice is not a function") — `renderCalendar()`'s task loop had no content-type filter, so non-content tasks with numeric entityIds (exposed by the 2026-07-10 `_deriveEntityId` priority fix) reached `.slice()` unguarded. Fixed @509: loop now filters to `task.content.*` (matching `renderTasks()`); Calendar-tab error routing also fixed (was writing failures only to the Campaigns tab's container). Confirmed working live, both roles.
 - [x] 2026-07-16: Admin Inventory failed to load live (Comax Sync card's file-link buttons) — reverted to pre-@489 state @507; root mechanism never found.
 - [x] 2026-07-15: Manager product-editor slow load (15-18s) + submit/verify modal race — fixed @479-@482. `jlmops/docs/WORKFLOWS.md` §16.
 - [x] 2026-07-15: New products triggered spurious `status_mismatch`/`translation_missing` warnings — fixed @490 (publish-status source filter).

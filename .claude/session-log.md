@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-16 (cont'd 2) — Publishing view Calendar-tab crash root-caused and fixed (@509)
+
+- **Calendar tab crashed on load, both roles** ("slug.slice is not a function"). Root cause: `renderCalendar()`'s task-grouping loop had no content-type filter (unlike its sibling `renderTasks()`, which filters to `task.content.*`) — it iterated every task in `state.tasks`, including product/validation/onboarding tasks whose `entityId` can be a bare numeric SKU. That was masked until `acd4ebc` (2026-07-10) flipped `_deriveEntityId`'s priority so `st_LinkedEntityId` wins for every task type, not just contact/CRM — after that, numeric SKUs flowed straight into a function that assumed a string. Two prior theories were chased and discarded on evidence before landing here: SysTasks-size (wrong call path), and a `st_DetailSnapshot` schema/column-shift (ruled out — column is schema-last, header confirmed aligned via a live CSV export from `exchange/`).
+- **Fixed @509**: `renderCalendar()`'s task loop now filters to `task.content.*`; `_loadCampaignsAndProjects()`'s failure handler now also clears the Calendar tab's own container (was writing errors only into the Campaigns tab's, leaving Calendar stuck on "Loading…" with no error surfaced on failure). Confirmed working live, both roles.
+- **Process note**: user pushed back hard mid-investigation on unverified theorizing ("stop guessing"). Checking `jlmops-status.md` (live SysLog export) for actual logged errors, and reading a real `SysTasks` CSV export instead of reasoning from schema alone, were what actually closed the gap — worth defaulting to positive evidence like this earlier next time a "used to work" report comes in.
+- Next: nothing pending from this thread.
+
+---
+
 ## 2026-07-16 (cont'd) — View-loading indicator shipped; Comax Sync file buttons re-implemented (@508)
 
 - **View-loading indicator (wishlist 2026-06-10) shipped.** Shell-level spinner next to the view title in `AppView.html` — `loadView()` drives a shared `ViewLoading` begin/end counter around the view-fetch, so every admin/manager view gets basic coverage with zero per-view changes. Admin Inventory's 4 mount/lazy-load calls also wired individually as the finer-grained pilot (spinner stays up until that view's own async loads finish, not just the shell fetch). Live-confirmed by user. Extending card-level wiring to other views is optional, mechanical follow-up.

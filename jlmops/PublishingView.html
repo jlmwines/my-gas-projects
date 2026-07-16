@@ -590,11 +590,13 @@
           } else {
             var msg = (res && res.error) ? res.error : 'Failed to load campaigns/projects';
             document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
+            document.getElementById('pv-cal-table-wrap').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
           }
         })
         .withFailureHandler(function(err) {
           var msg = err && err.message ? err.message : 'Network error';
           document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
+          document.getElementById('pv-cal-table-wrap').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
         })
         .WebAppPublishing_getCampaignsAndProjects();
     }
@@ -628,6 +630,11 @@
       // 2026-07-08 ("some have status, some don't").
       var tasksByBase = {};
       (state.tasks || []).forEach(function(t) {
+        // Content tasks only — same filter renderTasks() uses. Non-content
+        // tasks (product/order/sync/etc.) can carry a non-string entityId
+        // (e.g. a bare numeric SKU), which .slice() below can't handle and
+        // was never meant to reach this grouping in the first place.
+        if (!t.typeId || t.typeId.indexOf('task.content.') !== 0) return;
         var slug = t.entityId || '';
         var isEn = slug.slice(-3) === '-en';
         var isHe = slug.slice(-3) === '-he';
