@@ -6,8 +6,8 @@
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @498, stable; 2026-07-14/15 fixes smoke-tested and confirmed clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`, `jlmops/docs/WORKFLOWS.md` §16).
-- **jlmwines.com** (storefront/theme) — live, theme v1.2.30; Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
+- **jlmops** (GAS backend) — live, stable (current version in Metrics below); 2026-07-14/15 fixes smoke-tested and confirmed clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`, `jlmops/docs/WORKFLOWS.md` §16).
+- **jlmwines.com** (storefront/theme) — live (current version in Metrics below); Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
 - **business** — strategy/brand docs current.

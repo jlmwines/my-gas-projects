@@ -381,45 +381,43 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
  * @returns {Object} An object containing tasks for review and any errors.
  */
 function WebAppInventory_getAdminInventoryViewData() {
+  // Shared lookups (CmxProdM/SysProductAudit) are loaded once and reused by both the
+  // review-tasks table and the manager-queue table below. But each table's own row
+  // processing gets its OWN try/catch — 2026-07-16: a single function-wide try/catch
+  // meant an exception building EITHER table silently discarded BOTH results, and the
+  // client had no way to distinguish "confirmed zero open tasks" from "the query
+  // crashed" (the open-tasks badge's static markup already defaults to "0", so a
+  // swallowed error looked identical to a real zero-count answer). Each table now
+  // reports its own error independently instead of one failure blanking the other.
+  let cmxProdMMap, sysProductAuditMap;
   try {
     const allConfig = ConfigService.getAllConfig();
-
     const cmxProdMHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
     const sysProductAuditHeaders = allConfig['schema.data.SysProductAudit'].headers.split(',');
-    
+    cmxProdMMap = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU').map;
+    sysProductAuditMap = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_SKU').map;
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'getAdminInventoryViewData', `Shared lookup load failed: ${e.message}`, e);
+    return { error: `Could not load shared product/audit data: ${e.message}` };
+  }
+
+  const result = { reviewTasks: [], openTasks: [] };
+
+  try {
     const reviewTasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review')
       .concat(WebAppTasks.getOpenTasksByTypeIdAndStatus('task.inventory.count', 'Review'));
     LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Found ${reviewTasks.length} tasks in 'Review' status.`);
 
-    // Fetch Open Tasks for Manager Queue (New & Assigned status)
-    const allCountTasks = WebAppTasks.getOpenTasksByTypeId('task.inventory.count');
-    const allAuditTasks = WebAppTasks.getOpenTasksByTypeId('task.validation.comax_internal_audit');
-    
-    // Filter for tasks that are either 'New' or 'Assigned'
-    const managerQueueTasks = allCountTasks.concat(allAuditTasks).filter(t => 
-      t.st_Status === 'New' || t.st_Status === 'Assigned'
-    );
-    
-    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Found ${managerQueueTasks.length} tasks for manager queue (New/Assigned).`);
-    
-    const cmxProdMData = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
-    const cmxProdMMap = cmxProdMData.map;
-
-    const sysProductAuditData = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_SKU');
-    const sysProductAuditMap = sysProductAuditData.map;
-
-    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Starting to process review tasks...');
-
     const tasksForReview = reviewTasks.map(task => {
-      const sku = String(task.st_LinkedEntityId).trim();
+      const sku = String(task.st_LinkedEntityId || '').trim();
       const productName = task.st_LinkedEntityName || (cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product');
-      
+
       if (!task.st_LinkedEntityName && !cmxProdMMap.has(sku)) {
         LoggerService.warn('WebAppInventory', 'getAdminInventoryViewData', `SKU from task not found in CmxProdM and no name in task: ${sku}`);
       }
 
       const auditEntry = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku) : {};
-      
+
       const comaxStockFromMaster = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_Stock || 0 : 0;
       const bruryaQty = auditEntry.pa_BruryaQty || 0;
       const storageQty = auditEntry.pa_StorageQty || 0;
@@ -442,9 +440,25 @@ function WebAppInventory_getAdminInventoryViewData() {
     });
 
     tasksForReview.sort((a, b) => a.productName.localeCompare(b.productName));
-    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Finished processing review tasks. Starting open tasks...');
+    result.reviewTasks = tasksForReview;
+    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Finished processing review tasks.');
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'getAdminInventoryViewData', `Review-tasks processing failed: ${e.message}`, e);
+    result.reviewTasksError = e.message;
+  }
 
-    // Process Open Tasks for Manager Queue
+  try {
+    // Fetch Open Tasks for Manager Queue (New & Assigned status)
+    const allCountTasks = WebAppTasks.getOpenTasksByTypeId('task.inventory.count');
+    const allAuditTasks = WebAppTasks.getOpenTasksByTypeId('task.validation.comax_internal_audit');
+
+    // Filter for tasks that are either 'New' or 'Assigned'
+    const managerQueueTasks = allCountTasks.concat(allAuditTasks).filter(t =>
+      t.st_Status === 'New' || t.st_Status === 'Assigned'
+    );
+
+    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Found ${managerQueueTasks.length} tasks for manager queue (New/Assigned).`);
+
     const openTasks = managerQueueTasks.map(task => {
        let dateStr = '';
        if (task.st_CreatedDate instanceof Date) {
@@ -471,21 +485,18 @@ function WebAppInventory_getAdminInventoryViewData() {
          createdDate: dateStr
        };
     });
-    
+
     // Sort open tasks by product name
     openTasks.sort((a, b) => a.productName.localeCompare(b.productName));
-    
+    result.openTasks = openTasks;
+
     LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Finished processing open tasks (Enhanced).');
-
-    return {
-      reviewTasks: tasksForReview,
-      openTasks: openTasks
-    };
-
   } catch (e) {
-    LoggerService.error('WebAppInventory', 'getAdminInventoryViewData', e.message, e);
-    return { error: `Could not load data for Admin Inventory View: ${e.message}` };
+    LoggerService.error('WebAppInventory', 'getAdminInventoryViewData', `Open-tasks processing failed: ${e.message}`, e);
+    result.openTasksError = e.message;
   }
+
+  return result;
 }
 
 /**

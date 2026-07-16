@@ -112,7 +112,8 @@
       "WebFetch(domain:www.rnwinery.co.il)",
       "WebFetch(domain:tushia.co.il)",
       "Bash(git mv *)",
-      "Bash(mv UI_T2_4_content_stream_modal.md _archive/UI_T2_4_content_stream_modal.md)"
+      "Bash(mv UI_T2_4_content_stream_modal.md _archive/UI_T2_4_content_stream_modal.md)",
+      "Bash(awk 'NR==214,NR==900' AdminInventoryView.html)"
     ],
     "deny": [
       "Bash(git -C:*)",

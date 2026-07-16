@@ -47,7 +47,6 @@
                 </table>
             </div>
             <div id="comax-inventory-message-area" style="margin-bottom: 0.5rem;"></div>
-            <span id="comax-file-actions" class="mr-2"></span>
             <button id="btn-comax-export" class="btn btn-light" disabled>Comax Export</button>
             <button id="btn-comax-updated" class="btn btn-light ml-2" disabled>Comax Updated</button>
         </div>
@@ -749,33 +748,6 @@
   }
 
   /**
-   * Renders "Open File" + "Copy Filename" buttons for the Comax inventory
-   * export into #comax-file-actions, next to the Export/Updated buttons.
-   * Pass fileId falsy to clear it (e.g. once no export is in flight).
-   */
-  function renderComaxFileActions(fileId, fileName) {
-    const el = document.getElementById('comax-file-actions');
-    if (!el) return;
-    el.innerHTML = '';
-    if (!fileId) return;
-    const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
-    const openBtn = document.createElement('button');
-    openBtn.type = 'button';
-    openBtn.className = 'btn btn-light mr-2';
-    openBtn.textContent = 'Open File';
-    openBtn.addEventListener('click', () => window.open(fileUrl, '_blank'));
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.className = 'btn btn-light mr-2';
-    copyBtn.textContent = 'Copy Filename';
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(fileName || '').then(() => TaskWidgets.toast('Filename copied.', 'success'));
-    });
-    el.appendChild(openBtn);
-    el.appendChild(copyBtn);
-  }
-
-  /**
    * Renders the Comax Sync card based on the provided data.
    * @param {object} data - The data object from the backend.
    */
@@ -789,9 +761,8 @@
     comaxExportBtn.disabled = true;
     comaxConfirmBtn.disabled = true;
     comaxMessageArea.innerHTML = '';
-    comaxExportBtn.className = 'btn btn-light';
+    comaxExportBtn.className = 'btn btn-light'; 
     comaxConfirmBtn.className = 'btn btn-light ml-2';
-    renderComaxFileActions(null);
     tableBody.innerHTML = ''; // Clear table
 
     if (data.error) {
@@ -825,7 +796,6 @@
         comaxMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.openComaxInventoryConfirmationTask.notes}</div>`;
         comaxConfirmBtn.disabled = false;
         comaxConfirmBtn.onclick = function() { handleComaxConfirmClick(data.openComaxInventoryConfirmationTask.id); };
-        renderComaxFileActions(data.openComaxInventoryConfirmationTask.fileId, data.openComaxInventoryConfirmationTask.fileName);
     } else if (data.comaxInventoryExportCount > 0) {
         // comaxMessageArea.innerHTML = `<p>${data.comaxInventoryExportCount} items ready for export.</p>`; // Redundant with table
         comaxExportBtn.disabled = false;
