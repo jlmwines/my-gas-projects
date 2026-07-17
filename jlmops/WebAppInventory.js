@@ -699,14 +699,12 @@ function WebAppInventory_exportCountsToSheet() {
     const sheet = newSpreadsheet.getSheets()[0]; // Get the first sheet
 
     // Column layout (1-indexed):
-    //  A SKU   B Product Name   C Vintage (ref)   D Product Page
-    //  E Comax Qty   F Brurya Qty   G Storage Qty   H Office Qty   I Shop Qty
-    //  J Total Count   K Task ID
+    //  A SKU   B Product Name   C Comax Qty   D Brurya Qty
+    //  E Storage Qty   F Office Qty   G Shop Qty
+    //  H Total Count   I Task ID
     const headers = [
       "SKU",
       "Product Name",
-      "Vintage",
-      "Product Page",
       "Comax Quantity",
       "Brurya Quantity",
       "Storage Quantity",
@@ -719,20 +717,15 @@ function WebAppInventory_exportCountsToSheet() {
 
     const data = productsToCount.map((product, index) => {
       const rowNum = index + 2;
-      const pageCell = product.pageUrl
-        ? `=HYPERLINK("${String(product.pageUrl).replace(/"/g, '""')}","view")`
-        : '';
       return [
         product.sku,
         product.productName,
-        product.vintage || '',
-        pageCell,
         product.comaxQty,
         product.bruryaQty,
         product.storageQty,
         product.officeQty,
         product.shopQty,
-        `=G${rowNum}+H${rowNum}+I${rowNum}+F${rowNum}`, // Brurya + Storage + Office + Shop
+        `=D${rowNum}+E${rowNum}+F${rowNum}+G${rowNum}`, // Brurya + Storage + Office + Shop
         product.taskId
       ];
     });
@@ -745,14 +738,14 @@ function WebAppInventory_exportCountsToSheet() {
 
     // Highlight input columns (light yellow): Storage/Office/Shop
     const inputColor = '#FFF2CC';
-    sheet.getRange(2, 7, data.length, 3).setBackground(inputColor);  // Storage/Office/Shop (G,H,I)
+    sheet.getRange(2, 5, data.length, 3).setBackground(inputColor);  // Storage/Office/Shop (E,F,G)
 
     // Bold the Total column
-    sheet.getRange(2, 10, data.length, 1).setFontWeight('bold'); // J
+    sheet.getRange(2, 8, data.length, 1).setFontWeight('bold'); // H
 
     // Protection: lock everything except user-input columns
     const protection = sheet.protect().setDescription('System Data - Do Not Edit Locked Fields');
-    const inputRangeQty = sheet.getRange(2, 7, data.length, 3);  // G-I
+    const inputRangeQty = sheet.getRange(2, 5, data.length, 3);  // E-G
     protection.setUnprotectedRanges([inputRangeQty]);
 
     // Move the new spreadsheet to the designated folder

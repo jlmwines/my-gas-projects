@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-17. jlmops @509 live, stable, no code shipped today; Woo API push (descriptions/category/brand/attributes) fully scoped and reviewed at `jlmops/plans/WOO_API_PUSH_PLAN.md`, not started; deep review completed, Product Verification confirmed live/tested and its STATUS pointer corrected to the archived plan.
+**Updated:** 2026-07-17. jlmops @510 live, stable; Manager Inventory counts screen + bulk Sheet export both stripped of the leftover read-only Vintage/Product-Page columns (counting is quantity-only now); Woo API push (descriptions/category/brand/attributes) fully scoped and reviewed at `jlmops/plans/WOO_API_PUSH_PLAN.md`, not started; deep review completed, Product Verification confirmed live/tested and its STATUS pointer corrected to the archived plan.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-17 |
 | Revenue | Steady |
-| Deploy Version | jlmops @509 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-16 · theme 2026-07-09 |
+| Deploy Version | jlmops @510 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-07-17 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -70,7 +70,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Content-library versioning** — attach-to-replace + supersede→`_archive` confirmed live (Decision 7 / Plan B). Not yet smoke-tested: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; `runLibraryDuplicateReconcile` from the editor.
 - **Correct Product Name tool** — live (Admin → Products → SKU Management → Correct Product Name); edits WebProdM/WebDetM name fields and logs to Recent SKU Updates. Not yet smoke-tested from /dev. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - **New-product Products-view UX** — shipped, archived, and smoke-tested/validated by the user 2026-07-09 (`jlmops/plans/_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`); current behavior documented in `jlmops/docs/WORKFLOWS.md` §14. Accept Suggestion modal field order (EN name → Woo Post ID → HE name) and its required Comax "Sold Online" confirmation checkbox smoke-tested 2026-07-10. Closes the smoke-test gate the PROJ-CONTENT Inbox item was waiting on.
-- **Product verification** — fully shipped end-to-end, live, tasks executing in normal use (confirmed 2026-07-17). Manager review surface + reverted-task admin handling (Close / Pass to manager / Task-modal edit-note-and-close-normally) live and smoke-tested. Count-flow strip also complete — Manager Inventory's Counts tab no longer does inline vintage/comment editing or spawns `vintage_mismatch` tasks (that's now verification-only). Facts graduated to `jlmops/docs/WORKFLOWS.md`; plan archived at `jlmops/plans/_archive/PRODUCT_VERIFICATION_PLAN.md`.
+- **Product verification** — fully shipped end-to-end, live, tasks executing in normal use (confirmed 2026-07-17). Manager review surface + reverted-task admin handling (Close / Pass to manager / Task-modal edit-note-and-close-normally) live and smoke-tested. Count-flow strip also complete — Manager Inventory's Counts tab no longer does inline vintage/comment editing or spawns `vintage_mismatch` tasks (that's now verification-only). The read-only Vintage/Product-Page-link columns the 2026-07-14 strip had deliberately kept "for orientation" were removed too, live @510 2026-07-17 — counting stays quantity-only, product facts belong to verification alone, both on the live screen (`ManagerInventoryView.html`) and the bulk-entry Sheet export (`WebAppInventory.exportCountsToSheet`). Facts graduated to `jlmops/docs/WORKFLOWS.md`; plan archived at `jlmops/plans/_archive/PRODUCT_VERIFICATION_PLAN.md`.
 - **Product-detail load performance** — live and smoke-tested clean. Product-editor tasks (add/vintage-drift/verify-conversion) read a creation-time snapshot instead of live sheets; the verify batch-walk bulk-prefetches once at walk-start instead of per step; category-stock health is computed by housekeeping and cached, not live on widget load; `WebAppTasks.getOpenTasks` is genuinely cached now (was a module-level variable that never persisted across calls). System doc → `jlmops/docs/DATA_MODEL.md` (`st_DetailSnapshot`), `jlmops/docs/WORKFLOWS.md` §16; plans archived (`jlmops/plans/_archive/PRODUCT_DETAIL_SNAPSHOT_PLAN.md`, `_archive/VERIFY_DETAIL_SPEEDUP_PLAN.md`).
 - **SKU management** — Vendor SKU Update and Trim Safety not yet tested; Product Replacement tested and working, though its product search reads dead WebProdM columns (`.claude/bugs.md`).
 - **Admin Inventory** — live and confirmed working @508, Comax Sync file-link buttons re-implemented per Active Plans above (view-load confirmed clean; buttons themselves pending a live export to test against). Server-side error isolation for the review/manager-queue cards still isn't read by the client.

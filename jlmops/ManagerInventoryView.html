@@ -125,9 +125,7 @@
             .products-count-table th:nth-child(3),  .products-count-table td:nth-child(3),   /* Brurya */
             .products-count-table th:nth-child(4),  .products-count-table td:nth-child(4),   /* Storage */
             .products-count-table th:nth-child(5),  .products-count-table td:nth-child(5),   /* Office */
-            .products-count-table th:nth-child(6),  .products-count-table td:nth-child(6),   /* Shop */
-            .products-count-table th:nth-child(7),  .products-count-table td:nth-child(7),   /* Vintage */
-            .products-count-table th:nth-child(8),  .products-count-table td:nth-child(8) {  /* Link */
+            .products-count-table th:nth-child(6),  .products-count-table td:nth-child(6) {  /* Shop */
                 display: none;
             }
             .products-count-table tbody tr[data-task-id] { cursor: pointer; }
@@ -294,8 +292,6 @@
                                 <th class="text-center">Storage</th>
                                 <th class="text-center">Office</th>
                                 <th class="text-center">Shop</th>
-                                <th class="text-center">Vintage</th>
-                                <th class="text-center">Link</th>
                                 <th class="text-center">SKU</th>
                                 <th class="text-right">Product Name</th>
                                 <th></th>
@@ -311,9 +307,6 @@
                     const valShop = formatVal(item.shopQty);
 
                     const isChecked = (valStorage !== '' || valOffice !== '' || valShop !== '') ? 'checked' : '';
-                    const pageLink = item.pageUrl
-                        ? `<a href="${escapeAttr(item.pageUrl)}" target="_blank" rel="noopener">view</a>`
-                        : '';
 
                     tableHtml += `
                         <tr data-task-id="${item.taskId}" data-sku="${item.sku}" data-comax-qty="${item.comaxQty}" data-product-name="${escapeAttr(item.productName || '')}">
@@ -323,8 +316,6 @@
                             <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="storage" value="${valStorage}"></td>
                             <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="office" value="${valOffice}"></td>
                             <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="shop" value="${valShop}"></td>
-                            <td class="text-center">${escapeAttr(item.vintage || '')}</td>
-                            <td class="text-center">${pageLink}</td>
                             <td class="text-center">${item.sku}</td>
                             <td class="text-right">${item.productName}</td>
                             <td><input type="checkbox" class="product-count-checkbox" ${isChecked} disabled></td>
