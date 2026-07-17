@@ -279,9 +279,10 @@
   }
 
   function loadDashboard() {
+    ViewLoading.begin();
     google.script.run
-      .withSuccessHandler(handleData)
-      .withFailureHandler(handleError)
+      .withSuccessHandler(function(data) { ViewLoading.end(); handleData(data); })
+      .withFailureHandler(function(err) { ViewLoading.end(); handleError(err); })
       .WebAppDashboardV2_getManagerData();
   }
 

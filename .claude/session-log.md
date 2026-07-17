@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-17 (cont'd) — Manager Inventory count-flow cleanup + view-loading spinner rolled out everywhere (@510-@511)
+
+- **Manager Inventory counts** (@510) — removed the leftover read-only Vintage/Product-Page columns from both the live counts screen and the bulk-entry Sheet export; counting is quantity-only, verification owns product facts. Recalculated the Sheet export's Total-count formula and highlight/protection ranges for the new column layout; confirmed the Sheet-import reader is header-driven so nothing there broke.
+- **View-loading spinner rolled out to every remaining admin/manager view** (@511) — closes the 2026-06-10 wishlist ask, previously only piloted on Admin Inventory. Wired `ViewLoading.begin()/end()` around each view's own mount-time data load(s) across Dashboard (both), Tasks, Bundles, Campaigns, Contacts (both), Products (both), Projects, Development, Orders, and Publishing. Two deliberate exceptions, not oversights: `AdminSyncView`'s widget (a repeating status poller — wrapping it would flicker the spinner every cycle; it already has richer inline step-card feedback) and `LibraryView.html` (superseded, not in live navigation).
+- Hit the Apps Script 200-version cap mid-deploy; user cleared version history, retry succeeded clean.
+- Next: nothing pending from this thread. Woo API push plan (see above) still needs a build-sequencing decision.
+
+---
+
 ## 2026-07-17 — Woo API push plan scoped end-to-end; deep review; Product Verification pointer fixed
 
 - **Woo API push plan** (`jlmops/plans/WOO_API_PUSH_PLAN.md`, new) — scoped through live discussion, an independent-agent codebase re-verification, and real sample-data checks (`WebDetM`/`WebProdM`/`WebXltM`/`SysLkp_Texts` exports, a live WC product export). Confirmed root cause of a live description-duplication bug (`WooCommerceFormatter.js` prose header duplicates its own `SysLkp_Texts` lookup text). Settled: category WC-ID lives on `SysLkp_Texts` (not a new table); brand moves off the "Winery" attribute onto WooCommerce's native Brand field (`wpm_TaxProductBrand`, already pulled but unused) via a new `SysLkp_Brands` lookup + `wdm_Winery` column, following the Grapes/Kashrut admin-lookup pattern; Region/Grapes/old-Winery-attribute stay pruned. No code shipped — plan only, sequencing (build now vs. after acquisition-period work) still open. Former STATUS.md "Woo Brand + GTIN" deferred item folded into this plan.

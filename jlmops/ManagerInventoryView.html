@@ -263,9 +263,11 @@
 
             function loadProductCountsData() {
                 productCountsListDiv.innerHTML = 'Loading products for count...';
+                ViewLoading.begin();
                 google.script.run
-                    .withSuccessHandler(renderProductCountsTable)
+                    .withSuccessHandler(data => { ViewLoading.end(); renderProductCountsTable(data); })
                     .withFailureHandler(err => {
+                        ViewLoading.end();
                         showToast(`Error loading products for count: ${err.message}`, 'error');
                         productCountsListDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
                     })
@@ -812,9 +814,11 @@
 
             function loadBruryaInventoryData() {
                 listDiv.innerHTML = 'Loading inventory...';
+                ViewLoading.begin();
                 google.script.run
-                    .withSuccessHandler(renderBruryaInventory)
+                    .withSuccessHandler(data => { ViewLoading.end(); renderBruryaInventory(data); })
                     .withFailureHandler(err => {
+                        ViewLoading.end();
                         showToast(`Error loading inventory: ${err.message}`, 'error');
                     })
                     .WebAppInventory_getBruryaStockList();

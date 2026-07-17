@@ -47,8 +47,10 @@
 
   function loadData() {
     document.getElementById('campaign-list').innerHTML = '<p class="text-muted">Loading…</p>';
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(function (result) {
+        ViewLoading.end();
         if (result.error) {
           document.getElementById('campaign-list').innerHTML =
             '<p class="text-danger">Error: ' + TaskWidgets.escape(result.error) + '</p>';
@@ -59,6 +61,7 @@
         state.details = {};
         render();
       })
+      .withFailureHandler(function(err) { ViewLoading.end(); TaskWidgets.toast('Error loading campaigns: ' + err.message, 'error'); })
       .WebAppCampaigns_listCampaigns();
   }
 

@@ -747,7 +747,9 @@
         const panel = document.getElementById('category-status-panel');
         panel.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading status...';
 
+        ViewLoading.begin();
         google.script.run.withSuccessHandler(data => {
+            ViewLoading.end();
             panel.innerHTML = '';
             
             // 1. "All" Filter
@@ -779,6 +781,7 @@
 
             if (onDone) onDone();
         }).withFailureHandler(err => {
+            ViewLoading.end();
             panel.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
             if (onDone) onDone();
         }).WebAppProducts_getManagerWidgetData();
@@ -976,7 +979,9 @@
       detailBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
       onboardingBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
 
+      ViewLoading.begin();
       google.script.run.withSuccessHandler(tasks => {
+        ViewLoading.end();
         detailBody.innerHTML = '';
         onboardingBody.innerHTML = '';
 
@@ -1020,6 +1025,7 @@
         if (onboardingCount > 0) { const b = document.getElementById('card-body-newprod'); if (b && b.style.display === 'none') ManagerProductsView.toggleCard('newprod'); }
         if (onDone) onDone();
       }).withFailureHandler(err => {
+        ViewLoading.end();
         detailBody.innerHTML = '<tr><td colspan="5" class="text-danger">Error loading tasks.</td></tr>';
         onboardingBody.innerHTML = '';
         if (onDone) onDone();
@@ -1348,7 +1354,9 @@
       const countEl = document.getElementById('verify-task-count');
       if (!body) return;
       body.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+      ViewLoading.begin();
       google.script.run.withSuccessHandler(tasks => {
+        ViewLoading.end();
         const list = tasks || [];
         ManagerProductsView.verifyListCache = list;
         ManagerProductsView.setCountBadge('verify-task-count', list.length, 'badge-warning');
@@ -1372,6 +1380,7 @@
         });
         if (onDone) onDone();
       }).withFailureHandler(err => {
+        ViewLoading.end();
         body.innerHTML = `<tr><td colspan="3" class="text-danger">Error: ${(err && err.message) || err}</td></tr>`;
         if (onDone) onDone();
       }).WebAppProducts_getOpenVerifyTasks();
@@ -1381,7 +1390,9 @@
       const body = document.getElementById('pending-accept-list-body');
       if (!body) { if (onDone) onDone(); return; }
       body.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+      ViewLoading.begin();
       google.script.run.withSuccessHandler(tasks => {
+        ViewLoading.end();
         const list = tasks || [];
         ManagerProductsView.setCountBadge('pending-accept-count', list.length, 'badge-info');
         ManagerProductsView._newTabCount.pending = list.length;
@@ -1407,6 +1418,7 @@
         if (b && b.style.display === 'none') ManagerProductsView.toggleCard('pending-accept');
         if (onDone) onDone();
       }).withFailureHandler(err => {
+        ViewLoading.end();
         body.innerHTML = '<tr><td colspan="4" class="text-danger">Error loading suggestions.</td></tr>';
         if (onDone) onDone();
       }).WebAppProducts_getSuggestionTasks();

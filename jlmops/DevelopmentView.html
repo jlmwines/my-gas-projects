@@ -189,8 +189,10 @@
 
   // Populate sheet picker on load
   (function() {
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(function(names) {
+        ViewLoading.end();
         var sel = document.getElementById('sync-headers-sheet');
         names.forEach(function(name) {
           var opt = document.createElement('option');
@@ -198,7 +200,7 @@
           sel.appendChild(opt);
         });
       })
-      .withFailureHandler(function() {})
+      .withFailureHandler(function() { ViewLoading.end(); })
       .WebAppSystem_getSchemaSheetNames();
   })();
 

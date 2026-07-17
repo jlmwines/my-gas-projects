@@ -963,11 +963,13 @@
     // Lightweight count for the New Products header badge — shows pending suggestions +
     // submissions while the card is collapsed (the heavy section loads stay lazy-on-expand).
     AdminProductsView.loadNewProductsBadge = function() {
+      ViewLoading.begin();
       google.script.run.withSuccessHandler(function(res) {
+        ViewLoading.end();
         if (!res || res.error || !res.data) return;
         var np = res.data.newProducts || {};
         AdminProductsView.setCountBadge('stat-new-products', (np.suggested || 0) + (np.review || 0), 'badge-info');
-      }).WebAppProducts_getProductsWidgetData();
+      }).withFailureHandler(function() { ViewLoading.end(); }).WebAppProducts_getProductsWidgetData();
     };
 
     // Refresh = reload Detail Updates always + the currently active tab (if different).
@@ -1610,7 +1612,10 @@
       if (preloadedData !== undefined) { render(preloadedData); return; }
       AdminProductsView._tableState(tbody, true);
       tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-      google.script.run.withSuccessHandler(render).WebAppProducts_getAdminReviewTasks();
+      ViewLoading.begin();
+      google.script.run.withSuccessHandler(function(data) { ViewLoading.end(); render(data); })
+        .withFailureHandler(function(err) { ViewLoading.end(); TaskWidgets.toast('Error loading review list: ' + err.message, 'error'); })
+        .WebAppProducts_getAdminReviewTasks();
     };
 
     AdminProductsView.loadAcceptedList = function(preloadedData) {
@@ -1647,7 +1652,10 @@
         if (preloadedData !== undefined) { render(preloadedData); return; }
         AdminProductsView._tableState(tbody, true);
         tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-        google.script.run.withSuccessHandler(render).WebAppProducts_getAcceptedTasks();
+        ViewLoading.begin();
+        google.script.run.withSuccessHandler(function(data) { ViewLoading.end(); render(data); })
+          .withFailureHandler(function(err) { ViewLoading.end(); TaskWidgets.toast('Error loading accepted list: ' + err.message, 'error'); })
+          .WebAppProducts_getAcceptedTasks();
     };
 
     // Shared by every export action on this page: renders "Open File" + "Copy Filename"
@@ -1735,7 +1743,10 @@
         });
       };
       if (preloadedData !== undefined) { render(preloadedData); return; }
-      google.script.run.withSuccessHandler(render).WebAppProducts_getPendingDetailTasks();
+      ViewLoading.begin();
+      google.script.run.withSuccessHandler(function(data) { ViewLoading.end(); render(data); })
+        .withFailureHandler(function(err) { ViewLoading.end(); TaskWidgets.toast('Error loading pending details: ' + err.message, 'error'); })
+        .WebAppProducts_getPendingDetailTasks();
     };
 
     // --- Card 2: New Products ---
@@ -2599,9 +2610,12 @@
     AdminProductsView.loadRevertedVerify = function() {
       const tbody = document.getElementById('reverted-verify-body');
       if (tbody) { AdminProductsView._tableState(tbody, true); tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">Loading…</td></tr>'; }
+      ViewLoading.begin();
       google.script.run.withSuccessHandler(function(tasks) {
+        ViewLoading.end();
         AdminProductsView.renderRevertedVerify(tasks || []);
       }).withFailureHandler(function(err) {
+        ViewLoading.end();
         if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-danger py-2">Error: ' + AdminProductsView._escapeHtml(err.message) + '</td></tr>';
       }).WebAppProducts_getRevertedVerifyTasks();
     };

@@ -806,10 +806,12 @@
   function loadContacts() {
     document.getElementById('loading-indicator').style.display = 'block';
     document.getElementById('contact-list').innerHTML = '';
+    ViewLoading.begin();
 
     google.script.run
       .withSuccessHandler(function(data) {
         document.getElementById('loading-indicator').style.display = 'none';
+        ViewLoading.end();
         if (data.error) {
           showError(data.error);
           return;
@@ -822,6 +824,7 @@
       })
       .withFailureHandler(function(err) {
         document.getElementById('loading-indicator').style.display = 'none';
+        ViewLoading.end();
         showError(err.message);
       })
       .WebAppContacts_getContactList({});

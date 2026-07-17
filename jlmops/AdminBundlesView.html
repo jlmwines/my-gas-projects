@@ -228,8 +228,10 @@
     editorHome = es ? es.parentNode : null;
     bindEvents();  // wire handlers before data arrives; clicks on not-yet-rendered rows no-op
     // Single consolidated round-trip (T3.3): replaces the 4-call init fanout.
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(function(res) {
+        ViewLoading.end();
         if (!res || !res.success) {
           console.error('init failed:', res && res.error);
           return;
@@ -237,6 +239,7 @@
         applyInitData(res.data);
       })
       .withFailureHandler(function(err) {
+        ViewLoading.end();
         console.error('init call failed:', err);
       })
       .WebAppBundles_getViewData();

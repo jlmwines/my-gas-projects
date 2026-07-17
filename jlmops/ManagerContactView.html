@@ -251,8 +251,10 @@
     if (!state.contacts && listContainer.querySelector('.mc-empty')) {
       listContainer.innerHTML = '<div class="mc-empty">Loading contacts…</div>';
     }
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(function(data) {
+        ViewLoading.end();
         if (!data || data.error) {
           state.loadError = (data && data.error) || 'Failed to load contacts';
           state.contacts = [];
@@ -272,6 +274,7 @@
         }
       })
       .withFailureHandler(function(err) {
+        ViewLoading.end();
         state.loadError = (err && err.message) || String(err);
         state.contacts = [];
         listContainer.innerHTML = '<div class="mc-empty">Error: ' + TaskWidgets.escape(state.loadError) + '</div>';

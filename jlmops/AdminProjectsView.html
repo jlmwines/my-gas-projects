@@ -672,11 +672,14 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   }
 
   function loadContentStages() {
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(function(stages) {
+        ViewLoading.end();
         state.contentStages = stages || [];
         populateContentStagesCheckboxes();
       })
+      .withFailureHandler(function() { ViewLoading.end(); })
       .WebAppProjects_getContentStages();
   }
 
@@ -744,14 +747,17 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   }
 
   function loadData() {
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(function(result) {
+        ViewLoading.end();
         if (!result.error) {
           state.projects = result.data || [];
           render();
           updateStats();
         }
       })
+      .withFailureHandler(function() { ViewLoading.end(); })
       .WebAppProjects_getAllProjects();
 
     loadTasks();
@@ -761,8 +767,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     // Fetch all tasks when scope is 'all' (includes Done), otherwise just open tasks
     var fetchFn = state.taskScopeFilter === 'all' ? 'WebAppTasks_getAllTasks' : 'WebAppTasks_getAllOpenTasks';
 
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(function(result) {
+        ViewLoading.end();
         if (!result.error) {
           state.tasks = result.data || [];
           populateAssigneeFilter();
@@ -781,6 +789,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
           }
         }
       })
+      .withFailureHandler(function() { ViewLoading.end(); })
       [fetchFn]();
   }
 

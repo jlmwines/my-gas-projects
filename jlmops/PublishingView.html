@@ -527,9 +527,10 @@
     }
 
     function _loadData() {
+      ViewLoading.begin();
       google.script.run
-        .withSuccessHandler(_onLoaded)
-        .withFailureHandler(_onError)
+        .withSuccessHandler(function(res) { ViewLoading.end(); _onLoaded(res); })
+        .withFailureHandler(function(err) { ViewLoading.end(); _onError(err); })
         .WebAppLibrary_getData();
     }
 
@@ -578,8 +579,10 @@
     }
 
     function _loadCampaignsAndProjects() {
+      ViewLoading.begin();
       google.script.run
         .withSuccessHandler(function(res) {
+          ViewLoading.end();
           if (res && res.success) {
             state.campaigns = res.data.campaigns || [];
             state.projects = res.data.projects || [];
@@ -594,6 +597,7 @@
           }
         })
         .withFailureHandler(function(err) {
+          ViewLoading.end();
           var msg = err && err.message ? err.message : 'Network error';
           document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
           document.getElementById('pv-cal-table-wrap').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';

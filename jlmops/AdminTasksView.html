@@ -700,8 +700,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   }
 
   function loadData() {
+    ViewLoading.begin();
     google.script.run
       .withSuccessHandler(function(result) {
+        ViewLoading.end();
         if (result && result.success && result.data) {
           state.tasks = result.data.tasks || [];
           state.allTasks = state.tasks;
@@ -717,6 +719,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
           }
         }
       })
+      .withFailureHandler(function(err) { ViewLoading.end(); TaskWidgets.toast('Error loading tasks: ' + err.message, 'error'); })
       .WebAppLibrary_getData();
   }
 

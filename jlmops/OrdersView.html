@@ -67,8 +67,10 @@
     ordersListDiv.innerHTML = 'Loading packable orders...';
 
     try {
+      ViewLoading.begin();
       google.script.run
         .withSuccessHandler(orders => {
+          ViewLoading.end();
           if (orders.length === 0) {
             ordersListDiv.innerHTML = '<p>No orders are currently ready for packing.</p>';
             return;
@@ -94,6 +96,7 @@
           ordersListDiv.innerHTML = tableHtml;
         })
         .withFailureHandler(err => {
+          ViewLoading.end();
           ordersListDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
         })
         .WebAppOrders_getPackableOrders();
@@ -124,8 +127,10 @@
     openOrdersListDiv.innerHTML = 'Loading open orders...';
 
     try {
+      ViewLoading.begin();
       google.script.run
         .withSuccessHandler(orders => {
+          ViewLoading.end();
           if (orders.length === 0) {
             openOrdersListDiv.innerHTML = '<p>No open orders (on-hold or processing).</p>';
             return;
@@ -185,6 +190,7 @@
           }
         })
         .withFailureHandler(err => {
+          ViewLoading.end();
           openOrdersListDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
         })
         .WebAppOrders_getOpenOrdersForManager();
