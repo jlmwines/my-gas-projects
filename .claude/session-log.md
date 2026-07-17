@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-17 — Woo API push plan scoped end-to-end; deep review; Product Verification pointer fixed
+
+- **Woo API push plan** (`jlmops/plans/WOO_API_PUSH_PLAN.md`, new) — scoped through live discussion, an independent-agent codebase re-verification, and real sample-data checks (`WebDetM`/`WebProdM`/`WebXltM`/`SysLkp_Texts` exports, a live WC product export). Confirmed root cause of a live description-duplication bug (`WooCommerceFormatter.js` prose header duplicates its own `SysLkp_Texts` lookup text). Settled: category WC-ID lives on `SysLkp_Texts` (not a new table); brand moves off the "Winery" attribute onto WooCommerce's native Brand field (`wpm_TaxProductBrand`, already pulled but unused) via a new `SysLkp_Brands` lookup + `wdm_Winery` column, following the Grapes/Kashrut admin-lookup pattern; Region/Grapes/old-Winery-attribute stay pruned. No code shipped — plan only, sequencing (build now vs. after acquisition-period work) still open. Former STATUS.md "Woo Brand + GTIN" deferred item folded into this plan.
+- **Deep review run** (`plans/reviews/review-deep-2026-07-17.md`) — steady state confirmed; `STRATEGY.md`'s stale defer-date (flagged twice, unfixed) corrected in-session; GA4 6x-session anomaly and a transient schema-validation failure both self-resolved, dismissed. Process note: caught myself violating `business/KPI.md`'s own rule against sessions reading the raw GA4 Drive sheet directly (multi-tab, unreliable) — organic-traffic month-over-month isn't actually available through any sanctioned path yet.
+- **Product Verification** — plan was already archived and its facts graduated to `WORKFLOWS.md`, but `STATUS.md`'s Current State line still pointed at the pre-archive path; fixed. User confirmed live and tested.
+- Next: user to decide Woo API push sequencing before any build starts; flyer distribution date still unconfirmed.
+
+---
+
 ## 2026-07-16 (cont'd 2) — Publishing view Calendar-tab crash root-caused and fixed (@509)
 
 - **Calendar tab crashed on load, both roles** ("slug.slice is not a function"). Root cause: `renderCalendar()`'s task-grouping loop had no content-type filter (unlike its sibling `renderTasks()`, which filters to `task.content.*`) — it iterated every task in `state.tasks`, including product/validation/onboarding tasks whose `entityId` can be a bare numeric SKU. That was masked until `acd4ebc` (2026-07-10) flipped `_deriveEntityId`'s priority so `st_LinkedEntityId` wins for every task type, not just contact/CRM — after that, numeric SKUs flowed straight into a function that assumed a string. Two prior theories were chased and discarded on evidence before landing here: SysTasks-size (wrong call path), and a `st_DetailSnapshot` schema/column-shift (ruled out — column is schema-last, header confirmed aligned via a live CSV export from `exchange/`).

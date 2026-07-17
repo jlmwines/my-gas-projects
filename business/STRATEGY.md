@@ -71,7 +71,7 @@ Connections between areas where a directional decision in one constrains another
 
 - **Build-less-data, ship-more-action.** Affects every initiative — verification track design, campaign launches, KPI-tab decision (kept deferred). The default answer to "should we add a data surface?" is "no, unless an action surface needs it."
 - **Cross-sell loop** — schema exists, calculation not built. Decision deferred until campaign-engagement data justifies the work.
-- **Offline → online attribution** — flyer + tasting will need coupon codes + UTM-tagged QR. Attribution scheme is parked (Inbox `defer:2026-07-01`) because those channels aren't shipping yet.
+- **Offline → online attribution** — flyer + tasting will need coupon codes + UTM-tagged QR. Attribution scheme is parked (Inbox `defer:2026-08-10`) because those channels aren't shipping yet.
 
 ---
 
