@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-19 — Wine-description duplication bug fixed (@512)
+
+- User reported the Intensity/Complexity/Acidity rating text duplicating in wine descriptions on detail-edit/new-product export (manually repaired live descriptions in both languages, suspected the generator still had the bug). Matched exactly the root cause already diagnosed 2026-07-17 in `jlmops/plans/WOO_API_PUSH_PLAN.md` (Scope item 1) — confirmed still live in `WooCommerceFormatter.js:340-376` before touching it.
+- **Fixed and shipped standalone @512**, severed from the rest of the (still-undecided-sequencing) Woo API push plan since this fix didn't depend on its category/brand/attribute infrastructure. Each of the three blocks (Intensity/Complexity/Acidity) now emits just `<strong>Label:</strong>` as the header; the rating + prose comes entirely from the `SysLkp_Texts` blurb, which already carried both (verified against `exchange/JLMops_Data - SysLkp_Texts.csv`). Compact spec table and the dead `USE_NEW_FORMATTING` branch left untouched. Plan doc's Scope item 1 struck as shipped.
+- Next: awaiting a live product export to verify the fix (user manually fixed existing descriptions already, so no live duplicate to test against yet). Woo API push plan items 2-7 still need a sequencing decision.
+
+---
+
 ## 2026-07-17 (cont'd) — Manager Inventory count-flow cleanup + view-loading spinner rolled out everywhere (@510-@511)
 
 - **Manager Inventory counts** (@510) — removed the leftover read-only Vintage/Product-Page columns from both the live counts screen and the bulk-entry Sheet export; counting is quantity-only, verification owns product facts. Recalculated the Sheet export's Total-count formula and highlight/protection ranges for the new column layout; confirmed the Sheet-import reader is header-driven so nothing there broke.

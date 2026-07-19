@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-17. jlmops @511 live, stable; view-loading spinner now covers every admin/manager view's own data load, closing the 2026-06-10 wishlist ask; Manager Inventory counts screen + bulk Sheet export both stripped of the leftover read-only Vintage/Product-Page columns; Woo API push (descriptions/category/brand/attributes) fully scoped and reviewed at `jlmops/plans/WOO_API_PUSH_PLAN.md`, not started; deep review completed, Product Verification confirmed live/tested and its STATUS pointer corrected to the archived plan.
+**Updated:** 2026-07-19. jlmops @512 live, stable; fixed a wine-description generator bug (`WooCommerceFormatter.js`) that duplicated the Intensity/Complexity/Acidity rating+prose text on every new-product/detail-edit export, severed from the still-unstarted Woo API push plan (`jlmops/plans/WOO_API_PUSH_PLAN.md`) since it didn't depend on that plan's other infrastructure; awaiting a live product export to verify.
 
 ## At a glance
 
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-07-17 |
+| Last Active | 2026-07-19 |
 | Revenue | Steady |
-| Deploy Version | jlmops @511 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-17 · theme 2026-07-09 |
+| Deploy Version | jlmops @512 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-07-19 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -86,7 +86,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 ## Blocked / Deferred
 
 - **Year in Wine PDF** — needs PDF-generation research.
-- **Woo API push (descriptions, category, brand, attributes)** — fully scoped plan at `jlmops/plans/WOO_API_PUSH_PLAN.md` (2026-07-17), not started. Folds in the former "Woo Brand + GTIN structured-data enrichment" item (brand now pushes via WC's native Brand field, not a custom attribute). Sequencing open: this is catalog/ops infrastructure, not one of the acquisition-period's named channels — build now vs. queue behind acquisition work is an open call. Once built, extends to carry upsell/cross-sell values (separate later plan).
+- **Woo API push (descriptions, category, brand, attributes)** — fully scoped plan at `jlmops/plans/WOO_API_PUSH_PLAN.md` (2026-07-17). Its generator-duplication fix (item 1) shipped standalone @512 2026-07-19; items 2-7 (category/brand lookups, CSV export rework, push service) not started. Folds in the former "Woo Brand + GTIN structured-data enrichment" item (brand now pushes via WC's native Brand field, not a custom attribute). Sequencing open: this is catalog/ops infrastructure, not one of the acquisition-period's named channels — build now vs. queue behind acquisition work is an open call. Once built, extends to carry upsell/cross-sell values (separate later plan).
 - **Gift recipient campaigns** — lowest priority.
 - **VIP recognition + referral program** — after campaigns launch.
 

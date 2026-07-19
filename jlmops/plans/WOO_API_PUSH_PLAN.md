@@ -1,7 +1,7 @@
 # Woo API Push — Product Descriptions, Category, Brand, Attributes
 
 **Created:** 2026-07-16/17 (scoped via live discussion, independent-agent review, and real sample-data checks against `WebDetM`/`WebProdM`/`WebXltM`/`SysLkp_Texts` and a live WooCommerce product export).
-**Status:** Planned, not started. Sequencing undecided — this is catalog/ops infrastructure, not one of the acquisition-period's two named channels (content, offline); build now vs. queue behind acquisition-period work is an open call. Phase 1 of the bigger push/upsell initiative noted in `plans/STATUS.md`; upsell/cross-sell is a separate, later plan.
+**Status:** Scope item 1 (generator duplication fix) shipped live @512 2026-07-19, severed from the rest of this plan since it didn't depend on category/brand/attribute infrastructure. Items 2-7 (category/brand lookups, CSV export rework, push service) remain planned, not started — sequencing undecided (catalog/ops infrastructure, not one of the acquisition-period's two named channels; build now vs. queue behind acquisition-period work is an open call). Phase 1 of the bigger push/upsell initiative noted in `plans/STATUS.md`; upsell/cross-sell is a separate, later plan.
 
 ## Context
 
@@ -31,7 +31,7 @@ An independent agent re-verified this plan against the live codebase before buil
 
 ## Scope (build)
 
-1. **Fix the generator** -- `WooCommerceFormatter.js`: remove the duplicated label/value text from the prose-paragraph blocks (Intensity/Complexity/Acidity), keep the compact spec table unchanged.
+1. ~~**Fix the generator** -- `WooCommerceFormatter.js`: remove the duplicated label/value text from the prose-paragraph blocks (Intensity/Complexity/Acidity), keep the compact spec table unchanged.~~ **Shipped @512 2026-07-19.** Each block's header now reads just `<strong>Label:</strong>` — the rating + prose comes entirely from the `SysLkp_Texts` blurb, which already carried both. Compact spec table (`col2Lines`) and the dead `USE_NEW_FORMATTING` branch left untouched. Awaiting live verification against a real product export (user manually repaired existing live descriptions before this fix, so no test data yet).
 2. **Extend `SysLkp_Texts`** with an appended WC-category-term-ID column, populated once via `/wc/v3/products/categories`.
 3. **Build the new Brand lookup**: `SysLkp_Brands` sheet, 4th `WebAppLookups.js` allowed map, admin UI card entry (Grapes/Kashrut pattern), and a new `wdm_Winery` column on `WebDetM`. Populate the lookup's native-Brand term ID once the Brand taxonomy is in use.
 4. **One-time attribute-taxonomy-ID lookup** for Intensity/Complexity/Acidity -- fetch `/wc/v3/products/attributes` once, cache the 3 groups' IDs in `SysConfig`.

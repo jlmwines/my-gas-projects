@@ -341,22 +341,20 @@ const WooCommerceFormatter = (function() {
                     const intensityKey = 'IN0' + intensityCode;
                     const text = getLookupText(intensityKey, 'texts');
                     const url = getLookupText('URL_INTENSITY', 'texts');
-                    const label = getLookupText('LABEL_IN' + intensityCode, 'texts', intensityCode);
                     if (text) {
-                        const header = `<strong style="${headerStyle}">${isEn ? 'Intensity:' : 'עוצמה:'}</strong> ${label} (${intensityCode} ${isEn ? 'of' : 'מתוך'} 5)`;
+                        const header = `<strong style="${headerStyle}">${isEn ? 'Intensity:' : 'עוצמה:'}</strong>`;
                         const readMore = url ? ` <a href="${url}" style="${linkStyle}">${isEn ? 'Read more' : 'קראו עוד'} ${arrow}</a>` : '';
-                        appendedParagraphs.push(`<p>${header} – ${text}${readMore}</p>`);
+                        appendedParagraphs.push(`<p>${header} ${text}${readMore}</p>`);
                     }
                 }
                 if (complexityCode) {
                     const complexityKey = 'CO0' + complexityCode;
                     const text = getLookupText(complexityKey, 'texts');
                     const url = getLookupText('URL_COMPLEXITY', 'texts');
-                    const label = getLookupText('LABEL_CO' + complexityCode, 'texts', complexityCode);
                     if (text) {
-                        const header = `<strong style="${headerStyle}">${isEn ? 'Complexity:' : 'מורכבות:'}</strong> ${label} (${complexityCode} ${isEn ? 'of' : 'מתוך'} 5)`;
+                        const header = `<strong style="${headerStyle}">${isEn ? 'Complexity:' : 'מורכבות:'}</strong>`;
                         const readMore = url ? ` <a href="${url}" style="${linkStyle}">${isEn ? 'Read more' : 'קראו עוד'} ${arrow}</a>` : '';
-                        appendedParagraphs.push(`<p>${header} – ${text}${readMore}</p>`);
+                        appendedParagraphs.push(`<p>${header} ${text}${readMore}</p>`);
                     }
                 }
                 if (acidityCode) {
@@ -366,11 +364,10 @@ const WooCommerceFormatter = (function() {
                         const acidityKey = 'AC0' + level;
                         const text = getLookupText(acidityKey, 'texts');
                         const url = getLookupText('URL_ACIDITY', 'texts');
-                        const label = getLookupText('LABEL_AC' + level, 'texts', level);
                         if (text) {
-                            const header = `<strong style="${headerStyle}">${isEn ? 'Acidity:' : 'חומציות:'}</strong> ${label} (${level} ${isEn ? 'of' : 'מתוך'} 5)`;
+                            const header = `<strong style="${headerStyle}">${isEn ? 'Acidity:' : 'חומציות:'}</strong>`;
                             const readMore = url ? ` <a href="${url}" style="${linkStyle}">${isEn ? 'Read more' : 'קראו עוד'} ${arrow}</a>` : '';
-                            appendedParagraphs.push(`<p>${header} – ${text}${readMore}</p>`);
+                            appendedParagraphs.push(`<p>${header} ${text}${readMore}</p>`);
                         }
                     }
                 }
