@@ -5,6 +5,7 @@
 .wp-credentials
 .sftp-credentials
 .mc-credentials
+.woo-api-credentials
 *.credentials.csv
 
 # Google Cloud service-account credentials (used by content/register-library.js)

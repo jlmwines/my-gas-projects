@@ -11,6 +11,7 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Open
 
+- [ ] 2026-07-20: Admin Products "Correct Product Name" action (SKU Management) applies with no confirmation step first — risk of accidental edit. `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh when re-run from Admin Dev — only a nightly/manual housekeeping run updates the dashboard's cached status.
 - [ ] 2026-07-16: "System Health Status" task's displayed date is frozen at original creation, not last-run — any view surfacing its Created Date misrepresents last-check time.
 - [ ] 2026-07-16: Woo Orders integration heartbeat shows red every morning before ~08:00 IL — the staleness threshold isn't business-hours-aware like the pull cadence it's checking.
