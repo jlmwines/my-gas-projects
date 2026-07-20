@@ -154,14 +154,17 @@ The following sheets represent the core data model for managing simple products.
     *   `wxs_WebIdEn`: The ID of the original English product it's linked to.
 
 ### `WebProdM` (Web Products Master)
-*   **Purpose:** Contains a single row for each conceptual product, holding core data for identification and sorting.
-*   **Columns:**
-    *   `wpm_WebIdEn`: **Primary Key.** The unique ID of the original (English) product.
-    *   `wpm_SKU`: The SKU that links the product to Comax data.
-    *   `wpm_NameEn`: The English product name, for easy identification.
-    *   `wpm_PublishStatusEn`: The publication status of the English product.
-    *   `wpm_Stock`: The inventory level.
-    *   `wpm_Price`: The product's price.
+*   **Purpose:** WebToffee-format product export/import mirror — one row per WooCommerce product *per language* (EN and HE are separate rows; linked via `wpm_WpmlLanguageCode`/WPML, not a same-row EN/HE pair). Source of truth for taxonomy, pricing, stock, bundle, and tasting-attribute data pulled from (and pushed to) WooCommerce.
+*   **Columns:** 66 WebToffee-format columns (verified live against `config/schemas.json` and a fresh `WebProdM` export, 2026-07-20) + 1 jlmops-appended column, 67 total. **Key column:** `wpm_ID` (the WooCommerce post ID — not `wpm_WebIdEn`, which doesn't exist on this sheet).
+    *   **Core post/identity:** `wpm_ID`, `wpm_PostTitle`, `wpm_PostContent`, `wpm_PostExcerpt`, `wpm_PostStatus`, `wpm_PostDate`, `wpm_SKU`, `wpm_WpmlLanguageCode`
+    *   **Stock & pricing:** `wpm_Stock`, `wpm_RegularPrice`, `wpm_SalePrice`, `wpm_Backorders`, `wpm_SoldIndividually`, `wpm_LowStockAmount`, `wpm_ManageStock`
+    *   **Cross-sell/upsell:** `wpm_UpsellIds`, `wpm_CrosssellIds`, `wpm_Featured` (see `WOO_API_PUSH_PLAN.md` — WPML "Copy" fields, EN-side only)
+    *   **Media/URLs:** `wpm_ProductUrl`, `wpm_Images`, `wpm_ProductPageUrl`
+    *   **Taxonomy:** `wpm_TaxProductBrand`, `wpm_TaxProductType`, `wpm_TaxProductVisibility`, `wpm_TaxProductCat`, `wpm_TaxProductTag`
+    *   **SEO (RankMath):** `wpm_MetaRankMathDesc`, `wpm_MetaRankMathKeyword`
+    *   **Bundles (Woosb), 17 fields:** `wpm_WoosbAfterText`, `wpm_WoosbBeforeText`, `wpm_WoosbCustomPrice`, `wpm_WoosbDisableAutoPrice`, `wpm_WoosbDiscount`, `wpm_WoosbDiscountAmount`, `wpm_WoosbExcludeUnpurch`, `wpm_WoosbIds`, `wpm_WoosbLayout`, `wpm_WoosbLimitEachMax`, `wpm_WoosbLimitEachMin`, `wpm_WoosbLimitEachMinDef`, `wpm_WoosbLimitWholeMax`, `wpm_WoosbLimitWholeMin`, `wpm_WoosbManageStock`, `wpm_WoosbOptionalProducts`, `wpm_WoosbShippingFee`, `wpm_WoosbTotalLimits`, `wpm_WoosbTotalLimitsMax`, `wpm_WoosbTotalLimitsMin`
+    *   **Tasting/custom attributes** (each a name/data/default triplet — WooCommerce global-attribute convention): `wpm_AttrAcidity`/`wpm_AttrDataAcidity`/`wpm_AttrDefaultAcidity`, `wpm_AttrComplexity`/`wpm_AttrDataComplexity`/`wpm_AttrDefaultComplexity`, `wpm_AttrFoodContrast`/`wpm_AttrDataFoodContrast`/`wpm_AttrDefaultFoodContrast`, `wpm_AttrFoodHarmony`/`wpm_AttrDataFoodHarmony`/`wpm_AttrDefaultFoodHarmony`, `wpm_AttrIntensity`/`wpm_AttrDataIntensity`/`wpm_AttrDefaultIntensity`, `wpm_AttrWinery`/`wpm_AttrDataWinery`/`wpm_AttrDefaultWinery`
+    *   **Computed (jlmops-appended, not part of the WebToffee format):** `wpm_ProfitRate` — see §3 "Supporting profit fields" below for its calculation/preserve-only rule.
 
 ### `WebDetM` (Web Details Master)
 *   **Purpose:** Contains all detailed, language-dependent, and descriptive data for each product.
@@ -234,6 +237,11 @@ The following sheets represent the core data model for managing simple products.
 *   **Purpose:** Master table of Hebrew (translated) product data pulled from WooCommerce/WPML. Populated from `WebXltS` staging via the daily HE pull (`WooProductPullService` → `ProductImportService.upsertWebXltData`), which **clears and rewrites the whole table every sync run** — WebXltM is fully sync-owned, never hand-maintained.
 *   **Columns:** 31 columns mirroring `WebXltS` staging (`schema.data.WebXltM` in `config/schemas.json`) — WordPress/WPML fields (`wxm_ID`, `wxm_PostTitle`, `wxm_SKU`, `wxm_WpmlLanguageCode`, `wxm_WpmlOriginalId`, `wxm_WpmlOriginalSku`) plus RankMath and Woosb (bundle) fields, matching the equivalent EN-side fields on `WebProdM`. **Key column:** `wxm_ID`. The EN↔HE link is `wxm_WpmlOriginalId`/`wxm_WpmlOriginalSku`, pointing back to the EN product.
 *   **Historical note:** an earlier, much smaller 4-column schema (`wxl_WebIdHe`, `wxl_NameHe`, `wxl_WebIdEn`, `wxl_SKU`) was retired before the live `wxm_` schema above; the manual new-product hot-link (`linkAndFinalizeNewProduct`, deleted @422 per `_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`) kept writing those old `wxl_` column names until removal — dead code, since the live headers never matched and every write silently no-opped.
+
+### `SysCategories` and `SysLkp_Texts` (category lookups — two tables, one stale)
+*   **`SysCategories`** (`sct_Code, sct_NameEn, sct_NameHe, sct_ComaxDiv, sct_ComaxGrp` — `config/schemas.json`, key column `sct_Code`): a wine-category reference table mapping a WC-style category slug (`sct_Code`, e.g. `dry-red`) to EN/HE names and Comax division/group. Read only by `ContactEnrichmentService.js` (`_loadCategoriesLookup`, keyed on `sct_NameEn`) for CRM category-preference tagging. **Confirmed stale/unmaintained (2026-07-20, owner-confirmed)** — not kept in sync with live WooCommerce categories.
+*   **`SysLkp_Texts`** (`slt_Code, slt_TextEN, slt_TextHE, slt_Note` — no `schema.data.*` entry; read dynamically via `LookupService.getLookupMap('map.text_lookups')`, which pulls headers off the live sheet's row 1 at runtime, `LookupService.js:14-60`): a general text/translation lookup keyed by `slt_Code`, disambiguated by `slt_Note` (`Category`, `ComaxCat`, `WebCat`, plus tasting-attribute label/circle codes, pairing/kashrut text, etc.). The `Category`-note rows (~6, keyed by `cpm_Group` Hebrew text) and `ComaxCat`-note rows (~4, keyed by numeric Comax division code) track the **same underlying category/division data as `SysCategories`**, just reached from the Comax side rather than a WC-slug side. This is the table actually read live by packing slips and product descriptions (new + update) — `ProductService.js`, `WooCommerceFormatter.js` (`getLookupText`) — making it the operationally current one despite having no formal schema entry.
+*   **Consolidation is a known future desire, not scheduled:** the owner would be glad to migrate all category lookups onto one table, but doing so means refreshing `SysCategories`' stale data and repointing packing-slip/description generation to it (or vice versa) — see `plans/WOO_API_PUSH_PLAN.md` for the immediate build decision (extends `SysLkp_Texts`, not `SysCategories`).
 
 ## Bundle Management Data Model
 
