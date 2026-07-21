@@ -266,11 +266,41 @@ const ConfigService = (function() {
     configCache = null;
   }
 
+  /**
+   * Reads a staging-to-master field mapping from SysConfig and validates that a set
+   * of critical fields are present and point where expected, before callers rely on
+   * it to move data between staging and master sheets. Throws on any missing/mismatched
+   * mapping so a drifted config fails loudly at read time rather than silently
+   * mis-mapping a field.
+   * @param {string} mapName The config key holding the mapping (e.g. 'map.staging_to_master.web_products').
+   * @param {Object<string,string>} criticalMappings Expected {stagingField: masterField} pairs that must be present.
+   * @returns {Object<string,string>} The full validated mapping.
+   */
+  function getValidatedMapping(mapName, criticalMappings) {
+    const map = getConfig(mapName);
+    if (!map || Object.keys(map).length === 0) {
+      throw new Error(`${mapName} mapping configuration missing or empty!`);
+    }
+    for (const [stagingField, expectedMasterField] of Object.entries(criticalMappings)) {
+      if (!map[stagingField]) {
+        throw new Error(`CRITICAL: Mapping missing for ${stagingField}`);
+      }
+      if (map[stagingField] !== expectedMasterField) {
+        throw new Error(
+          `CRITICAL: Mapping mismatch for ${stagingField}. ` +
+          `Expected ${expectedMasterField}, got ${map[stagingField]}`
+        );
+      }
+    }
+    return map;
+  }
+
   return {
     getConfig: getConfig,
     getAllConfig: getAllConfig,
     setConfig: setConfig,
     forceReload: forceReload,
-    _getSheetDataAsMap: _getSheetDataAsMap
+    _getSheetDataAsMap: _getSheetDataAsMap,
+    getValidatedMapping: getValidatedMapping
   };
 })();

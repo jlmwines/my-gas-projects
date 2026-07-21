@@ -711,32 +711,13 @@ const ProductService = (function() {
 
     let updatedCount = 0;
     let skippedCount = 0;
-    const stagingToMasterMap = ConfigService.getConfig('map.staging_to_master.web_products');
-
-    // NEW: Validate mapping configuration exists and is complete
-    if (!stagingToMasterMap || Object.keys(stagingToMasterMap).length === 0) {
-        throw new Error('Staging to master mapping configuration missing or empty!');
-    }
-
     const criticalMappings = {
         'wps_Stock': 'wpm_Stock',
         'wps_RegularPrice': 'wpm_RegularPrice',
         'wps_SKU': 'wpm_SKU',
         'wps_PostTitle': 'wpm_PostTitle'
     };
-
-    // NEW: Validate critical mappings are present
-    for (const [stagingField, expectedMasterField] of Object.entries(criticalMappings)) {
-        if (!stagingToMasterMap[stagingField]) {
-            throw new Error(`CRITICAL: Mapping missing for ${stagingField}`);
-        }
-        if (stagingToMasterMap[stagingField] !== expectedMasterField) {
-            throw new Error(
-                `CRITICAL: Mapping mismatch for ${stagingField}. ` +
-                `Expected ${expectedMasterField}, got ${stagingToMasterMap[stagingField]}`
-            );
-        }
-    }
+    const stagingToMasterMap = ConfigService.getValidatedMapping('map.staging_to_master.web_products', criticalMappings);
 
     const mappingErrors = [];
 

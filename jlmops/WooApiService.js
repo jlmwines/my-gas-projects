@@ -13,21 +13,20 @@
 const WooApiService = (function() {
   const SERVICE_NAME = 'WooApiService';
 
-  /** SysEnv spreadsheet ID — stores API keys separate from code-managed SysConfig. */
-  const SYSENV_SPREADSHEET_ID = '1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM';
-
   /**
    * Read WooCommerce API credentials from the SysEnv sheet.
-   * SysEnv lives in a separate spreadsheet so credentials are never overwritten
-   * by rebuildSysConfigFromSource().
+   * SysEnv lives in a separate spreadsheet (ID sourced from SysConfig's
+   * system.spreadsheet.env, same pattern as system.spreadsheet.data) so
+   * credentials are never overwritten by rebuildSysConfigFromSource().
    * Sheet columns: scf_SettingName | ... | scf_P01 (key type) | scf_P02 (key value)
    * @returns {{ consumer_key: string, consumer_secret: string }}
    */
   function _getCredentialsFromSysEnv() {
-    var ss = SpreadsheetApp.openById(SYSENV_SPREADSHEET_ID);
+    var sysEnvSpreadsheetId = ConfigService.getConfig('system.spreadsheet.env').id;
+    var ss = SpreadsheetApp.openById(sysEnvSpreadsheetId);
     var sheet = ss.getSheetByName('SysEnv');
     if (!sheet) {
-      throw new Error('SysEnv sheet not found in spreadsheet ' + SYSENV_SPREADSHEET_ID);
+      throw new Error('SysEnv sheet not found in spreadsheet ' + sysEnvSpreadsheetId);
     }
     var data = sheet.getDataRange().getValues();
     var creds = {};

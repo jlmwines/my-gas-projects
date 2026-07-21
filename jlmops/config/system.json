@@ -45,6 +45,21 @@
         ""
     ],
     [
+        "system.spreadsheet.env",
+        "ID of the SysEnv credentials spreadsheet -- deliberately a separate file from JLMops_Data so rebuildSysConfigFromSource() never touches it. This is just the ID pointer (not a credential value), so unlike the SysEnv sheet's contents it's safe to source from SysConfig like any other spreadsheet ID.",
+        "stable",
+        "id",
+        "1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "system.spreadsheet.logs",
         "ID of the JLMops_Logs spreadsheet",
         "stable",

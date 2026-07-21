@@ -12,19 +12,19 @@
 const MailchimpService = (function() {
   const SERVICE_NAME = 'MailchimpService';
 
-  // SysEnv lives in a separate spreadsheet so credentials are never overwritten
-  // by rebuildSysConfigFromSource(). Same spreadsheet ID as WooApiService.
-  const SYSENV_SPREADSHEET_ID = '1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM';
-
   const PAGE_SIZE_DEFAULT = 1000;
   const RETRY_MAX = 3;
   const RETRY_DELAY_MS = 2000;
 
+  // SysEnv lives in a separate spreadsheet so credentials are never overwritten
+  // by rebuildSysConfigFromSource(). ID sourced from SysConfig's system.spreadsheet.env
+  // (same pattern as system.spreadsheet.data), shared with WooApiService.
   function _getApiKey() {
-    const ss = SpreadsheetApp.openById(SYSENV_SPREADSHEET_ID);
+    const sysEnvSpreadsheetId = ConfigService.getConfig('system.spreadsheet.env').id;
+    const ss = SpreadsheetApp.openById(sysEnvSpreadsheetId);
     const sheet = ss.getSheetByName('SysEnv');
     if (!sheet) {
-      throw new Error('SysEnv sheet not found in spreadsheet ' + SYSENV_SPREADSHEET_ID);
+      throw new Error('SysEnv sheet not found in spreadsheet ' + sysEnvSpreadsheetId);
     }
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
