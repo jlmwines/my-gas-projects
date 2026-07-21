@@ -1519,7 +1519,8 @@ const ProductService = (function() {
         const lookupMaps = {
             texts: LookupService.getLookupMap('map.text_lookups'),
             grapes: LookupService.getLookupMap('map.grape_lookups'),
-            kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+            kashrut: LookupService.getLookupMap('map.kashrut_lookups'),
+            categories: ConfigService.getCategoryTextLookup()
         };
 
         // --- DEBUGGING LOGS for webDetMap ---
@@ -1757,7 +1758,8 @@ const ProductService = (function() {
             const lookupMaps = {
                 texts: LookupService.getLookupMap('map.text_lookups'),
                 grapes: LookupService.getLookupMap('map.grape_lookups'),
-                kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+                kashrut: LookupService.getLookupMap('map.kashrut_lookups'),
+                categories: ConfigService.getCategoryTextLookup()
             };
   
             // 3. Generate HTML
@@ -2989,7 +2991,8 @@ const ProductService = (function() {
       const lookupMaps = {
         texts: LookupService.getLookupMap('map.text_lookups'),
         grapes: LookupService.getLookupMap('map.grape_lookups'),
-        kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+        kashrut: LookupService.getLookupMap('map.kashrut_lookups'),
+        categories: ConfigService.getCategoryTextLookup()
       };
 
       const skus = testSku ? [String(testSku)] : Array.from(webDetMap.keys());

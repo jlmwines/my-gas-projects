@@ -7,20 +7,6 @@
 const ActivityBackfillService = (function () {
   const SERVICE_NAME = 'ActivityBackfillService';
 
-  // Hebrew to English category mapping
-  const CATEGORY_TRANSLATIONS = {
-    'יין אדום יבש': 'Dry Red',
-    'יין לבן יבש': 'Dry White',
-    'רוזה': 'Rosé',
-    'יין חצי יבש': 'Semi-Dry',
-    'יין קינוח': 'Dessert',
-    'יין מבוצר': 'Fortified',
-    'יין מבעבע': 'Sparkling',
-    'ליקר': 'Liqueur',
-    'אביזרים': 'Accessories',
-    'מתנות': 'Gifts'
-  };
-
   /**
    * Backfills order.placed activities from order history.
    * Calculates totals from order items since order master doesn't have them.
@@ -606,16 +592,6 @@ const ActivityBackfillService = (function () {
   }
 
   /**
-   * Translates a Hebrew category to English.
-   * @param {string} hebrewCategory - Hebrew category name
-   * @returns {string} English category name
-   */
-  function translateCategory(hebrewCategory) {
-    if (!hebrewCategory) return '';
-    return CATEGORY_TRANSLATIONS[hebrewCategory] || hebrewCategory;
-  }
-
-  /**
    * Runs full activity backfill with time budget to avoid timeout.
    * Exits gracefully if approaching execution time limit.
    * @returns {Object} Combined results
@@ -681,9 +657,7 @@ const ActivityBackfillService = (function () {
     backfillCouponActivity: backfillCouponActivity,
     backfillSubscriptionActivity: backfillSubscriptionActivity,
     backfillCampaignActivity: backfillCampaignActivity,
-    runFullBackfill: runFullBackfill,
-    translateCategory: translateCategory,
-    CATEGORY_TRANSLATIONS: CATEGORY_TRANSLATIONS
+    runFullBackfill: runFullBackfill
   };
 })();
 

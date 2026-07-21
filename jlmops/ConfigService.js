@@ -295,12 +295,62 @@ const ConfigService = (function() {
     return map;
   }
 
+  /**
+   * Builds a Hebrew-category-name -> Comax division code lookup from SysCategories,
+   * replacing the divisionMap literal duplicated in HousekeepingService.js and
+   * WebAppProducts.js (x2). Some categories span more than one Comax division while
+   * being a single unified category in WooCommerce -- e.g. Gift Items is Comax
+   * divisions 7 and 9 (distinct there) but one WC category (SysCategories' sct_Value
+   * confirms both rows resolve to WC term 903). By owner decision (2026-07-21),
+   * single-division matching is sufficient for all current consumers, so a shared
+   * name resolves to whichever division's row comes last in the sheet -- SysCategories'
+   * current row order (gift-items before gift-items-2) means Gift Items resolves to
+   * division 9, matching the prior hardcoded maps' behavior. Reordering SysCategories
+   * rows would change which division wins for any future multi-division name.
+   * @returns {Map<string, string>} Map of sct_NameHe to a Comax division code.
+   */
+  function getCategoryDivisionMap() {
+    const schema = getConfig('schema.data.SysCategories');
+    const headers = schema.headers.split(',');
+    const data = _getSheetDataAsMap('SysCategories', headers, 'sct_Code');
+    const divisionByName = new Map();
+    data.map.forEach(row => {
+      const nameHe = String(row.sct_NameHe || '').trim();
+      const div = String(row.sct_ComaxDiv || '').trim();
+      if (!nameHe || !div) return;
+      divisionByName.set(nameHe, div);
+    });
+    return divisionByName;
+  }
+
+  /**
+   * Builds a Comax-wine-group -> SysCategories row lookup, keyed by sct_ComaxGrp
+   * (Hebrew wine group text, e.g. "יין אדום יבש"). Feeds WooCommerceFormatter's
+   * getLookupText('categories', ...) for the category line in product descriptions --
+   * replaces the SysLkp_Texts Category-note rows those calls used to read.
+   * @returns {Map<string, Object>} Map of sct_ComaxGrp to its SysCategories row.
+   */
+  function getCategoryTextLookup() {
+    const schema = getConfig('schema.data.SysCategories');
+    const headers = schema.headers.split(',');
+    const data = _getSheetDataAsMap('SysCategories', headers, 'sct_Code');
+    const lookupByGroup = new Map();
+    data.map.forEach(row => {
+      const comaxGrp = String(row.sct_ComaxGrp || '').trim();
+      if (!comaxGrp) return;
+      lookupByGroup.set(comaxGrp, row);
+    });
+    return lookupByGroup;
+  }
+
   return {
     getConfig: getConfig,
     getAllConfig: getAllConfig,
     setConfig: setConfig,
     forceReload: forceReload,
     _getSheetDataAsMap: _getSheetDataAsMap,
-    getValidatedMapping: getValidatedMapping
+    getValidatedMapping: getValidatedMapping,
+    getCategoryDivisionMap: getCategoryDivisionMap,
+    getCategoryTextLookup: getCategoryTextLookup
   };
 })();

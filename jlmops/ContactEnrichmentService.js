@@ -39,29 +39,6 @@ const ContactEnrichmentService = (function () {
     'Agur', 'Bat Shlomo', 'Adir', 'Kayoumi', 'Margalit', 'Maia', 'Sphera'
   ];
 
-  // Hebrew to English category translation (cpm_Group values)
-  const CATEGORY_TRANSLATION = {
-    'יין אדום יבש': 'Dry Red',
-    'יין לבן יבש': 'Dry White',
-    'רוזה': 'Rosé',
-    'יין רוזה': 'Rosé',
-    'יין מוגז': 'Sparkling',
-    'יין קינוח': 'Dessert',
-    'יין מחוזק': 'Fortified',
-    'יין חצי יבש': 'Semi-Dry'
-  };
-
-  // English to Hebrew category translation (reverse of above)
-  const CATEGORY_TRANSLATION_HE = {
-    'Dry Red': 'יין אדום יבש',
-    'Dry White': 'יין לבן יבש',
-    'Rosé': 'רוזה',
-    'Sparkling': 'יין מוגז',
-    'Dessert': 'יין קינוח',
-    'Fortified': 'יין מחוזק',
-    'Semi-Dry': 'יין חצי יבש'
-  };
-
   // Cache for lookup tables
   let _brandsLookup = null;
   let _categoriesLookup = null;
@@ -102,8 +79,13 @@ const ContactEnrichmentService = (function () {
   }
 
   /**
-   * Loads SysCategories lookup table for category translations.
-   * @returns {Map<string, Object>} Map of NameEn to {en, he}
+   * Loads SysCategories lookup table for category translations. Keyed three ways so
+   * both display-name translation and raw Comax division/group classification can
+   * share one lookup: sct_NameEn.toLowerCase() (existing lookups by English name),
+   * sct_ComaxGrp (wine rows -- Hebrew group text, e.g. "יין אדום יבש"), and
+   * sct_ComaxDiv (non-wine rows only -- division code as a string, e.g. "5"; wine
+   * rows share division "1" across categories so they're keyed by group, not division).
+   * @returns {Map<string, Object>} Map of lookup key to {en, he}
    */
   function _loadCategoriesLookup() {
     if (_categoriesLookup) return _categoriesLookup;
@@ -125,8 +107,15 @@ const ContactEnrichmentService = (function () {
           const row = data[i];
           const nameEn = String(row[idx['sct_NameEn']] || '').trim();
           const nameHe = String(row[idx['sct_NameHe']] || '').trim();
-          if (nameEn) {
-            _categoriesLookup.set(nameEn.toLowerCase(), { en: nameEn, he: nameHe || nameEn });
+          const comaxGrp = String(row[idx['sct_ComaxGrp']] || '').trim();
+          const comaxDiv = String(row[idx['sct_ComaxDiv']] || '').trim();
+          if (!nameEn) continue;
+          const entry = { en: nameEn, he: nameHe || nameEn };
+          _categoriesLookup.set(nameEn.toLowerCase(), entry);
+          if (comaxGrp) {
+            _categoriesLookup.set(comaxGrp, entry);
+          } else if (comaxDiv) {
+            _categoriesLookup.set(comaxDiv, entry);
           }
         }
       }
@@ -314,23 +303,23 @@ const ContactEnrichmentService = (function () {
   }
 
   /**
-   * Gets the primary category for a product based on Division/Group.
-   * Translates Hebrew cpm_Group values to English.
+   * Gets the primary category for a product based on Division/Group, sourced from
+   * SysCategories (wine rows keyed by Hebrew group text, non-wine rows keyed by
+   * division code -- see _loadCategoriesLookup).
    * @param {Object} product - Product with division and group fields
    * @returns {string} Primary category in English
    */
   function _getPrimaryCategory(product) {
     const div = product.division;
     const group = product.group;
+    const categoriesLookup = _loadCategoriesLookup();
 
     if (div === '1') {
-      // Wine - translate Group from Hebrew to English
-      return CATEGORY_TRANSLATION[group] || group || 'Wine';
+      const entry = categoriesLookup.get(group);
+      return entry ? entry.en : (group || 'Wine');
     }
-    if (div === '3') return 'Liqueur';
-    if (div === '5') return 'Accessories';
-    if (div === '9') return 'Gifts';
-    return 'Other';
+    const entry = categoriesLookup.get(div);
+    return entry ? entry.en : 'Other';
   }
 
   /**
@@ -477,8 +466,10 @@ const ContactEnrichmentService = (function () {
    * @returns {Object} { en: string, he: string } - Comma-separated frequent categories
    */
   function _calculateFrequentCategories(enrichedItems) {
+    // Must match SysCategories' sct_NameEn for non-wine rows (liqueurs, accessories,
+    // gift-items/gift-items-2) plus _getPrimaryCategory's 'Other' fallback.
     const wineItems = enrichedItems.filter(i =>
-      i.category && !['Liqueur', 'Accessories', 'Gifts', 'Other'].includes(i.category)
+      i.category && !['Liqueurs', 'Accessories', 'Gift Items', 'Other'].includes(i.category)
     );
 
     if (wineItems.length === 0) return { en: '', he: '' };
@@ -508,10 +499,10 @@ const ContactEnrichmentService = (function () {
         enNames.push(lookup.en);
         heNames.push(lookup.he);
       } else {
-        // Try reverse lookup from CATEGORY_TRANSLATION_HE
-        const heTranslation = CATEGORY_TRANSLATION_HE[cat];
+        // _getPrimaryCategory sources cat from this same SysCategories-backed lookup,
+        // so a miss here means no SysCategories row matched at all -- no Hebrew name available.
         enNames.push(cat);
-        heNames.push(heTranslation || cat);
+        heNames.push(cat);
       }
     });
 

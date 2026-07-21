@@ -184,6 +184,7 @@ const WooCommerceFormatter = (function() {
             if (lookupType === 'texts') return isEn ? item.slt_TextEN : item.slt_TextHE;
             if (lookupType === 'grapes') return isEn ? item.slg_TextEN : item.slg_TextHE;
             if (lookupType === 'kashrut') return isEn ? item.slk_TextEN : item.slk_TextHE;
+            if (lookupType === 'categories') return isEn ? item.sct_NameEn : item.sct_NameHe;
             return fallback;
         };
 
@@ -228,7 +229,7 @@ const WooCommerceFormatter = (function() {
 
             // Column 1: Category, Vintage, ABV, Volume, Region, Grapes
             if (group) {
-                const categoryName = getLookupText(group, 'texts', group);
+                const categoryName = getLookupText(group, 'categories', group);
                 if (categoryName) col1Lines.push(categoryName);
             }
             if (vintage) col1Lines.push(`${isEn ? 'Vintage' : 'שנת בציר'}: ${vintage}`);
@@ -438,7 +439,7 @@ const WooCommerceFormatter = (function() {
             }
 
             if (group) {
-                const categoryName = getLookupText(group, 'texts', group);
+                const categoryName = getLookupText(group, 'categories', group);
                 if (categoryName) html += `${categoryName}\n`;
             }
             if (vintage) html += addDetailLine('Vintage', 'שנת בציר', vintage);

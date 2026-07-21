@@ -418,32 +418,6 @@ function _getFilterOptions() {
 }
 
 /**
- * Hebrew to English category translation map.
- */
-const CATEGORY_TRANSLATIONS = {
-  'יין אדום יבש': 'Dry Red',
-  'יין לבן יבש': 'Dry White',
-  'רוזה': 'Rosé',
-  'יין חצי יבש': 'Semi-Dry',
-  'יין קינוח': 'Dessert',
-  'יין מבוצר': 'Fortified',
-  'יין מבעבע': 'Sparkling',
-  'ליקר': 'Liqueur',
-  'אביזרים': 'Accessories',
-  'מתנות': 'Gifts'
-};
-
-/**
- * Translates a Hebrew category to English.
- * @param {string} category - Category name (possibly Hebrew)
- * @returns {string} English category name
- */
-function _translateCategory(category) {
-  if (!category) return '';
-  return CATEGORY_TRANSLATIONS[category] || category;
-}
-
-/**
  * Formats a min-max range or average value for display.
  * @param {number} min - Minimum value
  * @param {number} max - Maximum value

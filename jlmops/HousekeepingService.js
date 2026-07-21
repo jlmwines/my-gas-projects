@@ -1466,14 +1466,7 @@ function HousekeepingService() {
         return result;
       }
 
-      // Hardcoded Division map for the current fixed category set (same as the prior
-      // live implementation — ConfigService's simple key/value map doesn't expose a third
-      // config param per row, so this isn't sourced from StockHealth's own config rows).
-      const divisionMap = {
-        'ליקר': '3',
-        'אביזרים': '5',
-        'פריטי מתנה': '9'
-      };
+      const divisionMap = ConfigService.getCategoryDivisionMap();
 
       const minRules = [];
       for (const [key, value] of Object.entries(stockHealthConfig)) {
@@ -1482,7 +1475,7 @@ function HousekeepingService() {
           minRules.push({
             category: catName,
             min: parseInt(value, 10),
-            targetDivision: divisionMap[catName] || null
+            targetDivision: divisionMap.get(catName) || null
           });
         }
       }

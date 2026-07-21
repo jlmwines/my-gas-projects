@@ -150,7 +150,8 @@ function WebAppProducts_getPreview(sku, formData, comaxData) {
     const lookupMaps = {
         texts: LookupService.getLookupMap('map.text_lookups'),
         grapes: LookupService.getLookupMap('map.grape_lookups'),
-        kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+        kashrut: LookupService.getLookupMap('map.kashrut_lookups'),
+        categories: ConfigService.getCategoryTextLookup()
     };
     return ProductService.getProductHtmlPreview(sku, formData, comaxData, 'EN', lookupMaps, false); // Assuming EN for preview, pass comaxData
 }
@@ -558,12 +559,8 @@ function WebAppProducts_getPotentialProducts(category) {
         return s === '1' || s === 'true' || s === 'yes' || s === 'כן';
     };
 
-    const divisionMap = {
-        'ליקר': '3',
-        'אביזרים': '5',
-        'פריטי מתנה': '9'
-    };
-    const targetDivision = divisionMap[category] || null;
+    const divisionMap = ConfigService.getCategoryDivisionMap();
+    const targetDivision = divisionMap.get(category) || null;
 
     let logCount = 0;
 
@@ -659,12 +656,8 @@ function WebAppProducts_searchProducts(searchTerm, category) {
     };
 
     // Map category to division if applicable
-    const divisionMap = {
-      'ליקר': '3',
-      'אביזרים': '5',
-      'פריטי מתנה': '9'
-    };
-    const targetDivision = category ? (divisionMap[category] || null) : null;
+    const divisionMap = ConfigService.getCategoryDivisionMap();
+    const targetDivision = category ? (divisionMap.get(category) || null) : null;
 
     cmxDataMap.map.forEach(product => {
       // Filter: Not Archived, Not on Web, Has Stock
