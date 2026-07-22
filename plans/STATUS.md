@@ -9,7 +9,7 @@ One current-state line per business area. The umbrella has no single phase label
 - **jlmops** (GAS backend) — live, stable (current version in Metrics below); 2026-07-14/15 fixes smoke-tested and confirmed clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`, `jlmops/docs/WORKFLOWS.md` §16).
 - **jlmwines.com** (storefront/theme) — live (current version in Metrics below); Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
-- **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
+- **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW July email HTML built EN+HE, ready to send); calendar filled through December.
 - **business** — strategy/brand docs current.
 
 ## Metrics
@@ -32,7 +32,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
-1. **July newsletter — print already in distribution (track only).** End-of-July AYIW email (`ayiw-2026-07`) content in progress — finish drafting and send before month end. August AYIW (`ayiw-2026-08`, target send 2026-09-08) also prepped 2026-07-09: calendar row merged, Doc placed at canonical Library path — ready for admin to attach/spawn when convenient.
+1. **July newsletter — print already in distribution (track only).** End-of-July AYIW email (`ayiw-2026-07`) — EN+HE Library Docs located, Mailchimp-ready HTML built (`marketing/newsletter/issues/2026-07/2026-07-ayiw-email-en/he.html`, same pattern as June's reference files). Session wrote the subject/preview/H1/CTA Hebrew strings (manager only translated the body) — worth a glance before sending. Admin to paste into Mailchimp (Image block + Code block per `EMAIL_GUIDELINES.md`) and send before month end. August AYIW (`ayiw-2026-08`, target send 2026-09-08) also prepped 2026-07-09: calendar row merged, Doc placed at canonical Library path — ready for admin to attach/spawn when convenient.
 2. **Branded shipping cartons — art confirmed with vendor; arrival date unknown.** Partner-owned. Track only: nudge in daily review; re-flag if production/delivery slips. No Claude action.
 3. **Flyer advertising — printed; distribution delayed until after the 9 Av fast day, likely last week of July, to 5,000 Talbiye residences.** Vendor-owned execution. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-08-10`).
 4. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).

@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-22 (cont'd) — July AYIW email built (EN+HE HTML)
+
+- Located the two `email-ayiw-2026-07-en/he` Library Docs in Drive (EN session-drafted; HE owned by `info@jlmwines.com` — confirms the manager's own translate/edit pass, per the AYIW exception).
+- Built `marketing/newsletter/issues/2026-07/2026-07-ayiw-email-en.html` + `-he.html`, copying June's exact reference-file structure/CSS. Body text is verbatim from the Docs; subject/preview/H1/CTA (both languages) are new copy this session wrote, following June's precedent of a custom monthly headline/CTA rather than the master doc's generic evergreen Subject/Preview/CTA lines.
+- User corrected file placement twice mid-session (not `content/AYIW/`, stay in `marketing/newsletter/issues/`) — this is a newsletter-family deliverable, that's its home.
+- Next: admin reviews the session-written Hebrew UI strings (not manager-translated, unlike the body), then pastes EN/HE bodies into two Mailchimp campaigns and sends before month end.
+
+---
+
 ## 2026-07-22 — Woo API push built, first live push confirmed (@524-@527)
 
 - Built items 3-6: item 3 needed no code (attribute-taxonomy IDs hardcoded in the push, not threaded through the live pull); item 4 reworked `_buildProductDetailExport` to append category/attribute/manage-stock/qty/WC-ID columns (append-only, old manual copy/paste untouched); item 5 added `WooInventoryPushService.pushProductDetails` (mandatory EN+HE pair, blank-category fail-safe); item 6 added a "Push via API" button to both export bars.
