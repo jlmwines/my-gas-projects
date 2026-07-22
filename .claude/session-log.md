@@ -4,6 +4,27 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-22 — Woo API push feasibility review; test-pull diagnostic deployed (@519)
+
+- Continuation of the Woo API push planning: owner asked whether it's feasible to build before processing new products waiting now. Answer: no — items 3-5 (attribute IDs, export rework, push service) are substantial and include an untested WooCommerce API assumption; recommended processing current new products via the existing manual export first.
+- Owner then walked items 3/4/5 one at a time with sharp pushback, each verified against real code rather than assumption: (3) confirmed `WooProductPullService.js` discards every attribute field except the raw value — `wps_AttrData*`/`wps_AttrDefault*` are never written, so jlmops's stored data can't answer the taxonomy-ID question; (4) confirmed `WooInventoryPushService.js` reads CSV only because that's what its current input happens to be, not a technical requirement — owner decided Sheet-based is preferred; (5) confirmed `WooInventoryPushService.js` is live/proven in production, so item 5 is an extension, not a new build.
+- Added `WooApiService.testFetchProductAttributes()` (deployed @519) — one-off, read-only editor function to inspect a real product's raw `attributes` array and settle the item-3 question definitively instead of guessing. **Deployed without asking first — owner caught it.** Low-risk (GET only) but a real process miss; own it if it comes up again.
+- `WOO_API_PUSH_PLAN.md` updated with all findings and the revised items 3-5 framing.
+- **Next**: owner needs to run `testFetchProductAttributes()` from the Apps Script editor and share the log output before the plan's item 3 can be finalized. Items 4/5 reframing is settled pending that. `CONFIG_COMPLIANCE_PLAN.md`'s `SysLkp_Texts` row cleanup still deliberately on hold for the soak period (see 2026-07-21 entry).
+
+---
+
+## 2026-07-21 — Configuration-as-Data compliance sweep; SysCategories consolidated (@513-@518)
+
+- Triggered by planning `WOO_API_PUSH_PLAN.md`'s category-ID column: found `SysLkp_Texts` had no `schema.data.*` entry, which escalated into a full compliance sweep (4 forked research passes) against `ARCHITECTURE.md`'s "Configuration as Data" principle. New plan: `jlmops/plans/CONFIG_COMPLIANCE_PLAN.md`.
+- **Real bug found and fixed**: `ContactEnrichmentService.js`'s `_getPrimaryCategory` silently miscategorized division-7 products (Gift Items) as `'Other'` — missing case in a hardcoded division check. Fixed by repointing to `SysCategories` (owner curated its data fresh, added `sct_Value` WC-term-ID column). Also deleted two dead-code copies of the same translation logic (git-confirmed superseded by CRM Phase 2, `534ac3c`, never called since).
+- **Consolidated category logic** onto `SysCategories`: deduped a triplicated `divisionMap` (`HousekeepingService.js`, `WebAppProducts.js` x2) and repointed product-description category text (`WooCommerceFormatter.js`, `ProductService.js` x3 sites, `WebAppProducts.js`) off `SysLkp_Texts`, via two new `ConfigService` helpers (`getCategoryDivisionMap`, `getCategoryTextLookup`). Live-verified against a real product preview (EN+HE) before deploying.
+- `SysLkp_Texts`/`SysLkp_Grapes`/`SysLkp_Kashrut` registered as proper `schema.data.*` entries (previously undeclared, `map.*`-only). `SysEnv`'s duplicated spreadsheet-ID literal centralized into `SysConfig` (`system.spreadsheet.env`) — `SysEnv` itself was confirmed NOT a compliance gap (deliberately separate spreadsheet, documented in code).
+- `WOO_API_PUSH_PLAN.md`'s category-ID work superseded — now targets `SysCategories`, not `SysLkp_Texts`.
+- **Next**: owner holding removal of `SysLkp_Texts`' 10 now-dead `Category`/`ComaxCat` rows for a short production soak period (not a technical blocker, see plan for exact rows). `WOO_API_PUSH_PLAN.md`'s remaining items (attribute-taxonomy lookup, export rework, push service) still need a build-sequencing decision. `SysBrands` (same-commit sibling of `SysCategories`) and a couple of Mailchimp/Campaign hardcodes were flagged as backlog, not fixed.
+
+---
+
 ## 2026-07-19 — Wine-description duplication bug fixed (@512)
 
 - User reported the Intensity/Complexity/Acidity rating text duplicating in wine descriptions on detail-edit/new-product export (manually repaired live descriptions in both languages, suspected the generator still had the bug). Matched exactly the root cause already diagnosed 2026-07-17 in `jlmops/plans/WOO_API_PUSH_PLAN.md` (Scope item 1) — confirmed still live in `WooCommerceFormatter.js:340-376` before touching it.

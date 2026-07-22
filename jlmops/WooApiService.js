@@ -387,3 +387,20 @@ const WooApiService = (function() {
 function testWooApiConnection() {
   return WooApiService.testConnection();
 }
+
+/**
+ * One-off test: fetch a single live product and log its raw `attributes` array
+ * exactly as WooCommerce returns it (id/name/slug/options/etc.), so WOO_API_PUSH_PLAN.md's
+ * item 3 (attribute-taxonomy-ID sourcing) can be settled against real data instead of
+ * inferring from what WooProductPullService.js currently keeps (confirmed lossy --
+ * it only captures options[0], discards everything else). Run from the Apps Script
+ * editor function picker; defaults to product 13 (Adir A) if called with no argument.
+ * @param {string|number} [wcId] WooCommerce product ID to inspect.
+ * @returns {object} The full raw product.attributes array as WooCommerce returned it.
+ */
+function testFetchProductAttributes(wcId) {
+  const id = wcId || 13;
+  const product = WooApiService.fetchProductById(id);
+  Logger.log('Product %s (%s) raw attributes:\n%s', id, product.name, JSON.stringify(product.attributes, null, 2));
+  return product.attributes;
+}
