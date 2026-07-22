@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-22. jlmops @526 live, stable; `SysCategories` consolidated as the category authority (see `jlmops/plans/CONFIG_COMPLIANCE_PLAN.md`, one cleanup step held for a production soak period). Woo API push (`jlmops/plans/WOO_API_PUSH_PLAN.md`) is built and confirmed working end-to-end for the new-product path (export → API push → review → publish); existing-product edit path still needs a live test.
+**Updated:** 2026-07-22. jlmops @528 live, stable; `SysCategories` consolidated as the category authority (see `jlmops/plans/CONFIG_COMPLIANCE_PLAN.md`, one cleanup step held for a production soak period). Woo API push (`jlmops/plans/WOO_API_PUSH_PLAN.md`) confirmed working end-to-end for both new-product and existing-product edit paths. Vintage-drift tasks fixed to stop showing/saving stale Comax data (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — deployed, awaiting a live vintage change to smoke-test.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-22 |
 | Revenue | Steady |
-| Deploy Version | jlmops @527 · theme v1.2.31 |
+| Deploy Version | jlmops @528 · theme v1.2.31 |
 | Deploy Date | jlmops 2026-07-22 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -39,7 +39,7 @@ The live "what now" — daily review reads these first.
 5. **Galilee region post (Slot B, due 2026-08-11, see `content/REGION_POSTS_PLAN.md`)** — in progress; drafted + registered in the library (`blog-region-galilee-en`, state `draft`).
 6. **Central Mountains region post (Slot C) — body drafted through Image Prompts, 2026-07-09.** Calendar row staged (`blog-region-central-mountains`, cal_Date 2026-08-25, pending "Apply Pending Updates"); Drive doc placed at the canonical library path (`blog-region-central-mountains-en 26-07-09-12-05`); git source at `content/regions/central-mountains/central-mountains-en.post.md`. Remaining: winery verification (Gvaot/Tura not yet confirmed against JLM's carried wineries), Canva images, HE translation, library registration, WP push — same checklist as Galilee (`content/REGION_POSTS_PLAN.md`).
 7. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
-8. **Woo API push edit-path test** — new-product path confirmed working live @526/527; the existing-product detail-update path (no-op edit on an already-published product) hasn't been tried yet. Trigger an existing product's detail-update export + push next to close out `jlmops/plans/WOO_API_PUSH_PLAN.md`'s verification.
+8. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
 
 ## Active Plans
 
@@ -52,7 +52,8 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Admin Inventory Comax file-link buttons** — re-implemented @508 by copying `AdminProductsView._renderFileActions`'s proven pattern (`containerId`/`fileUrl`/`fileName`) rather than restoring the version that broke. View-load confirmed clean live 2026-07-16. The buttons themselves (Open File/Copy Filename) are not yet tested — no active Comax export/confirmation task to test against; user will advise when one appears. Original failure's root mechanism was never found, so this is the safest available reimplementation, not a guaranteed fix. Same-shaped buttons on Detail Update/New Product export (`AdminProductsView.html`, same @489 commit) remain unverified but unaffected by this change.
 - **Publishing view Calendar-tab crash** — fixed @509 2026-07-16, confirmed working live both roles. `renderCalendar()`'s task-grouping loop had no content-type filter (unlike `renderTasks()`), so non-content tasks with numeric entityIds — exposed by the 2026-07-10 `_deriveEntityId` priority fix — reached `.slice()` unguarded and crashed the whole view. Also fixed: `_loadCampaignsAndProjects()`'s failure path now clears the Calendar tab's own container, not just the Campaigns tab's. See `.claude/bugs.md`.
 - **Category data** — `SysCategories` is the live category authority (owner-curated, carries the WC category term ID). Product descriptions, CRM enrichment, and stock-deficiency/product-suggestion logic all read it through shared `ConfigService` lookups rather than scattered hardcoded maps. `SysLkp_Texts` still holds its now-superseded category rows, kept temporarily as a safety net during a production soak period before cleanup — see `jlmops/plans/CONFIG_COMPLIANCE_PLAN.md`.
-- **Woo API push** (`jlmops/plans/WOO_API_PUSH_PLAN.md`) — live @526. Export sheet carries category/attributes (each attribute a reviewable Value/Visible/Position triple)/manage-stock/qty/WC IDs; "Push via API" button on both export bars; first real push confirmed 2026-07-22 (new-product path: export → push → draft in Woo → reviewed → published). Existing-product edit-path (no-op detail update) not yet tested. RankMath meta-description/focus-keyword push deferred (manual for now, no urgency) — old manual copy/paste into Woo remains available as a fallback throughout.
+- **Woo API push** (`jlmops/plans/WOO_API_PUSH_PLAN.md`) — live @526. Export sheet carries category/attributes (each attribute a reviewable Value/Visible/Position triple)/manage-stock/qty/WC IDs; "Push via API" button on both export bars; both new-product and existing-product edit paths confirmed working live 2026-07-22. RankMath meta-description/focus-keyword push (item 8) deferred (manual for now, no urgency) — old manual copy/paste into Woo remains available as a fallback throughout.
+- **Vintage-mismatch snapshot fix** (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — live @528. `task.validation.vintage_mismatch` tasks no longer freeze Comax/Web data at creation time (the snapshot mechanism was showing/saving stale vintages, and captured the wrong field entirely — pre-drift `cpm_Vintage` instead of the incoming `cps_Vintage`); both creation paths (rule-based + verify-fail conversion) now rely on the existing live-read fallback. Not yet smoke-tested — needs a real vintage change to occur naturally. Add/Verification-fail-conversion tasks are unaffected and still snapshot.
 
 ## Current State
 

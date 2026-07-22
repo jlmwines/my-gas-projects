@@ -1239,27 +1239,15 @@ function WebAppProducts_getManagerVerifyTasks() {
  */
 function WebAppProducts_passVerifyToManager(taskId) {
   try {
-    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-    const headers = taskSchema.headers.split(',');
-    const allTasks = ConfigService._getSheetDataAsMap('SysTasks', headers, 'st_TaskId').map;
-    const task = allTasks.get(taskId);
-    const sku = task ? String(task.st_LinkedEntityId || '').trim() : '';
-
-    let detailSnapshot = undefined;
-    if (sku) {
-      const detail = ProductService.getWebDetailRows(sku);
-      const allConfig = ConfigService.getAllConfig();
-      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
-      const cmxObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxHeaders, 'cpm_SKU');
-      const comax = cmxObj.map.get(sku) || null;
-      detailSnapshot = { master: detail.master, staging: detail.staging, comax: comax };
-    }
-
+    // task.validation.vintage_mismatch is deliberately excluded from the product-detail
+    // snapshot mechanism (jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md) — it tracks
+    // a live Comax-vs-Web discrepancy, so a creation-time freeze defeats the point. No
+    // detailSnapshot is set here; WebAppProducts_loadProductEditorData falls back to a
+    // live read when absent.
     return WebAppTasks_updateTask(taskId, {
       taskTypeId: 'task.validation.vintage_mismatch',
       assignedTo: 'Manager',
-      status: 'New',
-      detailSnapshot: detailSnapshot
+      status: 'New'
     });
   } catch (e) {
     LoggerService.error('WebAppProducts', 'passVerifyToManager', `Error: ${e.message}`, e);

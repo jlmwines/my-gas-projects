@@ -180,20 +180,12 @@ const ValidationOrchestratorService = (function() {
       const notes = `${baseNotes}\nDetails: ${discrepancy.details}`;
       const entityName = discrepancy.name || '';
 
-      // Product-detail snapshot (jlmops/plans/PRODUCT_DETAIL_SNAPSHOT_PLAN.md, Phase 1
-      // "update" path) — scoped to the one rule that feeds the shared product editor via
-      // this task type. discrepancy.data already has the CmxProdM (cpm_*) fields this rule
-      // compares; WebDetM/WebDetS aren't part of that data, so they need one extra read here.
+      // task.validation.vintage_mismatch is deliberately excluded from the product-detail
+      // snapshot mechanism (jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md) — it tracks
+      // a live Comax-vs-Web discrepancy, so a creation-time freeze defeats the point (same
+      // reasoning as the verify modal, docs/WORKFLOWS.md §16.2). No detailSnapshot is built
+      // here; WebAppProducts_loadProductEditorData falls back to a live read when absent.
       let taskOptions = undefined;
-      if (rule.on_failure_task_type === 'task.validation.vintage_mismatch' &&
-          rule.sheet_A === 'CmxProdM' && rule.sheet_B === 'CmxProdS') {
-          const comaxSnapshot = {};
-          Object.keys(discrepancy.data || {}).forEach(k => {
-              if (k.indexOf('cpm_') === 0) comaxSnapshot[k] = discrepancy.data[k];
-          });
-          const detail = ProductService.getWebDetailRows(entityId);
-          taskOptions = { detailSnapshot: { master: detail.master, staging: detail.staging, comax: comaxSnapshot } };
-      }
 
       TaskService.createTask(rule.on_failure_task_type, entityId, entityName, finalTitle, notes, sessionId, taskOptions);
 
