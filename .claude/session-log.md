@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-22 (cont'd) — Admin Products Accepted card stale after mid-queue accept, fixed (@529)
+
+- User asked whether the Details tab's Accepted card refreshes after accepting a reviewed task. Traced `AdminProductsView.acceptChanges` (`AdminProductsView.html:2289`): it only calls `refreshView()` (which reloads Accepted) when the review queue empties or the task wasn't opened from the queue — mid-queue accepts just splice the review list and auto-advance, never touching the Accepted card. User confirmed this is the normal case (approving fewer than all available), so the card was going stale for the whole session, off-screen and unnoticed.
+- Fix: added `AdminProductsView.loadAcceptedList()` to the mid-queue branch so every accept refreshes the card regardless of queue position. Deployed @529.
+- Not yet smoke-tested live.
+
+---
+
 ## 2026-07-22 (cont'd) — Vintage-drift snapshot bug fixed (@528); Woo API push existing-product edit path confirmed
 
 - User reported a product-detail task showing vintage 2023 when Comax (`cpm_Vintage`) clearly showed 2025. Traced to the `st_DetailSnapshot` product-detail-snapshot mechanism (`docs/WORKFLOWS.md` §16.1): `task.validation.vintage_mismatch` tasks were being snapshotted like Add/Verify-conversion tasks, but their whole purpose is tracking a live Comax-vs-Web discrepancy — freezing it at creation defeats the point. Found two stacked bugs: (1) the snapshot captured `cpm_Vintage` (pre-drift/master) instead of `cps_Vintage` (the incoming/staging value that's the actual reason the task exists) — wrong from the moment of creation, not just stale later; (2) both write paths (`submitProductDetails`, `acceptProductDetails`) do a full-row overwrite from the manager's form, which is entirely seeded from the frozen snapshot — so ANY field on that SKU that changed elsewhere while the task sat open gets silently reverted on Submit/Accept, not just vintage.

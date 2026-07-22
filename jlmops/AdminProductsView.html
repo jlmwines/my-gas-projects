@@ -2304,6 +2304,10 @@
             // Re-render the review table in the background so the list stays in sync,
             // but don't block the next open on it.
             AdminProductsView._rerenderReviewTable();
+            // Accepted card doesn't self-update from the spliced list above (it's a
+            // separate server-backed table) — reload it so accepting mid-queue doesn't
+            // leave it stale until the queue happens to fully drain.
+            AdminProductsView.loadAcceptedList();
             if (tasks.length === 0) {
               AdminProductsView.closeModal();
               AdminProductsView.refreshView();
