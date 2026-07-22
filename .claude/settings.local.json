@@ -117,7 +117,9 @@
       "Bash(rm \"C:/Users/B/projects/jlmwines/.claude/SESSION_SUMMARY.md\" \\\\ *)",
       "Bash(rm -r \"C:/Users/B/projects/jlmwines/jlmops/.claude\" && echo \"removed duplicate jlmops/.claude/ \\(last-cleanup.md was a stale duplicate; settings.local.json's clasp permissions are already superseded by the broader global allow-list\\)\")",
       "Bash(TESTFILE=C:/Users/B/projects/jlmwines/plans/STATUS.md node -e ' *)",
-      "WebFetch(domain:wpml.org)"
+      "WebFetch(domain:wpml.org)",
+      "WebFetch(domain:woocommerce.github.io)",
+      "WebFetch(domain:developer.woocommerce.com)"
     ],
     "deny": [
       "Bash(git -C:*)",
