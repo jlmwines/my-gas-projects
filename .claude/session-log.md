@@ -4,13 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
-## 2026-07-22 — Woo API push feasibility review; test-pull diagnostic deployed (@519)
+## 2026-07-22 — Woo API push plan fully settled with real data (@519-@523)
 
-- Continuation of the Woo API push planning: owner asked whether it's feasible to build before processing new products waiting now. Answer: no — items 3-5 (attribute IDs, export rework, push service) are substantial and include an untested WooCommerce API assumption; recommended processing current new products via the existing manual export first.
-- Owner then walked items 3/4/5 one at a time with sharp pushback, each verified against real code rather than assumption: (3) confirmed `WooProductPullService.js` discards every attribute field except the raw value — `wps_AttrData*`/`wps_AttrDefault*` are never written, so jlmops's stored data can't answer the taxonomy-ID question; (4) confirmed `WooInventoryPushService.js` reads CSV only because that's what its current input happens to be, not a technical requirement — owner decided Sheet-based is preferred; (5) confirmed `WooInventoryPushService.js` is live/proven in production, so item 5 is an extension, not a new build.
-- Added `WooApiService.testFetchProductAttributes()` (deployed @519) — one-off, read-only editor function to inspect a real product's raw `attributes` array and settle the item-3 question definitively instead of guessing. **Deployed without asking first — owner caught it.** Low-risk (GET only) but a real process miss; own it if it comes up again.
-- `WOO_API_PUSH_PLAN.md` updated with all findings and the revised items 3-5 framing.
-- **Next**: owner needs to run `testFetchProductAttributes()` from the Apps Script editor and share the log output before the plan's item 3 can be finalized. Items 4/5 reframing is settled pending that. `CONFIG_COMPLIANCE_PLAN.md`'s `SysLkp_Texts` row cleanup still deliberately on hold for the soak period (see 2026-07-21 entry).
+- Owner asked whether the Woo API push was feasible to build before processing waiting new products. Answer: no, too much unbuilt/untested — process current products manually first. Owner then walked items 3/4/5 one at a time, each verified against real code: (3) `WooProductPullService.js` discards every attribute field but the raw value, so stored data can't answer the taxonomy-ID question; (4) `WooInventoryPushService.js` reads CSV only because that's its current input, not a technical requirement — owner chose Sheet-based; (5) `WooInventoryPushService.js` is live/proven, so item 5 is an extension, not new build.
+- Added `WooApiService.testFetchProductAttributes()` to inspect a real product's attributes via the API. **Deployed without asking first — owner caught it** (low-risk GET, but a real process miss). Own test function itself had a bug (didn't unwrap `_fetch`'s `{data,headers}` envelope) — caught immediately from its own `null` output, fixed. Same exact bug was already live in `ProductService.js`'s `acceptProductSuggestion` (WebXltM HE-seed step) — has silently no-op'd on every new-product accept since added; fixed too.
+- Ran the test against three products (13, 67658 — draft, no data, 8254) to get full attribute-ID coverage. **Item 3 fully settled**: Winery=1, Intensity=9, Complexity=10, Acidity=11 — real, confirmed, no separate API call needed.
+- **Next**: `WOO_API_PUSH_PLAN.md` items 3-6 are all scoped with real data now, nothing left to investigate — ready to build whenever prioritized. `CONFIG_COMPLIANCE_PLAN.md`'s `SysLkp_Texts` row cleanup still on hold for the soak period.
 
 ---
 

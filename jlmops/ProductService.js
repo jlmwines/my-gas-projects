@@ -1926,7 +1926,8 @@ const ProductService = (function() {
       // 7. Seed WebXltM row to close translation validation gap at accept time (Track C)
       if (wpmId) {
         try {
-          const enProduct = WooApiService.fetchProductById(wpmId);
+          const enProductResult = WooApiService.fetchProductById(wpmId);
+          const enProduct = enProductResult && enProductResult.data; // fetchProductById returns _fetch's {data, headers} envelope
           const heWooId = enProduct && enProduct.translations && enProduct.translations.he
             ? String(enProduct.translations.he) : '';
           if (heWooId) {

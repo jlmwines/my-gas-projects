@@ -400,7 +400,20 @@ function testWooApiConnection() {
  */
 function testFetchProductAttributes(wcId) {
   const id = wcId || 13;
-  const product = WooApiService.fetchProductById(id);
+  const result = WooApiService.fetchProductById(id);
+  const product = result.data; // fetchProductById returns _fetch's {data, headers} envelope, not the raw product
   Logger.log('Product %s (%s) raw attributes:\n%s', id, product.name, JSON.stringify(product.attributes, null, 2));
   return product.attributes;
+}
+
+/**
+ * Zero-argument wrapper for testFetchProductAttributes, so it's directly runnable
+ * from the Apps Script editor's function picker (which can't pass arguments).
+ * Checks product 8254 specifically to surface the Acidity attribute's id -- product
+ * 13 (Adir A) doesn't have one set, and product 67658 turned out to be a draft with
+ * no attribute data at all.
+ * @returns {object} The full raw product.attributes array as WooCommerce returned it.
+ */
+function testFetchProductAttributes_DryWhite() {
+  return testFetchProductAttributes(8254);
 }
