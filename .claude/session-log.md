@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-22 — Woo API push built, first live push confirmed (@524-@527)
+
+- Built items 3-6: item 3 needed no code (attribute-taxonomy IDs hardcoded in the push, not threaded through the live pull); item 4 reworked `_buildProductDetailExport` to append category/attribute/manage-stock/qty/WC-ID columns (append-only, old manual copy/paste untouched); item 5 added `WooInventoryPushService.pushProductDetails` (mandatory EN+HE pair, blank-category fail-safe); item 6 added a "Push via API" button to both export bars.
+- **Real bug caught before first push**: attribute payload sent only `{id, options}` — confirmed via WooCommerce's official docs that `visible` defaults to `false` on write, which would have silently hidden every attribute. Fixed, then **corrected again** on owner feedback: `visible`/`position` must be reviewable/editable in the sheet itself (also serves as the manual-fallback file), not hardcoded invisibly in push code. Each attribute is now a Value/Visible/Position triple in the export, read from the sheet by the push (falling back to sensible defaults only when a cell is blank).
+- Lost real time chasing a phantom "missing columns" report — deploy pipeline, URL, and code were all confirmed correct three separate ways before the actual issue surfaced (owner expected 3 columns per attribute, not 1) — worth remembering that a "the file doesn't match" report can be a real design gap, not a deploy bug, once the deploy chain checks out.
+- **First real push confirmed working 2026-07-22**: new-product path, export → push → draft in Woo → reviewed → published. Existing-product edit-path still untested (STATUS.md Next Action #8).
+- RankMath meta-description/focus-keyword push scoped (item 8: description = first paragraph of long description, focus keyword = product title) but deferred, not built — remains manual, no urgency.
+- Post-confirm UI polish (@527): Confirm now clears file-actions/push-button/stashed file ID so only Export is live for the next round.
+
+---
+
 ## 2026-07-22 — Woo API push plan fully settled with real data (@519-@523)
 
 - Owner asked whether the Woo API push was feasible to build before processing waiting new products. Answer: no, too much unbuilt/untested — process current products manually first. Owner then walked items 3/4/5 one at a time, each verified against real code: (3) `WooProductPullService.js` discards every attribute field but the raw value, so stored data can't answer the taxonomy-ID question; (4) `WooInventoryPushService.js` reads CSV only because that's its current input, not a technical requirement — owner chose Sheet-based; (5) `WooInventoryPushService.js` is live/proven, so item 5 is an extension, not new build.

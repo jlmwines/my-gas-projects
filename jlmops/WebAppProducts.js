@@ -139,6 +139,23 @@ function WebAppProducts_confirmWebUpdates() {
 }
 
 /**
+ * Pushes description/category/attribute fields from a product-detail export
+ * Sheet to WooCommerce via the API (WOO_API_PUSH_PLAN.md items 5-6). Shared by
+ * both the existing-product-updates export bar and the New Products tab's
+ * export bar -- both export the same Sheet shape via _buildProductDetailExport.
+ * @param {string} fileId - Drive file ID of the export Sheet (from the Export step).
+ * @returns {Object} Result with success status and message.
+ */
+function WebAppProducts_pushProductDetails(fileId) {
+    try {
+        return WooInventoryPushService.pushProductDetails(fileId);
+    } catch (e) {
+        LoggerService.error('WebAppProducts', 'pushProductDetails', `Error: ${e.message}`, e);
+        throw e;
+    }
+}
+
+/**
  * Generates HTML previews for the product editor.
  * @param {string} sku The product SKU.
  * @param {Object} formData The current form data.

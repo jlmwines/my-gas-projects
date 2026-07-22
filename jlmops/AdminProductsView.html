@@ -107,6 +107,7 @@
           <div class="d-flex justify-content-end align-items-center p-2">
             <span id="details-file-actions" class="mr-2"></span>
             <button id="btn-export-details" class="btn btn-sm mr-2" onclick="AdminProductsView.exportUpdates()">Export</button>
+            <button id="btn-push-details" class="btn btn-sm mr-2" onclick="AdminProductsView.pushProductDetails('details')" disabled>Push via API</button>
             <button id="btn-confirm-details" class="btn btn-sm" onclick="AdminProductsView.confirmUpdates()" disabled>Confirm</button>
           </div>
         </div>
@@ -235,6 +236,7 @@
           <div id="new-web-actions" class="ds-section-actions" style="display:none;">
             <span id="new-file-actions" class="mr-2"></span>
             <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export</button>
+            <button id="btn-push-new" class="btn btn-sm mr-2" onclick="AdminProductsView.pushProductDetails('new')" disabled>Push via API</button>
             <button id="btn-confirm-new" class="btn btn-sm mr-2" onclick="AdminProductsView.confirmNewProducts()" disabled>Confirm Published</button>
           </div>
           <div class="table-responsive ds-action" style="display:none;">
@@ -1695,6 +1697,8 @@
                 AdminProductsView._renderFileActions('details-file-actions', res.fileUrl, res.fileName);
                 // Enable Confirm button after successful export
                 document.getElementById('btn-confirm-details').disabled = false;
+                AdminProductsView._detailsFileId = res.fileId;
+                document.getElementById('btn-push-details').disabled = false;
             } else {
                 statusDiv.textContent = 'Export failed: ' + res.message;
                 statusDiv.className = 'text-right text-danger mt-2';
@@ -1703,15 +1707,72 @@
         });
     };
 
+    // Shared "Push via API" handler for both export bars (WOO_API_PUSH_PLAN.md
+    // items 5-6). `kind` is 'details' (existing-product updates) or 'new' (New
+    // Products tab) -- picks which file ID was stashed by the matching export
+    // handler and which status div/button to update.
+    AdminProductsView.pushProductDetails = function(kind) {
+        const fileId = kind === 'new' ? AdminProductsView._newDetailsFileId : AdminProductsView._detailsFileId;
+        const statusDivId = kind === 'new' ? 'new-export-status' : 'export-status';
+        const btnId = kind === 'new' ? 'btn-push-new' : 'btn-push-details';
+        if (!fileId) {
+            TaskWidgets.toast('Export the sheet first.', 'warning');
+            return;
+        }
+        TaskWidgets.confirm('Push these product details to WooCommerce via the API now?', function() {
+            const statusDiv = document.getElementById(statusDivId);
+            const btn = document.getElementById(btnId);
+            btn.disabled = true;
+            statusDiv.textContent = 'Pushing to WooCommerce...';
+            statusDiv.className = 'mt-2 small text-info';
+            google.script.run.withSuccessHandler(res => {
+                btn.disabled = false;
+                if (res.success) {
+                    statusDiv.textContent = res.message;
+                    statusDiv.className = 'mt-2 small text-success';
+                } else {
+                    statusDiv.textContent = 'Push failed: ' + res.message;
+                    statusDiv.className = 'mt-2 small text-danger';
+                }
+            }).withFailureHandler(err => {
+                btn.disabled = false;
+                statusDiv.textContent = 'Push failed: ' + err.message;
+                statusDiv.className = 'mt-2 small text-danger';
+            }).WebAppProducts_pushProductDetails(fileId);
+        });
+    };
+
+    // After Confirm, clear the file-actions (Open File/Copy Filename) + stashed
+    // file ID and disable Push/Confirm again -- so the next round starts clean
+    // with only Export available, instead of leaving stale buttons pointing at
+    // an already-confirmed file.
+    AdminProductsView._resetExportActions = function(kind) {
+        const fileActionsId = kind === 'new' ? 'new-file-actions' : 'details-file-actions';
+        const pushBtnId = kind === 'new' ? 'btn-push-new' : 'btn-push-details';
+        const confirmBtnId = kind === 'new' ? 'btn-confirm-new' : 'btn-confirm-details';
+        const fileActionsEl = document.getElementById(fileActionsId);
+        if (fileActionsEl) fileActionsEl.innerHTML = '';
+        const pushBtn = document.getElementById(pushBtnId);
+        if (pushBtn) pushBtn.disabled = true;
+        const confirmBtn = document.getElementById(confirmBtnId);
+        if (confirmBtn) confirmBtn.disabled = true;
+        if (kind === 'new') {
+            AdminProductsView._newDetailsFileId = null;
+        } else {
+            AdminProductsView._detailsFileId = null;
+        }
+    };
+
     AdminProductsView.confirmUpdates = function() {
         TaskWidgets.confirm('Website updated with these details? This closes the tasks.', function() {
         const statusDiv = document.getElementById('export-status');
         statusDiv.textContent = 'Processing...';
-        
+
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
                 statusDiv.textContent = res.message;
                 statusDiv.className = 'mt-2 small text-success';
+                AdminProductsView._resetExportActions('details');
                 AdminProductsView.refreshView();
             } else {
                 statusDiv.textContent = 'Error: ' + res.message;
@@ -1889,6 +1950,8 @@
                 statusDiv.className = 'mt-2 small text-success';
                 AdminProductsView._renderFileActions('new-file-actions', res.fileUrl, res.fileName);
                 document.getElementById('btn-confirm-new').disabled = false;
+                AdminProductsView._newDetailsFileId = res.fileId;
+                document.getElementById('btn-push-new').disabled = false;
             } else {
                 statusDiv.textContent = 'Export failed: ' + res.message;
                 statusDiv.className = 'mt-2 small text-danger';
@@ -1905,7 +1968,7 @@
                 if (res.success) {
                     statusDiv.textContent = res.message;
                     statusDiv.className = 'mt-2 small text-success';
-                    document.getElementById('btn-confirm-new').disabled = true;
+                    AdminProductsView._resetExportActions('new');
                     AdminProductsView.refreshView();
                 } else {
                     statusDiv.textContent = 'Error: ' + res.message;

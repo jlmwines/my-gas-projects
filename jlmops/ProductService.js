@@ -1514,7 +1514,9 @@ const ProductService = (function() {
 
         const webDetMap = getMap('WebDetM', 'schema.data.WebDetM', 'wdm_SKU');
         const cmxMap = getMap('CmxProdM', 'schema.data.CmxProdM', 'cpm_SKU');
-        
+        const webProdMap = getMap('WebProdM', 'schema.data.WebProdM', 'wpm_SKU');
+        const webXltMap = getMap('WebXltM', 'schema.data.WebXltM', 'wxm_WpmlOriginalSku');
+
         // Load Lookups
         const lookupMaps = {
             texts: LookupService.getLookupMap('map.text_lookups'),
@@ -1540,7 +1542,25 @@ const ProductService = (function() {
             'Long Description EN',
             'Short Description HE',
             'Long Description HE',
-            'Product Title HE'
+            'Product Title HE',
+            // Appended for the Woo API push (Woo API Push Plan item 4) -- existing
+            // columns A-H are untouched so the manual copy/paste-into-Woo workflow
+            // keeps working exactly as before.
+            'WC ID EN',
+            'WC ID HE',
+            'Category WC ID',
+            'Manage Stock',
+            'Qty',
+            // Each attribute is a value/visible/position triple -- WooCommerce
+            // requires visible+position on every attribute write (defaults to
+            // hidden if omitted) and the owner wants these reviewable/editable
+            // in the sheet before any push, not hardcoded invisibly in the push
+            // code. Default Visible=TRUE, Position=sequential; edit before pushing
+            // if a product needs different values.
+            'Winery', 'Winery Visible', 'Winery Position',
+            'Intensity', 'Intensity Visible', 'Intensity Position',
+            'Complexity', 'Complexity Visible', 'Complexity Position',
+            'Acidity', 'Acidity Visible', 'Acidity Position'
         ];
         exportDataRows.push(headers);
 
@@ -1572,6 +1592,39 @@ const ProductService = (function() {
             const longDescriptionEnHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
             const longDescriptionHeHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
 
+            // Woo API push fields (item 4). WC IDs come from WebDetM/WebXltM (seeded
+            // at new-product accept time, per docs/WORKFLOWS.md §14 -- same source
+            // for both new and existing products). Category resolves via the same
+            // Comax-group lookup WooCommerceFormatter already reads for description
+            // text. Winery/manage-stock/qty are carried through from the last Woo
+            // pull (WebProdM) unchanged -- there's no authoring surface for them.
+            // Intensity/Complexity/Acidity come from WebDetM, the authored source
+            // the descriptions above are themselves built from, not from WebProdM's
+            // last-pulled value -- otherwise an editor's change would never reach
+            // the push. Non-wine SKUs simply have no wdm_Intensity/etc. row values,
+            // so these come through blank -- same code path for every SKU.
+            const wpmRow = webProdMap.get(sku);
+            const wxmRow = webXltMap.get(sku);
+            const categoryRow = cmxRow ? lookupMaps.categories.get(cmxRow.cpm_Group) : undefined;
+
+            // Value/Visible/Position per attribute, in this fixed order (matches
+            // the header columns above and WooInventoryPushService's attribute
+            // payload builder). Visible defaults TRUE and Position to this array's
+            // index whenever a value is present -- both editable in the sheet
+            // before push; blank value means the attribute is skipped entirely
+            // (non-wine SKUs), so Visible/Position stay blank too.
+            const attrOrder = [
+                { label: 'Winery', value: wpmRow ? (wpmRow.wpm_AttrWinery || '') : '' },
+                { label: 'Intensity', value: webDetRow.wdm_Intensity || '' },
+                { label: 'Complexity', value: webDetRow.wdm_Complexity || '' },
+                { label: 'Acidity', value: webDetRow.wdm_Acidity || '' }
+            ];
+            const attrColumns = [];
+            attrOrder.forEach((attr, i) => {
+                const hasValue = attr.value !== '';
+                attrColumns.push(attr.value, hasValue ? true : '', hasValue ? i : '');
+            });
+
             exportDataRows.push([
                 sku,
                 cmxRow ? (cmxRow.cpm_Price || '') : '',
@@ -1580,8 +1633,13 @@ const ProductService = (function() {
                 longDescriptionEnHtml,
                 shortDescriptionHe,
                 longDescriptionHeHtml,
-                productTitleHe
-            ]);
+                productTitleHe,
+                webDetRow.wdm_WebIdEn || '',
+                wxmRow ? (wxmRow.wxm_ID || '') : '',
+                categoryRow ? (categoryRow.sct_Value || '') : '',
+                wpmRow ? (wpmRow.wpm_ManageStock === 'yes') : false,
+                wpmRow ? (wpmRow.wpm_Stock || '') : ''
+            ].concat(attrColumns));
         });
 
         if (exportDataRows.length <= 1 && skippedSkus.length === skus.length) { // Only headers present AND all SKUs were skipped or no SKUs were processed
