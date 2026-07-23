@@ -21,7 +21,6 @@ Projects: jlmops, web, marketing, content
 - [ ] Coupon Service - dedicated service for coupon management
 - [ ] Smarter reprint logic: Track first immutable print separately
 - [ ] Remove one-time backfill code when CRM is stable
-- [ ] Remove hardcoded workaround in WebAppProducts.js:438
 - [ ] 2026-06-08: **Bundles — surface missed profit opportunities.** Flag high-profit wines (`wpm_ProfitRate`) that aren't used in ANY bundle (cross-bundle `usage` = 0, the Stage 6 index) so the operator can pull them into a bundle. The signals already exist (profit from Stage 2, usage from Stage 6); this is a read-only "high-margin wines not in any bundle" report/card on AdminBundles. Capstone to the Stage 7 generator.
 - [ ] WhatsApp integration
 - [ ] Mailchimp export from CRM

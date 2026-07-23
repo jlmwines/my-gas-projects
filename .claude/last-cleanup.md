@@ -1,14 +1,15 @@
-2026-07-14 — project-scoped cleanup pass (jlmwines only).
+2026-07-23 — project-scoped cleanup pass (jlmwines only).
 
 Touched this pass:
-- `.claude/bugs.md` — consolidated 2 overlapping submit/verify-hang entries (07-12, 07-14) into 1 clean entry covering all three sequential fixes (@479/@480/@481); the load-time entry (07-12) already reflected the @482 fix from earlier this session.
-- `.claude/wishlist.md` — 3 stale `content` items removed (superseded by docs that now exist): the "NEXT SESSION: Publication Calendar" planning block (its output is `content/PUBLICATION_CALENDAR.md`), "Israel wine regions content" (superseded by `REGION_POSTS_PLAN.md`, active production), "Newsletter template (Canva)" (confirmed built and in production use via `marketing/NEWSLETTER_PLAN.md`). Left "Holiday wine posts" and "FAQ page implementation" — no evidence either is done.
-- `.claude/session-log.md` — pruned entries from 2026-06-09 through 2026-06-12 (31+ days old), extending the prior pass's boundary from "before 2026-06-09" to "before 2026-06-14", per the file's own header and the 30-day default. Durable facts from that range already graduated to system docs, noted in the extended pruned-block summary.
-- `plans/STATUS.md`, `jlmops/plans/BUG_FIX_SEQUENCE.md`, `jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md` — already reconciled to current state (through jlmops @482) as part of this session's own session-end wrap, immediately before this cleanup pass; re-verified, no further drift found.
+- `jlmops/plans/BUG_FIX_SEQUENCE.md` — header progress line was stale (still listed Session J as open); J was actually shipped/smoke-tested clean 2026-07-15 per the body of the same doc. Corrected.
+- `plans/STATUS.md` — Metrics row "Open Bugs" carried the same stale J-open claim (`Open sessions: F, H, I, J`). Corrected to `F, H, I`.
+- `CALENDAR.md` — `Updated:` date bumped; plan-driven-queue summary line for `BUG_FIX_SEQUENCE.md` had the same stale J-open claim, corrected to match.
+- `.claude/wishlist.md` — removed one undated jlmops item ("Remove hardcoded workaround in WebAppProducts.js:438") — grepped the current file for any workaround/hardcode comment near that reference; none found, and the line itself is now a different function's docstring after months of edits. Treated as resolved-and-drifted, not re-verifiable at the original granularity.
+- `.claude/session-log.md` — pruned entries from 2026-06-14 through 2026-06-22 (now 31+ days old), extending the prior pass's boundary from "before 2026-06-14" to "before 2026-06-23", per the file's own header and the 30-day default. Durable facts from that range (PublishingView build, Content Library versioning Decision 7, content-workflow redesign, product verification reverted-task handling, new-product UX overhaul, Correct Product Name tool, Handling guide) already graduated to system docs — noted in the new pruned-block summary.
 
 Audited, no change needed:
+- `.claude/bugs.md` open jlmops/web/marketing/content sections — cross-checked each item with a plan-doc pointer against that plan's current state (`SYNC_HARDENING_PLAN.md`, `RELIABILITY_AUDIT.md` §1.3, `CONFIG_COMPLIANCE_PLAN.md`) — all still genuinely open, no resolved-but-untracked items found beyond the wishlist item above.
 - `plans/STATUS.md` Inbox — 1 deferred item (offline-attribution, `defer:2026-08-10`), not yet due.
-- `content/PUBLICATION_CALENDAR.md` — read in full; dates/slots internally consistent, no past-due unaddressed items.
-- `marketing/NEWSLETTER_PLAN.md` — spot-checked against the wishlist staleness question above; current.
+- Memory (`~/.claude/projects/.../memory/`) — spot-checked against this session's actual tool use (deploy.ps1 wrapper, pinned deployment ID, clasp auth, AYIW English-only convention) — all confirmed accurate by direct use this session, no drift.
 
-Out of scope this pass (flagged, not done): a full completion-status audit of all ~40 `jlmops/plans/*.md` docs — disproportionate for a routine cleanup pass (architecture-review territory). STATUS.md's Active Plans section is deliberately curated, not exhaustive; most of the ~22 plans with zero STATUS.md references are likely stable reference docs (design system, coding standards, testing guide) rather than stale completions, but this wasn't individually verified per-doc. Portfolio-wide `CALENDAR.md`, VaadAi, AliyahNet — out of scope (project-scoped pass, not portfolio-wide).
+Out of scope this pass (flagged, not done): a full completion-status audit of all ~40 `jlmops/plans/*.md` docs — disproportionate for a routine cleanup pass. STATUS.md's Active Plans section is deliberately curated, not exhaustive. Portfolio-wide `STATUS.md`/`CALENDAR.md`, VaadAi, AliyahNet — out of scope (project-scoped pass, not portfolio-wide).

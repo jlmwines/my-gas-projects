@@ -4,7 +4,7 @@
 
 Sequenced by readiness (concrete fix shape → diagnosis needed → larger scope → audits). Each session is one focused unit of work. Sessions A–E each end with: commit → user OK → `clasp push` → user smoke → user OK → `deploy.ps1`.
 
-**Progress 2026-07-12:** Sessions A–E and G shipped/resolved. Open: F (sync hardening, needs staging repro), H (timestamp/date-format audit), I (count-task creation audit), J (product-editor cache fix + manager submit hang, new 2026-07-12).
+**Current state:** Sessions A–E, G, and J shipped/resolved (J confirmed smoke-tested clean 2026-07-15, see below). Open: F (sync hardening, needs staging repro), H (timestamp/date-format audit), I (count-task creation audit).
 
 ---
 
