@@ -13,6 +13,13 @@
      ~1,500 risks losing the reader. -->
 
 
+<!-- STOP HERE once the body above is drafted. Hand off Title + Body ONLY and
+     wait — do not draft anything below this line (Excerpt through Image
+     Prompts) in the same pass. That's a later, separate pass that starts
+     only once the manager returns this body locked/edited (see
+     content/CLAUDE.md work order, step 3a). -->
+
+
 ## EXCERPT
 <!-- WordPress post excerpt. 1–2 sentences (~150 chars). Shows on category and search listings. -->
 
@@ -25,9 +32,10 @@ __FEATURED_ID__
 
 
 ## EMAIL SUBJECT
-<!-- Subject line for the companion promotional email. Draft this from the
-     locked body, same as every other extract below — manager edits/translates,
-     doesn't write it from scratch. -->
+<!-- Subject line for the companion promotional email. Draft this in the
+     later derivative pass, from the body once it's back locked from the
+     manager — not in the same pass as the body draft. Manager
+     edits/translates, doesn't write it from scratch. -->
 
 
 ## EMAIL PREVIEW TEXT
@@ -40,7 +48,8 @@ __FEATURED_ID__
 <!-- Full email body copy — post-promo-led, features THIS post (see
      marketing/_resources/NEWSLETTER_REFERENCE.md "Companion Email Campaign": hero image, this
      body, sign-off "— Evyatar", no footer, no signup CTA — subscribers already
-     subscribed). Session drafts from the locked body; manager edits/translates. -->
+     subscribed). Drafted in the later derivative pass, from the body once
+     it's back locked from the manager; manager edits/translates. -->
 
 
 ## EMAIL CTA
@@ -65,11 +74,6 @@ __FEATURED_ID__
 
 ## IMAGE PROMPTS
 <!-- One prompt per illustration. Impressionist oil painting. Consistent palette across the post. -->
-
-
-## NOTES
-<!-- Optional. Source docs, SEO meta description/focus keyword draft, pre-publish
-     checklist items, manifest slug. Human-facing only — push-posts.js ignores it. -->
 
 
 <!-- PUBLISH-TIME ONLY — do not fill during drafting. The publishing session converts

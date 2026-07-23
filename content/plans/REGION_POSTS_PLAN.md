@@ -57,9 +57,10 @@ Post source files live in a per-region subfolder alongside that region's image a
 ## Production checklist (per post)
 
 - [ ] Body draft (from Montefiore + map sources + guide plan spec)
+- [ ] **Session stops here** — hand off Title + Body only; wait for the manager to return the body locked/edited before continuing (`content/CLAUDE.md` work order, step 3a). Do not draft anything below this line in the same pass.
 - [ ] Title confirmed
 - [ ] WP Excerpt
-- [ ] Email fields — Subject/Preview/Body/CTA (required — these all lead a companion email; session drafts, manager edits/translates)
+- [ ] Email fields — Subject/Preview/Body/CTA (required — these all lead a companion email; drafted in the later derivative pass, from the locked body; manager edits/translates)
 - [ ] Newsletter Excerpt (web)
 - [ ] Print Newsletter Body (required — these all lead a newsletter)
 - [ ] CTA

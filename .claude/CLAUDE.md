@@ -69,7 +69,7 @@ Friendly, personal, never talks down. Polite and earnest, never negative about c
 
 Blog posts have one canonical spec — don't restate it here, it drifts. Before touching any `.post.md` file or running `push-posts.js`, read: `content/_resources/_post-template.md` (the actual section order — start every post by copying it) and `content/CLAUDE.md` (full spec: required sections, parser dependencies, work order, file naming, library registration). Pipeline mechanics: `content/_resources/PUBLISHING.md`.
 
-The one fact worth repeating here because it's the constraint that keeps getting violated: **Body is the section right after Title, written and locked first.** Everything else in the template (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) is derived from the locked body afterward, and a drafting session never adds HTML or a "Paste below" block — that's a separate publishing-session step.
+The one fact worth repeating here because it's the constraint that keeps getting violated: **Body is the section right after Title, written and locked first — and a session stops there.** Once the body draft is written, hand off Title + Body only and wait; don't draft Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, or Image Prompts in the same pass. Those are a later, separate pass — the same session picking back up, or a later one — that only starts once the manager returns the body locked. A drafting session also never adds HTML or a "Paste below" block — that's a separate publishing-session step.
 
 ## Drive Asset Placement
 

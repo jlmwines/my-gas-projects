@@ -279,12 +279,14 @@ For each issue:
 
 ## Companion Email Campaign
 
-A separate email send (EN + HE) accompanies each issue. The email is post-promo-led — it features the month's blog post, not the Making Wine series. **Actual model (corrected 2026-07-01 — the prior "manager writes it verbatim" description was wrong):** the session drafts the full post — body, excerpt, and every extract needed (Newsletter Excerpt, Print Newsletter Body, Email Subject/Preview/Body/CTA, Image Prompts) — from seed facts and guidance, same drafting pass, same effort. The manager's job is to edit the English draft and translate it to Hebrew, not to originate the email copy from scratch. Making Wine stays in the print secondary slot; it does not anchor the companion email.
+A separate email send (EN + HE) accompanies each issue. The email is post-promo-led — it features the month's blog post, not the Making Wine series. **Actual model (corrected 2026-07-23 — the prior "same drafting pass, same effort" description conflated the post's own workflow with a newsletter-specific one):** the Email Subject/Preview/Body/CTA are not drafted *for* the newsletter. They are the featured blog post's own derivative fields — drafted during that post's normal derivative pass (`content/CLAUDE.md` work order, steps 4–10, gated on the post's body being locked first at step 3a) — and this newsletter assembly process simply pulls them from the post's `.post.md` file once they already exist. There is no separate "newsletter drafting session" that originates this copy. The manager's job is still to edit the English and translate it to Hebrew, same as with every other post derivative. Making Wine stays in the print secondary slot; it does not anchor the companion email.
+
+Newsletter assembly itself (both print and email) is largely a manual product, not a fresh per-issue draft: the printed left column and the companion email body draw on (1) the pre-written 12-month Making Wine draft, edited by Evyatar month-by-month, and (2) the featured blog post's content, already drafted and locked through earlier, unrelated post-workflow sessions. The session's actual per-issue contribution to the newsletter is narrower than "drafts the newsletter" — it's supplying the tagged/UTM article QR URL (see "QR code specifications" above) for that issue's post.
 
 ### Structure
 
 1. **Hero:** blog post featured image (referenced by the post's Mailchimp-side upload).
-2. **Body:** drafted by the session into the `## EMAIL BODY` section of the post's `.post.md` file, from the same locked body as the rest of the post's derivatives. Manager edits the English, then translates to Hebrew.
+2. **Body:** the post's own `## EMAIL BODY` section — drafted by the session during that post's derivative pass (work order step 6, after the body is locked), not freshly drafted for the newsletter. Manager edits the English, then translates to Hebrew.
 3. **Sign-off:** `— Evyatar`.
 4. **No footer:** no `jlmwines.com` URL band; no boilerplate. The Mailchimp footer handles compliance.
 
@@ -294,7 +296,7 @@ Subscribers are already subscribed. The signup ask lives on the print insert + t
 
 ### Workflow
 
-Same Mailchimp MCP constraint as documented: the integration cannot edit user-created drafts. Session builds the HTML body from the post's own `## EMAIL BODY` section (once locked and translated); user creates the Mailchimp campaign draft and pastes in the content, then reviews and schedules.
+Same Mailchimp MCP constraint as documented: the integration cannot edit user-created drafts. Session pulls the HTML body from the post's own `## EMAIL BODY` section (already drafted in that post's derivative pass, once locked and translated); user creates the Mailchimp campaign draft and pastes in the content, then reviews and schedules.
 
 ---
 
@@ -315,6 +317,7 @@ The site's footer signup CTA (next to the existing Evyatar-in-vineyard photo) ge
 - **Volume estimate.** TBD by observation over first 2–3 issues.
 - **Logo asset.** Confirm a one-color SVG/PNG of the JLM logo is available for the masthead.
 - **Real signature.** SVG script-font placeholder is in place; replace with a scanned handwritten signature when Evyatar produces one.
+- **Per-issue workflow / Structure mechanics scope (2026-07-23).** "Companion Email Campaign" now correctly frames Email fields as the post's own derivative-pass output and the newsletter as a largely manual AYIW+post assembly, with the session's real per-issue job being the tagged/UTM article QR URL. The "Per-issue workflow" and "Structure" sections above still describe some deliverables (docx paste-sources, excerpt content) in session-produced-per-issue language. Not resolved here — flagged for the user to confirm how much of those sections needs a matching update before treating this doc as fully consistent.
 
 ---
 

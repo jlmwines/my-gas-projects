@@ -4,6 +4,26 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-23 — content/ and marketing/ folder reorganization; stale docs removed
+
+- Split loose files in `content/` and `marketing/` into `scripts/` (programs), `_resources/` (session-consulted guides/templates), and `plans/` (+ `_archive/`) — a convention neither area had, mirroring `jlmops/plans/`. Moved `content/node_modules`+`package.json` to the `jlmwines/` repo root.
+- Built `content/scripts/upload-images.js`, one generic manifest-driven script replacing the two per-post `upload-context-images.js`/`upload-handling-images.js` (both deleted).
+- Removed stale docs: `content/PUBLICATION_CALENDAR.md` (manually-reconciled mirror of the live `JLMops_Publishing` sheet — `CALENDAR.md` now points straight at the sheet) and `content/seo-meta-review.md` (+ its dangling `register-library.js` manifest entry). `marketing/NEWSLETTER_PLAN.md` graduated to `marketing/_resources/NEWSLETTER_REFERENCE.md` (proven monthly practice, not intent); `marketing/WHATSAPP_TRANSITION.md`(+`.docx`) archived — account is live/in use, no near-term plan to expand it; 3 scattered wishlist bullets consolidated to one.
+- Fixed ~30 stale path references across the repo this surfaced (STATUS.md, session-log, business/, jlmops/plans/, website/ plan docs, post-file source citations). Committed (`659c8c0`) and pushed to `origin/main`.
+- The content-drafting "stop after body draft" gate discussed this session is now implemented — see the entry below.
+
+---
+
+## 2026-07-23 (cont'd) — content-drafting two-pass gate implemented; `## NOTES` removed
+
+- Added a new work-order step 3a (`content/CLAUDE.md`, `.claude/CLAUDE.md`, `_post-template.md`, `content/plans/REGION_POSTS_PLAN.md`): a session drafts the body, then stops and hands off Title+Body only — Excerpt/Email fields/Newsletter Excerpt/Print Newsletter Body/CTA/Image Prompts are a later pass, gated on the manager returning the body locked. Fixes the real problem: sessions were drafting the full derivative set in one pass, overwhelming the manager. AYIW is explicitly out of scope (short content, session-stimulus-then-manager-rewrite is fine there).
+- Removed `## NOTES` from the template and spec — confirmed via git history (`0bd5225`, 2026-07-01) it was a session addition never actually requested, added on the side during an unrelated restructuring commit. Confirmed safe: parser already ignored it.
+- Added a new editorial rule: derivative extracts must draw from the post's core material, not tacked-on web-reader sections (e.g. a region post's "Wineries to Visit" list) — CTA should promise something genuinely unshown, not just "read more."
+- Reworked `marketing/_resources/NEWSLETTER_REFERENCE.md`'s Companion Email Campaign section: it previously claimed a separate "session drafts the full post... same drafting pass" newsletter-specific effort. Corrected — Email fields are the post's own derivative-pass output; the newsletter (print + email) is largely a manual assembly of AYIW + the post's already-drafted content, with the session's real per-issue job being the tagged/UTM QR URL. Flagged (not resolved) that the doc's "Per-issue workflow" section may need a further consistency pass.
+- Verified: grepped for leftover one-pass phrasing (none), confirmed `push-posts.js` still runs clean.
+
+---
+
 ## 2026-07-22 (cont'd) — Woo API push: attributes array doesn't prune old ones (found, not fixed)
 
 - User reported live-test results: pushed attributes (Winery/Intensity/Complexity/Acidity) update correctly, but Region/Grape/Harmonize/Contrast — deliberately never sent by this push — remain on products that already had them. Checked WooCommerce's official REST API docs directly; they don't document PUT's merge-vs-replace behavior for `attributes` (same dead end `WOO_API_PUSH_PLAN.md` hit in July). The live result settles it: `attributes` is NOT full-replace, contradicting the plan's original assumption.

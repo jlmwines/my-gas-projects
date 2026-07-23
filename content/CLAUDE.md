@@ -101,18 +101,17 @@ This table must mirror `_resources/_post-template.md` exactly — if they disagr
 | Section | Length | Purpose |
 |---|---|---|
 | `## TITLE` | 50–70 chars | Final post title |
-| `## BODY` | 800–1,200 words | The full post, plain prose during drafting. Write/lock this first — everything below is derived from it. |
+| `## BODY` | 800–1,200 words | The full post, plain prose during drafting. Write/lock this first — the drafting session stops here and hands off Title+Body only; everything below is derived from it once the manager returns it locked. |
 | `## EXCERPT` | 1–2 sentences (~150 chars) | WordPress post excerpt — category/search listings |
 | `## FEATURED MEDIA` | — | WP media ID, stamped by the per-post image-upload script |
-| `## EMAIL SUBJECT` | one line | Subject line for the companion promotional email. Session drafts from the locked body, same as every other extract; manager edits/translates, doesn't originate it. |
+| `## EMAIL SUBJECT` | one line | Subject line for the companion promotional email. Not part of the body-drafting pass — drafted in the later derivative pass, only after the manager has returned the body locked; manager edits/translates, doesn't originate it. |
 | `## EMAIL PREVIEW TEXT` | 150 chars max | Preheader shown in email clients before opening — most clients truncate past 150. Session drafts; manager edits/translates. |
-| `## EMAIL BODY` | full email copy | Companion email body — post-promo-led, features this post (see `marketing/_resources/NEWSLETTER_REFERENCE.md` Companion Email Campaign). Session drafts; manager edits/translates. |
+| `## EMAIL BODY` | full email copy | Companion email body — post-promo-led, features this post (see `marketing/_resources/NEWSLETTER_REFERENCE.md` Companion Email Campaign). Not part of the body-drafting pass — drafted in the later derivative pass, only after the manager has returned the body locked; manager edits/translates. |
 | `## EMAIL CTA` | one line | Email call-to-action button/link text. Session drafts; manager edits/translates. |
 | `## NEWSLETTER EXCERPT (web/social)` | ~50 words | Social posts, email teasers, web snippets — ends with `[Read the full guide →]` |
 | `## PRINT NEWSLETTER BODY` | ~150–200 words | Printed Wine Talk insert (left column). Self-contained — reader may not scan the QR. Signs off `— Evyatar` |
 | `## CTA` | one line | End-of-post link copy. Default: `Read the full guide →` |
 | `## IMAGE PROMPTS` | one prompt per illustration | Canva prompts. Impressionist oil painting style |
-| `## NOTES` | optional | Source docs, SEO meta draft, pre-publish checklist, manifest slug. Human-facing only. |
 | Body → HTML (publish-time only) | full post | Publishing session converts `## BODY` prose into HTML and moves it to the very end of the file, after the line `Paste below into WordPress Code Editor:` |
 
 ### Parser dependencies
@@ -120,7 +119,7 @@ This table must mirror `_resources/_post-template.md` exactly — if they disagr
 `content/scripts/push-posts.js` parses three things from each source file:
 - `## TITLE` → WP post title. **Must be the first line of the file** — the regex anchors to file-start, not just any `## ` boundary.
 - `## EXCERPT` → WP excerpt field. Position-independent.
-- Everything after `Paste below into WordPress Code Editor:` → WP post body. **Must be the last thing in the file** — the parser captures from that marker to end-of-file; anything placed after it (Notes, Image Prompts, etc.) would get swallowed into the WordPress post body.
+- Everything after `Paste below into WordPress Code Editor:` → WP post body. **Must be the last thing in the file** — the parser captures from that marker to end-of-file; anything placed after it (Image Prompts, etc.) would get swallowed into the WordPress post body.
 
 Every other `## `-headed section — including `## BODY` itself — is a human-facing reference the parser ignores. This is why `## BODY` can sit right after Title for readability: only the two constraints above are load-bearing.
 
@@ -129,9 +128,10 @@ Every other `## `-headed section — including `## BODY` itself — is a human-f
 1. Topic + angle agreed
 2. **Body draft** — first pass from source material or outline, written directly into `## BODY` (sits right after Title in the template). Plain prose. NO HTML, no "Paste below" block — that is added by the publishing session only.
 3. Editorial review + revisions until body is locked (manager edits the prose in the file or Drive doc)
+3a. **Session stops here.** Hand off Title + Body only — nothing else — and wait. Do not draft steps 4–10 (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image prompts) until the manager returns the body locked/edited. This holds even within a single long session: finishing the body is not license to keep going into the derivatives in the same pass. The derivative pass (steps 4–10) is a separate pass, gated on the returned lock — the same session picking back up later, or a different one.
 4. **Title** confirmed
 5. **WP Excerpt** — derived from locked body
-6. **Email fields** (Subject/Preview/Body/CTA) — drafted by the session from the locked body, same pass as the rest of the post's derivatives
+6. **Email fields** (Subject/Preview/Body/CTA) — derived from the locked body, in the post's derivative pass (step 6, after the gate at step 3a) — never bundled into the same pass as the body draft
 7. **Newsletter Excerpt (web)** — derived from locked body
 8. **Print Newsletter Body** — derived from locked body, fuller treatment
 9. **CTA**
@@ -141,7 +141,9 @@ Every other `## `-headed section — including `## BODY` itself — is a human-f
 
 **Once body is locked (step 3), it is verbatim for every later step.** "Derived from locked body" in steps 5–10 means extracted/condensed *from* the existing wording — never a fresh paraphrase of the body itself. A session adding Email fields, Newsletter Excerpt, or a translation must not also rewrite `## BODY` as a side effect. (Real incident, 2026-07-01: the Negev post's body was progressively paraphrased across three sessions while later sections were being added, losing real content — restored from the original Drive doc. If the body genuinely needs a content change, that's a deliberate, called-out edit, not an incidental rewrite.)
 
-**A drafting session stops after step 10.** Steps 11–12 are separate sessions. Never add HTML or copy-paste instructions to a draft file.
+**Extracts must come from the post's core material, not tacked-on sections.** A region post's "Wineries to Visit" list, or similar web-reader bonus content, is not fair material for Excerpt/Newsletter Excerpt/Email Body/Print Newsletter Body — those must draw from the actual substance of the post. The CTA should promise something genuinely not yet shown, not just "read more" on content already summarized.
+
+**A drafting session stops twice: after step 2, at the step 3a gate (Title + Body only, wait for the manager's lock), and again after step 10.** Steps 11–12 are separate sessions. Never add HTML or copy-paste instructions to a draft file.
 
 Body is always written and locked first, in place at the top of the file; derivatives are extracted/condensed from it after.
 
