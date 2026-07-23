@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-23 (cont'd) — terminology convention set; one open idea parked (not yet in a project doc)
+
+- **Convention going forward:** use "guide" as the general term for any current-practice doc (session-consulted or human-facing), replacing the finer plan/document/reference split. "Plan" is reserved for genuine unbuilt intent only.
+- **Open, not yet actionable:** user proposed sessions draft to local HTML for readable preview/iteration before pushing anything to Drive/library/jlmops (Drive MCP has no update/edit tool, so an early push is a one-way commitment). Needs two decisions before it's implementable — scope (body only, or every push?) and styling (plain vs. site-accurate). Currently only recorded in a global (non-project) plan file, `C:\Users\B\.claude\plans\we-can-return-to-shiny-thompson.md` — not discoverable from this repo; surface it again next time this comes up rather than assuming it's tracked here.
+
+---
+
 ## 2026-07-23 — content/ and marketing/ folder reorganization; stale docs removed
 
 - Split loose files in `content/` and `marketing/` into `scripts/` (programs), `_resources/` (session-consulted guides/templates), and `plans/` (+ `_archive/`) — a convention neither area had, mirroring `jlmops/plans/`. Moved `content/node_modules`+`package.json` to the `jlmwines/` repo root.
