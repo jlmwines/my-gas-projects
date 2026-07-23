@@ -1,7 +1,7 @@
 # UI Tier 2.1 — AdminBundlesView IA restructure
 
 **Session ID:** UI_T2_1
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** Superseded 2026-06-07 by `ADMIN_BUNDLES_UI_PLAN.md`'s deeper three-lens redesign of the same view (`AdminBundlesView`) — that plan is now the owning doc for AdminBundlesView UI work. This IA-restructure was never shipped. Plan v1 (2026-05-28) findings, kept for reference:
 - Slot Edit Modal is Bootstrap modal (CLAUDE.md violation) — folded into session as Stage A.
 - Health Alerts card is NOT a count duplicate — it's a working replacement-selection workflow. **Do not retire.** Repurposed: keep workflow, drop count duplication, hide when no alerts.
 - Row-level parity badge deferred — parity check writes to global panel, not per-bundle state; would need backend change. Out of scope.

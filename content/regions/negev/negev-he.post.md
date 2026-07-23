@@ -118,7 +118,7 @@
 ## NOTES
 - Source: Drive doc `blog-region-negev-he 26-06-30-18-14` (ID: `1jCpN7xZvME32mLiJf-12CiW6cqN2WHWlgGiADGp1WNE`), owner `info@jlmwines.com`, shared with `accounts@jlmwines.com` 2026-07-06. Body/Excerpt/Email fields/Newsletter Excerpt/Print Newsletter Body/CTA copied verbatim from that doc — no paraphrasing.
 - No separate HE Image Prompts section — the 4 images (featured + 3 body) are shared across both language versions; prompts live only in `negev-en.post.md`.
-- **HE SEO meta description not yet drafted** — needs writing before the wp-admin RankMath step (per `content/PUBLISHING.md`, this one doesn't come from `## NOTES` automatically the way EN's does).
+- **HE SEO meta description not yet drafted** — needs writing before the wp-admin RankMath step (per `content/_resources/PUBLISHING.md`, this one doesn't come from `## NOTES` automatically the way EN's does).
 - Slug: `blog-negev` (https://jlmwines.com/he/blog-negev/) — also changed during wp-admin finishing, same as EN, just landed back on the original draft slug. Unlike prior posts, this one does NOT share a slug with EN — EN finishing landed on `negev-wine` instead. Breaks the assumed same-slug-across-languages convention (`context`/`how-to-store-open-serve-wine` still share slugs) — noted here so a future push doesn't assume it.
 - WP draft stub created 2026-07-06, post ID 67602 (paired with EN post ID 67600).
 - Published live 2026-07-06 (superseded the original "stays draft" plan — user decision, see `plans/STATUS.md`).

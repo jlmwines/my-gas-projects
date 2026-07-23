@@ -1,6 +1,6 @@
 # Campaign Architecture
 
-**Status.** Consolidated 2026-05-11 after the planning conversation. Ready for build review.
+**Status.** Live. Data model + UI (`SysMarketingCampaigns`, `SysShortUrls`, `MarketingCampaignService`, `WebAppCampaigns`, `AdminCampaignsView`, Distribution task templates) shipped and confirmed working; short URLs are pasted manually (auto-push deferred). See `plans/STATUS.md` Current State. This doc remains the architecture reference for the layer split below.
 
 **Purpose.** Define the data model, workflow, and UI for managing marketing campaigns, their distribution outputs (UTM-tagged URL + short URL + QR), and their relationship to content production Projects.
 
@@ -186,5 +186,5 @@ Four phases, overlapping and recurring:
 - `jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md` — campaign strategy / business levers (this plan provides the data shape)
 - `jlmops/docs/DATA_MODEL.md` — schema additions to be documented here
 - `jlmops/docs/WORKFLOWS.md` §12 — flow patterns reused for Project task chains
-- `content/PUBLICATION_CALENDAR.md` — external calendar view; annotates with `sm_CampaignId` and Project IDs as cross-link
+- `jlmops/docs/DATA_MODEL.md` "Publishing Calendar" — the live `JLMops_Publishing` sheet is the calendar of record (`content/PUBLICATION_CALENDAR.md`, an older markdown mirror, was removed 2026-07-23)
 - `content/CLAUDE.md` — post format and blog/newsletter decoupling; aligns with Project task chain templates

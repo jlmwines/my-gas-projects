@@ -52,7 +52,7 @@ Visual alternatives available for each (thumbnail→fullscreen, sketch→mosaic,
 
 Use metaphors to clarify, not to dominate. Customers should never feel they need to "learn" our system.
 
-Full reference: `content/SENSORY_FRAMEWORK.md`
+Full reference: `content/_resources/SENSORY_FRAMEWORK.md`
 
 ## Content Purpose
 
@@ -78,25 +78,25 @@ Before publishing any content, verify:
 
 Blog cadence and newsletter cadence run on independent tracks. Don't treat newsletter-worthiness as a gating filter for what gets published.
 
-- **Blog publishes everything** that builds the book's content architecture (per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`). That includes encyclopedic, dry reference posts (region spokes, grape spokes, historical detail) — they ship for SEO authority and as searchable reference, not for newsletter promotion.
+- **Blog publishes everything** that builds the book's content architecture (per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`). That includes encyclopedic, dry reference posts (region spokes, grape spokes, historical detail) — they ship for SEO authority and as searchable reference, not for newsletter promotion.
 - **Newsletter cherry-picks** the most narrative/shareable post from each month's publishing catch. Theme posts (anchored in a region with a grape and a winery story) and accessible profile pieces are typical newsletter leads. Dry spokes publish without a newsletter slot — that's fine.
 - **Practical effect:** blog can run faster than monthly when production allows; newsletter still drops monthly off whatever's freshest. The Print Newsletter Body section is only required for posts that will lead a newsletter — purely-reference spokes can skip it.
 
 ## Post Source File Format
 
-Each blog post lives as a `.md` file (one EN, one HE) with a fixed section structure. Start new posts by copying `_post-template.md`.
+Each blog post lives as a `.md` file (one EN, one HE) with a fixed section structure. Start new posts by copying `_resources/_post-template.md`.
 
-**Publishing a post → see `content/PUBLISHING.md`** for the full pipeline (the image-upload + `push-posts.js` scripts, the manifest, credentials/target, commands, and the manual wp-admin checklist after a push). Planned automation of that checklist: `content/PUBLISH_ENHANCEMENT_PLAN.md`.
+**Publishing a post → see `content/_resources/PUBLISHING.md`** for the full pipeline (the image-upload + `push-posts.js` scripts, the manifest, credentials/target, commands, and the manual wp-admin checklist after a push). Planned automation of that checklist: `content/plans/PUBLISH_ENHANCEMENT_PLAN.md`.
 
 **Manager/Admin task workflow in the jlmops app (who does each step, where to click) → see `content/PRODUCTION_GUIDE.md`.** Source of truth is `jlmops/docs/WORKFLOWS.md` §13; this guide is a Manager-facing snapshot, regenerate it if that workflow changes.
 
-**Registering a post in the jlmops content library → see `content/register-library.js` header** for all usage modes (`<slug>`, `--all`, `--update`). Add a manifest entry to the script, then run `node content/register-library.js <slug>`.
+**Registering a post in the jlmops content library → see `content/scripts/register-library.js` header** for all usage modes (`<slug>`, `--all`, `--update`). Add a manifest entry to the script, then run `node content/scripts/register-library.js <slug>`.
 
-**Writing the post's HTML block (the `Paste below into WordPress Code Editor:` section) → see `content/HTML_BLOCK_GUIDE.md` first.** Copy column/image layout from `content/existing-layouts/*.raw.txt` or an existing bilingual pair (e.g. `Handling EN.post.md`/`Handling HE.post.md`) — never invent column widths or CSS from scratch. The single most important rule: **the HE HTML is a structural copy of the EN HTML — same columns, same order, same classes, only the text is translated.** There is no cross-language mirroring/flipping convention on this site; do not try to build one.
+**Writing the post's HTML block (the `Paste below into WordPress Code Editor:` section) → see `content/_resources/HTML_BLOCK_GUIDE.md` first.** Copy column/image layout from `content/_resources/existing-layouts/*.raw.txt` or an existing bilingual pair (e.g. `content/basics/handling/Handling EN.post.md`/`Handling HE.post.md`) — never invent column widths or CSS from scratch. The single most important rule: **the HE HTML is a structural copy of the EN HTML — same columns, same order, same classes, only the text is translated.** There is no cross-language mirroring/flipping convention on this site; do not try to build one.
 
 ### Required sections (in this order)
 
-This table must mirror `_post-template.md` exactly — if they disagree, the template file is stale and gets fixed, not read around. Body sits right after Title: a human opening the file reads the post first, then sees the derived fields below it.
+This table must mirror `_resources/_post-template.md` exactly — if they disagree, the template file is stale and gets fixed, not read around. Body sits right after Title: a human opening the file reads the post first, then sees the derived fields below it.
 
 | Section | Length | Purpose |
 |---|---|---|
@@ -117,7 +117,7 @@ This table must mirror `_post-template.md` exactly — if they disagree, the tem
 
 ### Parser dependencies
 
-`content/push-posts.js` parses three things from each source file:
+`content/scripts/push-posts.js` parses three things from each source file:
 - `## TITLE` → WP post title. **Must be the first line of the file** — the regex anchors to file-start, not just any `## ` boundary.
 - `## EXCERPT` → WP excerpt field. Position-independent.
 - Everything after `Paste below into WordPress Code Editor:` → WP post body. **Must be the last thing in the file** — the parser captures from that marker to end-of-file; anything placed after it (Notes, Image Prompts, etc.) would get swallowed into the WordPress post body.
@@ -137,7 +137,7 @@ Every other `## `-headed section — including `## BODY` itself — is a human-f
 9. **CTA**
 10. **Image prompts**
 11. HE translation — entire chain duplicates into the HE file last
-12. **Publishing session only** — if the post has body images, run the per-post `upload-<topic>-images.js` script first (see `content/PUBLISHING.md` — copy the template matching the post's actual folder depth, flat vs. nested, don't assume). It stamps media IDs/URLs into the `.post.md` files. Then convert `## BODY` prose to HTML, replace it with `Paste below into WordPress Code Editor:` + HTML block **moved to the end of the file** (the parser reads to end-of-file from that marker), then run `push-posts.js`.
+12. **Publishing session only** — if the post has body images, run the per-post `upload-<topic>-images.js` script first (see `content/_resources/PUBLISHING.md` — copy the template matching the post's actual folder depth, flat vs. nested, don't assume). It stamps media IDs/URLs into the `.post.md` files. Then convert `## BODY` prose to HTML, replace it with `Paste below into WordPress Code Editor:` + HTML block **moved to the end of the file** (the parser reads to end-of-file from that marker), then run `push-posts.js`.
 
 **Once body is locked (step 3), it is verbatim for every later step.** "Derived from locked body" in steps 5–10 means extracted/condensed *from* the existing wording — never a fresh paraphrase of the body itself. A session adding Email fields, Newsletter Excerpt, or a translation must not also rewrite `## BODY` as a side effect. (Real incident, 2026-07-01: the Negev post's body was progressively paraphrased across three sessions while later sections were being added, losing real content — restored from the original Drive doc. If the body genuinely needs a content change, that's a deliberate, called-out edit, not an incidental rewrite.)
 

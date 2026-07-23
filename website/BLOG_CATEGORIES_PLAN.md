@@ -1,6 +1,6 @@
 # Wine Talk — Multiple Blog Categories
 
-The Wine Talk page (`/articles/` EN, `/he/articles/` HE — template "Articles (Wine Talk)") currently shows only the **Basics** category, hardcoded. `content/guide/ISRAELI_WINE_GUIDE_PLAN.md` §Content Architecture already road-maps six eventual categories (Regions, Wineries, Grapes, History, Uniqueness, People) plus the existing Basics content — so this isn't a "make room for one more category" fix, it's "build the page for an open-ended, growing category count." This doc is the plan; not yet implemented.
+The Wine Talk page (`/articles/` EN, `/he/articles/` HE — template "Articles (Wine Talk)") currently shows only the **Basics** category, hardcoded. `content/plans/ISRAELI_WINE_GUIDE_PLAN.md` §Content Architecture already road-maps six eventual categories (Regions, Wineries, Grapes, History, Uniqueness, People) plus the existing Basics content — so this isn't a "make room for one more category" fix, it's "build the page for an open-ended, growing category count." This doc is the plan; not yet implemented.
 
 ## Current state (verified live 2026-07-06, re-verified same day after category creation)
 

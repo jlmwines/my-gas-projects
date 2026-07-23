@@ -125,5 +125,5 @@ Do these in order. Each tier unblocks or amplifies the next.
 
 - `plans/SEO_AUDIT_2026-05-06.md` — technical audit findings with fix details
 - `plans/RANKMATH_WPML_AUDIT.md` — WPML × RankMath checklist + MCP tooling notes
-- `content/REGION_POSTS_PLAN.md` — region post sequence and calendar
+- `content/plans/REGION_POSTS_PLAN.md` — region post sequence and calendar
 - `website/HOMEPAGE_BLOCKS_PLAN.md` — Phase 1 resolves homepage hreflang http→https (#1 in audit)

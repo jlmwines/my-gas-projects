@@ -235,7 +235,7 @@ These require zero wine knowledge and work with any wine.
 
 ## Related Documents
 
-- `content/SENSORY_FRAMEWORK.md` - The three dimensions
-- `content/SENSORY_METAPHORS.md` - Music and art metaphors
+- `content/_resources/SENSORY_FRAMEWORK.md` - The three dimensions
+- `content/_resources/SENSORY_METAPHORS.md` - Music and art metaphors
 - `content/Pairing EN.md` - Harmonize vs Contrast system
 - `business/CONTENT_STRATEGY.md` - Brand voice

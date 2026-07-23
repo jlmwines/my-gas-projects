@@ -1,1 +1,0 @@
-# Gemini Session Guidelines

@@ -13,7 +13,7 @@ This calendar tracks only items that are NOT inside one of those plan queues.
 
 ## Content Calendar
 
-Superseded by `content/PUBLICATION_CALENDAR.md`, which is actively maintained and reconciled against the live calendar sheet (`JLMops_Publishing`) each time slots change — this file no longer keeps its own copy of the schedule (the two had drifted: this table still showed the pre-Negev slot order and stale dates as of 2026-06-21). See that doc for region-post slot assignments and `content/REGION_POSTS_PLAN.md` for per-region production status.
+Authoritative source is the live [`JLMops_Publishing` calendar sheet](https://docs.google.com/spreadsheets/d/1xnhFKCPUkvVdMy7GWXDWwiipT6j028ZrZ_69GJ6HWjc) directly — "calendar is king" (`jlmops/docs/DATA_MODEL.md` "Publishing Calendar"). `content/PUBLICATION_CALENDAR.md`, a manually-reconciled markdown mirror, was removed 2026-07-23 as a stale duplicate of that sheet. See `content/plans/REGION_POSTS_PLAN.md` for per-region production status.
 
 ## Upcoming
 

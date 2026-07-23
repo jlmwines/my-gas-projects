@@ -119,7 +119,7 @@ async function main() {
   for (var n = 1; n <= SLOTS.length; n++) {
     console.log('  Slot ' + n + ': id=' + idMap[n] + '  ' + urlMap[n]);
   }
-  console.log('\nNext: `node content/push-posts.js negev --both`.');
+  console.log('\nNext: `node content/scripts/push-posts.js negev --both`.');
 }
 
 main().catch(function(err) {

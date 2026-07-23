@@ -28,11 +28,12 @@ shipped log for the canonical record):
 
 Archived 2026-05-31.
 
+- `UI_T5_2_admin_products_modals.md` — SHIPPED (3 `btn-primary` sites fixed, modals already `modal-overlay`). Archived 2026-07-23 (portfolio cleanup pass — was sitting as "ready to ship" though the code fix had already landed).
+
 ## Still active in `jlmops/plans/` (deliberately NOT archived)
 
-- `UI_T2_1_admin_bundles.md` — ready to ship, deprioritized (desktop-only)
+- `UI_T2_1_admin_bundles.md` — never shipped; superseded 2026-06-07 by `ADMIN_BUNDLES_UI_PLAN.md`'s deeper redesign of the same view
 - `UI_T2_4_content_stream_modal.md` — deferred-with-reasoning (live decision doc)
 - `UI_T4_3_inventory_mobile.md` — shipped but Stage B count modal unsmoked
 - `UI_T5_1_admin_contacts_modals.md` — shipped but smoke pending + Contact Action Ribbon Phase 2 rework
-- `UI_T5_2_admin_products_modals.md` — ready to ship (queued next)
 - `UI_T5_3_shared_list_component.md` — conditional-defer decision doc

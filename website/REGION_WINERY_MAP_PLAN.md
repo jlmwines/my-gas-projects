@@ -1,6 +1,6 @@
 # Region Posts — Winery Map
 
-Each of the six region posts (`content/REGION_POSTS_PLAN.md`) ends with a "Wineries to Visit" list. The ideal is an interactive map with callouts and links, not just a bullet list. This doc is the plan for that; not yet built. First region to get one: Negev (8 wineries, links already researched — see below).
+Each of the six region posts (`content/plans/REGION_POSTS_PLAN.md`) ends with a "Wineries to Visit" list. The ideal is an interactive map with callouts and links, not just a bullet list. This doc is the plan for that; not yet built. First region to get one: Negev (8 wineries, links already researched — see below).
 
 ## Approach: Google My Maps, embedded
 

@@ -7,13 +7,13 @@ A session-readable index of every recurring operational task this project suppor
 ## Content
 
 **Publish a blog post**
-- Procedure: `content/PUBLISHING.md`
-- Command: `node content/push-posts.js <name> --both`
+- Procedure: `content/_resources/PUBLISHING.md`
+- Command: `node content/scripts/push-posts.js <name> --both`
 - Notes: manifest-driven (add entry to `push-posts.js` MANIFEST if post is new); pushes to live site as a draft; does NOT publish. Manual wp-admin checklist after push: focus keyword, SEO snippet, WPML link, then publish.
 
 **Upload images for a post**
-- Procedure: `content/PUBLISHING.md` §"The two scripts"
-- Script: write a fresh `upload-<topic>-images.js` from `upload-handling-images.js` template; run `node content/upload-<topic>-images.js`
+- Procedure: `content/_resources/PUBLISHING.md` §"The scripts"
+- Script: add a manifest entry to `content/scripts/upload-images.js`; run `node content/scripts/upload-images.js <name>`
 - Notes: uploads to live WP media library; prints the featured image ID for the `## FEATURED MEDIA` section; stamps body image placeholders in the `.post.md` file.
 
 **Upload a content draft doc to Drive (blog post draft)**
@@ -26,8 +26,8 @@ A session-readable index of every recurring operational task this project suppor
 - Notes: use `textContent`, NOT `base64Content` + pandoc .docx. The .docx path is slow, forces a binary conversion, and produces different formatting. Timestamp via PowerShell timezone API only (Git Bash returns UTC).
 
 **Register content in the jlmops library**
-- Procedure: `content/register-library.js` header (read it — covers all modes)
-- Command: `node content/register-library.js <slug>` (or `--all`, `--update`)
+- Procedure: `content/scripts/register-library.js` header (read it — covers all modes)
+- Command: `node content/scripts/register-library.js <slug>` (or `--all`, `--update`)
 - Notes: writes to `JLMops_Library` (single-tab, Drive-MCP-readable). Requires service-account JSON at `.gcp-credentials.json`. Add manifest entry to the script first.
 
 **Format a docx for WordPress**

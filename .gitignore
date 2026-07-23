@@ -12,7 +12,7 @@
 .gcp-credentials.json
 
 # Local npm install for content/ tooling
-content/node_modules/
+node_modules/
 content/package-lock.json
 
 # Local incremental-deploy manifest (SHA-1 of last-deployed theme files)

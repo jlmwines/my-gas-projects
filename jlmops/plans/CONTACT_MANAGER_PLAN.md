@@ -2,7 +2,7 @@
 
 **Purpose.** Activate the existing CRM data layer. The system already runs nightly (548 contacts enriched as of 2026-04-30) — what's missing is automated data sync and an action layer for partner follow-ups.
 
-**Status.** Plan written 2026-04-30. **Half 1 SHIPPED 2026-05-05 as jlmops @81** (`MailchimpService.js` + `ContactImportService.importFromMailchimpApi()` + `CampaignService.pullRecentCampaigns()` wired into housekeeping phase 3; AdminContactsView refresh button live). Half 2 (action layer) not started.
+**Status.** Plan written 2026-04-30. **Half 1 SHIPPED 2026-05-05 as jlmops @81** (`MailchimpService.js` + `ContactImportService.importFromMailchimpApi()` + `CampaignService.pullRecentCampaigns()` wired into housekeeping phase 3; AdminContactsView refresh button live). **Half 2 SHIPPED 2026-05-14** — see status below.
 
 ---
 
@@ -96,7 +96,7 @@ Per-contact **recipient** rows (not engagement) — record that contact X was in
 
 ## Half 2 — Manager CRM (Action Layer)
 
-**Status.** Plan reshaped 2026-05-14 after a discovery pass on existing CRM code and a review of Pipedrive's pattern. Half 2 is no longer a single trigger-driven follow-up screen; it's a small CRM surface for the manager (search → contact → action), with the welcome trigger as the first source of work.
+**Status.** SHIPPED 2026-05-14 as jlmops @105–@116 (portfolio `CALENDAR.md` "Manager CRM Half 2"). Reshaped per the discovery pass below into a small CRM surface for the manager (search → contact → action) rather than a single trigger-driven follow-up screen, with the welcome trigger as the first source of work — `ManagerContactView`, the outreach trigger, and the Action Panel are live. Not yet archived: `task.contact.outreach` and `ManagerContactView` haven't graduated to `jlmops/docs/WORKFLOWS.md` yet (only `SysContactActivity`'s schema has, via `DATA_MODEL.md`) — hold archiving this plan until that graduation happens.
 
 ### Discovery — what's already in place
 

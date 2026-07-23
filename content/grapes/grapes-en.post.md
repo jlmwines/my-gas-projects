@@ -107,11 +107,11 @@ Impressionist oil painting of an ancient stone winepress amid revived desert vin
 
 
 ## NOTES
-- **Facts verified this session** (2026-07-03) via `content/regions/ISRAEL-WINE-REGIONS.pdf` (Montefiore 2023) and targeted web research — see `content/guide/ISRAELI_WINE_GUIDE_PLAN.md` §GRAPES for full sourcing per fact (Cabernet/Carignan/Merlot hectare shares, Colombard/Emerald Riesling brandy role + UC Davis breeding history, Barbera/Malbec climate mechanisms, Argaman's Volcani Institute origin, Golan Heights Winery's UC Davis consultant Peter Stern).
+- **Facts verified this session** (2026-07-03) via `content/regions/ISRAEL-WINE-REGIONS.pdf` (Montefiore 2023) and targeted web research — see `content/plans/ISRAELI_WINE_GUIDE_PLAN.md` §GRAPES for full sourcing per fact (Cabernet/Carignan/Merlot hectare shares, Colombard/Emerald Riesling brandy role + UC Davis breeding history, Barbera/Malbec climate mechanisms, Argaman's Volcani Institute origin, Golan Heights Winery's UC Davis consultant Peter Stern).
 - Written per the plan's writing guidance: 1-2 flavor notes per grape (not a tasting-note stack), real mechanism (climate/soil/technique) instead of comparison-to-a-European-region framing, plain language throughout.
 - Indigenous-grape section (Marawi/Hamdani/Bittuni/Dabouki/Jandali) handled per the plan's editorial caution — wine-and-archaeology framing only, stays out of the ownership argument entirely.
 - Individual grape spoke posts (Cabernet Sauvignon, Malbec, etc.) are deferred per the plan's sequencing decision — this anchor is written to stand alone in the meantime.
 - SEO meta description (paste into RankMath): "Cabernet, Chardonnay, Merlot — familiar names. What's actually growing in Israel, and what's actually in the glass, is a different story. The real grapes of Israel, from ancient revivals to a grape built in a lab."
 - Focus keyword suggestion: "Israel grape varieties"
-- Slug: `grapes-index` (or per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s File Naming Convention section — that section predates the working `.post.md`/`-en`/`-he` convention actually used for region posts and may need reconciling)
+- Slug: `grapes-index` (or per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`'s File Naming Convention section — that section predates the working `.post.md`/`-en`/`-he` convention actually used for region posts and may need reconciling)
 - **Status:** body drafted through Image Prompts (steps 1-10 of `content/CLAUDE.md`'s work order). Not yet: HE translation, library registration, or publish.

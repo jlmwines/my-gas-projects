@@ -484,7 +484,7 @@ Manager: Reviews translation...
 | 4 | `ManagerDashboardView_v2.html` | Add created date (compact M/D format) to each list row |
 | 5 | `ManagerDashboardView_v2.html` | Add "Created" read-only field to task detail view |
 
-**Status:** Approved. Pending implementation.
+**Status:** Shipped and live — verified 2026-07-23 (`task-col-created` / created-date column present in `ManagerDashboardView_v2.html`).
 
 ### 2026-03-03: Admin Projects View — created date + column crowding fix
 
@@ -506,4 +506,4 @@ Manager: Reviews translation...
 
 Sort-by-created logic already existed (line 1233). No backend changes needed — admin task map already includes `st_CreatedDate`.
 
-**Status:** Done. In test (not deployed).
+**Status:** Shipped and live — verified 2026-07-23 (`createdDateDisp` present in `AdminProjectsView.html` / `AdminTasksView.html`).
