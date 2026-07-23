@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-22. jlmops @528 live, stable; `SysCategories` consolidated as the category authority (see `jlmops/plans/CONFIG_COMPLIANCE_PLAN.md`, one cleanup step held for a production soak period). Woo API push (`jlmops/plans/WOO_API_PUSH_PLAN.md`) confirmed working end-to-end for both new-product and existing-product edit paths. Vintage-drift tasks fixed to stop showing/saving stale Comax data (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — deployed, awaiting a live vintage change to smoke-test.
+**Updated:** 2026-07-23. jlmops @529 live, stable; `SysCategories` consolidated as the category authority (see `jlmops/plans/CONFIG_COMPLIANCE_PLAN.md`, one cleanup step held for a production soak period). Woo API push (`jlmops/plans/WOO_API_PUSH_PLAN.md`) confirmed working end-to-end for both new-product and existing-product edit paths; known gap found in the same testing — the `attributes` array doesn't prune Region/Grape/Harmonize/Contrast as originally assumed, owner OK'd leaving as-is (`.claude/bugs.md`). Vintage-drift tasks fixed to stop showing/saving stale Comax data (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — deployed, awaiting a live vintage change to smoke-test. Admin Products' Accepted card now refreshes on every admin accept, not just when the review queue fully drains.
 
 ## At a glance
 
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-07-22 |
+| Last Active | 2026-07-23 |
 | Revenue | Steady |
 | Deploy Version | jlmops @529 · theme v1.2.31 |
 | Deploy Date | jlmops 2026-07-22 · theme 2026-07-09 |
