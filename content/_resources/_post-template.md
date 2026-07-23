@@ -38,7 +38,7 @@ __FEATURED_ID__
 
 ## EMAIL BODY
 <!-- Full email body copy — post-promo-led, features THIS post (see
-     marketing/NEWSLETTER_PLAN.md "Companion Email Campaign": hero image, this
+     marketing/_resources/NEWSLETTER_REFERENCE.md "Companion Email Campaign": hero image, this
      body, sign-off "— Evyatar", no footer, no signup CTA — subscribers already
      subscribed). Session drafts from the locked body; manager edits/translates. -->
 

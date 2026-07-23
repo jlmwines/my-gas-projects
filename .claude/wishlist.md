@@ -22,7 +22,7 @@ Projects: jlmops, web, marketing, content
 - [ ] Smarter reprint logic: Track first immutable print separately
 - [ ] Remove one-time backfill code when CRM is stable
 - [ ] 2026-06-08: **Bundles — surface missed profit opportunities.** Flag high-profit wines (`wpm_ProfitRate`) that aren't used in ANY bundle (cross-bundle `usage` = 0, the Stage 6 index) so the operator can pull them into a bundle. The signals already exist (profit from Stage 2, usage from Stage 6); this is a read-only "high-margin wines not in any bundle" report/card on AdminBundles. Capstone to the Stage 7 generator.
-- [ ] WhatsApp integration
+- [ ] WhatsApp Business account is set up and in use (site links point to it); full segmentation/broadcast/automation build (labels, opt-in sync, broadcast lists) has no near-term plan. Scoped spec if revisited: `marketing/plans/_archive/WHATSAPP_TRANSITION.md`, `jlmops/plans/WHATSAPP_CRM_INTEGRATION.md`.
 - [ ] Mailchimp export from CRM
 - [ ] Recommendation engine
 - [ ] AI/Claude integration
@@ -43,7 +43,7 @@ Projects: jlmops, web, marketing, content
 
 ## marketing
 
-- [ ] 2026-07-02: **Loyalty rewards program** — not a discount (deliberately moving away from automated coupons); reward is an extra or upgraded bottle. Plan → `marketing/REWARDS_PLAN.md`.
+- [ ] 2026-07-02: **Loyalty rewards program** — not a discount (deliberately moving away from automated coupons); reward is an extra or upgraded bottle. Plan → `marketing/plans/REWARDS_PLAN.md`.
 - [ ] Year in Wine product dynamic content
 - [ ] Referral coupons
 - [ ] Referral short URL
@@ -52,8 +52,6 @@ Projects: jlmops, web, marketing, content
 - [ ] Video content
 - [ ] FAQ/Glossary
 - [ ] YouTube channel
-- [ ] Business WhatsApp
-- [ ] Zadarma 055 for WhatsApp
 - [ ] 2026-05-07: Bilingual flyer drop in 8 Jerusalem neighborhoods (German Colony, Emek Refaim, Rechavia, Talbiyeh, Beit HaKerem, Arnona, Nayot, Ein Kerem) — vendor candidates yoterplus.co.il + dilen.co.il; ~₪2000 test budget; first surfaced 2026-02-09
 - [ ] 2026-05-07: Wine tasting / sampling events at restaurants and venues — previously planned by partner, canceled by war; QR-code + discount cards already produced for new-customer acquisition; revisit and execute
 - [ ] 2026-05-15: **Bundle + package imagery refresh + bundle duplicate meta.** Two distinct Canva-generated visual systems so a glance distinguishes them. **Bundles** (flexible suggestions, no built-in discount): atmospheric/thematic imagery — palette + texture + mood, no specific bottle compositions (membership changes too often, fake labels betray AI). Loose/sketchy "suggestion" feel via fanned/spread layout or ghost-shape cues; composition rides the tier axis (value = abundant, premium = sparse/refined). **Packages** (themed problem-solvers, fixed composition + discount): situational Israeli scenes rendered in naïve Israeli folk-art idiom (Reuven Rubin / Nahum Gutman lineage) — flat color, warm earth tones (terracotta, ochre, cypress green, Jerusalem stone, deep wine red), unfussy shapes. Existing package themes stay (Cheese Please, Shabbat Shalom, Al Ha-Aish, etc.) — just re-illustrated with Israeli palette and composition cues (pita/olives/labneh, low charcoal grill, cypress + bougainvillea backdrops). Drop the slot-machine "winning combination" illustration entirely — gambling+alcohol is tonally off. Also: bundles have duplicate meta (titles/descriptions across category) — fix as part of the same pass.

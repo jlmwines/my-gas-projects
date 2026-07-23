@@ -2,7 +2,9 @@
 
 Add WhatsApp-related fields and functionality to the jlmops contact sheet.
 
-**Related:** `marketing/WHATSAPP_TRANSITION.md`
+**Status:** No near-term plan — the WhatsApp Business account is set up and in active use (site links point to it), but the broader segmentation/opt-in/broadcast build this spec supports isn't being pursued. Archived alongside its companion doc.
+
+**Related:** `marketing/plans/_archive/WHATSAPP_TRANSITION.md`
 
 ---
 

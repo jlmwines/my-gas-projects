@@ -14,7 +14,7 @@
 |--------|-----|
 | Full strategy | `business/CONTENT_STRATEGY.md` |
 | Content quick-reference | `content/CLAUDE.md` |
-| Email tone | `marketing/EMAIL_GUIDELINES.md` |
+| Email tone | `marketing/_resources/EMAIL_GUIDELINES.md` |
 | Marketing tone | `marketing/CLAUDE.md` |
 
 **Core rules (consolidated):**
@@ -81,7 +81,7 @@
 
 ### Email (Mailchimp)
 
-- Voice: see `marketing/EMAIL_GUIDELINES.md`
+- Voice: see `marketing/_resources/EMAIL_GUIDELINES.md`
 - Visual: simple, mostly text — designed to read as a personal note rather than a marketing template
 - Mechanics: One campaign, two language copies (EN + HE) per `business/STRATEGY.md`
 
@@ -89,8 +89,8 @@
 
 - Voice: editorial, not pitchy
 - Visual: matches website typography (Secular One + Rubik)
-- Operating model: `marketing/NEWSLETTER_PLAN.md`
-- Status: Issue #1 printed and distributing (inserted into shipments + store bags)
+- Operating model: `marketing/_resources/NEWSLETTER_REFERENCE.md`
+- Status: Live, monthly cadence (inserted into shipments + store bags); current issue per `plans/STATUS.md`
 
 ### Packing slip
 

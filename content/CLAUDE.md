@@ -106,7 +106,7 @@ This table must mirror `_resources/_post-template.md` exactly — if they disagr
 | `## FEATURED MEDIA` | — | WP media ID, stamped by the per-post image-upload script |
 | `## EMAIL SUBJECT` | one line | Subject line for the companion promotional email. Session drafts from the locked body, same as every other extract; manager edits/translates, doesn't originate it. |
 | `## EMAIL PREVIEW TEXT` | 150 chars max | Preheader shown in email clients before opening — most clients truncate past 150. Session drafts; manager edits/translates. |
-| `## EMAIL BODY` | full email copy | Companion email body — post-promo-led, features this post (see `marketing/NEWSLETTER_PLAN.md` Companion Email Campaign). Session drafts; manager edits/translates. |
+| `## EMAIL BODY` | full email copy | Companion email body — post-promo-led, features this post (see `marketing/_resources/NEWSLETTER_REFERENCE.md` Companion Email Campaign). Session drafts; manager edits/translates. |
 | `## EMAIL CTA` | one line | Email call-to-action button/link text. Session drafts; manager edits/translates. |
 | `## NEWSLETTER EXCERPT (web/social)` | ~50 words | Social posts, email teasers, web snippets — ends with `[Read the full guide →]` |
 | `## PRINT NEWSLETTER BODY` | ~150–200 words | Printed Wine Talk insert (left column). Self-contained — reader may not scan the QR. Signs off `— Evyatar` |

@@ -115,7 +115,7 @@ KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign"
 - `website/MARKET_CONTEXT.md` — market segmentation, growth strategy, the "57 days" stat (correction: should be reframed as observed, not goal — the working goal is 90 days; update when we revisit MARKET_CONTEXT)
 - `business/STRATEGY.md` — strategic posture and direction principles (acquisition focus, build-less-data principle) that frame KPI priorities
 - `plans/STATUS.md` — current state of cross-area initiatives that produce or consume KPI data (newsletter, Contact Manager, cross-sell)
-- `marketing/NEWSLETTER_PLAN.md` — newsletter mechanics (KPI #5 source)
+- `marketing/_resources/NEWSLETTER_REFERENCE.md` — newsletter mechanics (KPI #5 source)
 - `jlmops/plans/CONTACT_MANAGER_PLAN.md` — Mailchimp daily pull (KPI #5 wiring)
 - `claudeops/plans/STATUS.md` — meta-tracking of "do we have the right structure"; pointer back to this doc
 

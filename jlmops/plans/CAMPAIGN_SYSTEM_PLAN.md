@@ -70,7 +70,7 @@ The Year in Wine campaign (late-Dec 2025 / early-Jan 2026) drew pleasing feedbac
 
 1. **Customers don't choose wine by attribute scores.** Leading copy with "your top wineries / favorite categories / intensity range" felt off. Attributes are an education/positioning asset on product surfaces, not a marketing hook. *Don't lead email with "we've analyzed your preferences."*
 2. **The offer asked too much.** Auto-coupons + free-gift-at-checkout + tiered rewards (fgr01/02/03) was a complex behavior request; personal touches got buried under mechanics. *Simpler offers (single coupon, single CTA) outperform clever ones.*
-3. **Email's job is a "we exist" reminder.** Customers order infrequently; when an email arrives they're often already due. *Frequency and presence beat sophistication* — the newsletter print insert (`marketing/NEWSLETTER_PLAN.md`) runs on this premise.
+3. **Email's job is a "we exist" reminder.** Customers order infrequently; when an email arrives they're often already due. *Frequency and presence beat sophistication* — the newsletter print insert (`marketing/_resources/NEWSLETTER_REFERENCE.md`) runs on this premise.
 
 **Dropped from the roadmap:** Year in Wine PDFs (wrong format); tiered reward coupons (fgr01/02/03 — unredeemed, complexity > value); free-gift-at-checkout selection mechanics.
 

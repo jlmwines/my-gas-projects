@@ -2,7 +2,7 @@
 
 Reference for composing monthly "Making Wine" entries for the newsletter and companion email. Applies to AI-assisted drafting and human editing alike.
 
-**Channel.** Newsletter print + companion email only. Not published on the blog (subscriber-exclusive content; see `marketing/NEWSLETTER_PLAN.md`).
+**Channel.** Newsletter print + companion email only. Not published on the blog (subscriber-exclusive content; see `marketing/_resources/NEWSLETTER_REFERENCE.md`).
 
 **Cadence.** Monthly. Each entry tracks the wine year (May = canopy season, August = veraison, October = harvest, etc.).
 
