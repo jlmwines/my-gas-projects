@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-23 (cont'd) — first-ever comprehensive jlmops code audit executed
+
+- Ran the never-executed `jlmops/plans/CODE_AUDIT_PLAN.md` (drafted 2026-06-04) as 6 subsystem passes, each a background `general-purpose` Agent call: Sync/Orders, Products/Inventory, CRM/Campaigns (=Phase 3), Content Library, Core Plumbing, WebApp controllers, Admin UI, Manager/shared UI (Platform and UI clusters each split in two for size). Started as a separate new `CODE_REVIEW_PLAN.md` before discovering the pre-existing, more mature `CODE_AUDIT_PLAN.md` mid-session — merged into it (single home for the fact), duplicate file deleted.
+- Headline finding, independently reconfirmed by nearly every pass: `doGet` only blocks unlisted "viewer" accounts; every other role gets the identical app shell and the role-switcher is client-side only — zero server-side authorization anywhere in the codebase. Definitively characterized (not just re-flagged) in the WebApp-controllers pass.
+- ~18 findings filed to `.claude/bugs.md`, each pointing to the full analysis in `CODE_AUDIT_PLAN.md` §9. Cross-cutting synthesis (§10, done inline — no fresh agent needed since context was already held) found one meta-pattern behind most concrete bugs: fixes/schema changes/shared patterns introduced in one place don't propagate to sibling call sites doing the same job (e.g. a retired field name fixed in 1 of 4 SKU functions, `ModalOverlay` used correctly in some views and bypassed in siblings). Fix priority ranked in 4 tiers in §10.
+- Fixed 4 stale `ARCHITECTURE.md` lines found along the way (describing dead services `WpmlService`/`CategoryService`/`PromotionsEngineService` as live; a `doPost` router that was never built).
+- Nothing fixed — findings-only, as scoped. `jlmwines/plans/STATUS.md` Next Action #4 points here for triage; next session should pick a tier and start fixing, or continue the one open gap (Phase 4 error-handling wasn't checked as an explicit dimension in the first 2 passes).
+
+---
+
 ## 2026-07-23 (cont'd) — terminology convention set; one open idea parked (not yet in a project doc)
 
 - **Convention going forward:** use "guide" as the general term for any current-practice doc (session-consulted or human-facing), replacing the finer plan/document/reference split. "Plan" is reserved for genuine unbuilt intent only.

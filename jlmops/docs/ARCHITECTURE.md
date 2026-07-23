@@ -56,17 +56,16 @@ The data flow is typically: `HTML View` -> `View Controller (Shared or Dedicated
 
 ### 2.2. Backend: API-Driven & Service-Oriented
 
-The backend is designed as a collection of services that are controlled by a single API endpoint.
+The backend is designed as a collection of services, each exposing global functions the frontend calls directly.
 
-*   **API Endpoint:** A single `doPost(e)` function acts as the router for all incoming requests from the frontend. It inspects the request (`{action: '...', payload: {...}}`) and routes it to the appropriate service.
+*   **API Endpoint:** There is no `doPost` router — the frontend calls individual global functions (e.g. `WebAppTasks_updateTask`) directly via `google.script.run` (see §2.1.2). `doGet` in `WebApp.js` only routes the initial page load (viewer role → `AccessDenied.html`, everyone else → the SPA shell); it is not re-checked before any subsequent `google.script.run` call.
 *   **Service Layer:** The core logic is broken down into the following services:
     *   **`OrchestratorService`**: Manages the time-driven trigger, scans for new files, checks the `FileRegistry`, and initiates the correct workflows.
     *   **`ProductService`**: Handles core product data management, including the validation and integrity checks for the product onboarding and SKU change workflows.
+    *   Web category assignment reads `SysCategories` via `ConfigService.getCategoryDivisionMap()`/`getCategoryTextLookup()` (consolidated 2026-07-21) — not a dedicated `CategoryService`; that file is retired dead code.
     *   **`OrderService`**: Manages the entire order lifecycle. It handles the import and upsert of order data into the master sheets and is the master controller of the processing state machine in `SysOrdLog`, setting the initial `Eligible` or `Ineligible` status based on defined business rules.
     *   **`PackingSlipService`**: Acts as an enrichment engine. It scans `SysOrdLog` for `Eligible` orders, gathers all necessary data for printing, enriches it with descriptive text, and places the result in `SysPackingCache`. Upon completion, it updates the order's status in `SysOrdLog` to `Ready`.
     *   **`PrintService`**: Handles the final document generation. It reads pre-processed data from `SysPackingCache` for orders marked as `Ready`. For each order, it copies a designated Google Doc template, populates the copy with the order's specific data, and saves the result as a new Google Doc in an output folder. It then completes the workflow by setting the order's status in `SysOrdLog` to `Printed`.
-    *   **`CategoryService`**: Contains the rules engine for dynamically determining web categories based on Comax attributes.
-    *   **`WpmlService`**: Encapsulates the specific rules for handling multilingual data to ensure compatibility with WPML.
     *   **`BundleService`**: Manages the entire lifecycle of product bundles. This service uses a rules-based engine defined in the Data Model (`SysBundlesM`, `SysBundleRows`, `SysBundleActiveComponents`). Its primary responsibilities include:
         *   Monitoring the stock levels of all SKUs listed in `SysBundleActiveComponents`.
         *   If an active component is low on stock, it consults the eligibility rules for that bundle slot (defined in `SysBundleRows`) to find and suggest suitable replacements.
