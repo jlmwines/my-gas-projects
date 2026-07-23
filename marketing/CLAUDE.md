@@ -2,10 +2,12 @@
 
 Campaigns, promotions, and customer communications for JLM Wines.
 
-## Operational Procedures
+## Folder Layout
 
-- **Email HTML (promo / companion emails)** → `marketing/EMAIL_GUIDELINES.md` — design decisions, Mailchimp process, Hebrew checklist, and what not to do. Reference HTML: `marketing/newsletter/issues/2026-06/2026-06-handling-en.html` + HE sibling.
-- **Print newsletter (monthly insert)** → `marketing/NEWSLETTER_PLAN.md` — full workflow: layout, Making Wine series, Drive template/docx delivery, issue cadence. Per-issue files in `marketing/newsletter/issues/`.
+- `marketing/plans/` — active plans (intent, not yet fully built): `FLYER_PLAN.md`, `REWARDS_PLAN.md`. `_archive/` holds graduated or deferred plans (e.g. `WHATSAPP_TRANSITION.md` — account is live and in use, but the broader build has no near-term plan).
+- `marketing/_resources/` — session references consulted while doing marketing work, not plans or manager-facing docs: `EMAIL_GUIDELINES.md` (design decisions, Mailchimp process, Hebrew checklist — read before building any promo/companion email HTML), `NEWSLETTER_REFERENCE.md` (full monthly-issue workflow: layout, Making Wine series, Drive template/docx delivery, issue cadence — read before building an issue). Reference HTML: `marketing/newsletter/issues/2026-06/2026-06-handling-en.html` + HE sibling.
+- `marketing/newsletter/` — per-issue newsletter + email files (`issues/<YYYY-MM>/`) and shared assets (banner, signatures, QR codes).
+- `marketing/flyer/` — flyer print artifacts.
 
 ## Related Folders
 

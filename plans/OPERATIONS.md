@@ -40,12 +40,12 @@ A session-readable index of every recurring operational task this project suppor
 ## Marketing
 
 **Create a promo or companion email (HTML for Mailchimp)**
-- Procedure: `marketing/EMAIL_GUIDELINES.md`
+- Procedure: `marketing/_resources/EMAIL_GUIDELINES.md`
 - Templates: `marketing/newsletter/issues/2026-06-handling-en.html` + sibling HE file (current reference examples)
 - Notes: write inline HTML only (the `<h1>` through closing `<p>`); Mailchimp wraps the outer structure. Two sends — EN and HE to language-segmented lists. Hero image goes in a Mailchimp Image block, not in the code.
 
 **Create the newsletter (print insert + companion email)**
-- Procedure: `marketing/NEWSLETTER_PLAN.md`
+- Procedure: `marketing/_resources/NEWSLETTER_REFERENCE.md`
 - Pattern: most-recent issue in `marketing/newsletter/issues/` — copy structure
 - Session produces (all files local — session-owned, user pastes from them):
   1. `<YYYY-MM>-<label>-en.md` + `he.md` — two sections (`## LEFT COLUMN` / `## RIGHT COLUMN`), plain text only, no table or image refs (QR images live in the Drive template)
