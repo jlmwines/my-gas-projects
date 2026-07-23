@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-22 (cont'd) — Woo API push: attributes array doesn't prune old ones (found, not fixed)
+
+- User reported live-test results: pushed attributes (Winery/Intensity/Complexity/Acidity) update correctly, but Region/Grape/Harmonize/Contrast — deliberately never sent by this push — remain on products that already had them. Checked WooCommerce's official REST API docs directly; they don't document PUT's merge-vs-replace behavior for `attributes` (same dead end `WOO_API_PUSH_PLAN.md` hit in July). The live result settles it: `attributes` is NOT full-replace, contradicting the plan's original assumption.
+- Owner: not urgent, leave as-is for now, just be aware. Corrected the wrong assumption in `WOO_API_PUSH_PLAN.md` (Region/Grapes bullet, Verification section, top status line) and the code comment in `WooInventoryPushService.js#_buildAttributesPayload`. Logged as an open, low-priority bug in `.claude/bugs.md`. No code behavior change.
+
+---
+
 ## 2026-07-22 (cont'd) — Admin Products Accepted card stale after mid-queue accept, fixed (@529)
 
 - User asked whether the Details tab's Accepted card refreshes after accepting a reviewed task. Traced `AdminProductsView.acceptChanges` (`AdminProductsView.html:2289`): it only calls `refreshView()` (which reloads Accepted) when the review queue empties or the task wasn't opened from the queue — mid-queue accepts just splice the review list and auto-advance, never touching the Accepted card. User confirmed this is the normal case (approving fewer than all available), so the card was going stale for the whole session, off-screen and unnoticed.

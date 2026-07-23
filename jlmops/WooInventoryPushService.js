@@ -291,10 +291,15 @@ const WooInventoryPushService = (function() {
 
   /**
    * Build the WooCommerce `attributes` array for one export row. Only includes
-   * attributes with a non-blank value -- Region/Grape/Harmonize/Contrast (never
-   * in this export) and any blank Intensity/Complexity/Acidity on a non-wine SKU
-   * drop off naturally via Woo's full-replace semantics, which is the intended
-   * pruning behavior (WOO_API_PUSH_PLAN.md Category/attribute section).
+   * attributes with a non-blank value.
+   *
+   * NOTE (confirmed live 2026-07-22, WOO_API_PUSH_PLAN.md): the `attributes`
+   * array is NOT full-replace on product PUT -- attributes omitted here (Region/
+   * Grape/Harmonize/Contrast, never sent by this export; a blank Intensity/
+   * Complexity/Acidity on a non-wine SKU) are left untouched on the product, not
+   * cleared. Any product already carrying those stays that way indefinitely.
+   * Owner OK'd leaving as-is for now (not urgent) -- do not assume this array
+   * prunes anything it doesn't explicitly include.
    *
    * `visible` must be sent explicitly -- WooCommerce's write API defaults it to
    * `false` when omitted (confirmed against the official REST API docs,

@@ -11,6 +11,7 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Open
 
+- [ ] 2026-07-22: Woo API push's `attributes` array doesn't prune Region/Grape/Harmonize/Contrast on existing products — WooCommerce PUT doesn't full-replace `attributes` as assumed. Not urgent, owner OK'd leaving as-is. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
 - [ ] 2026-07-20: Admin Products "Correct Product Name" action (SKU Management) applies with no confirmation step first — risk of accidental edit. `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh when re-run from Admin Dev — only a nightly/manual housekeeping run updates the dashboard's cached status.
 - [ ] 2026-07-16: "System Health Status" task's displayed date is frozen at original creation, not last-run — any view surfacing its Created Date misrepresents last-check time.
