@@ -303,6 +303,24 @@ const LibraryService = (function() {
     }
 
     /**
+     * Runs fn() while holding the script-wide lock, releasing it afterward.
+     * Guards check-then-write sequences (entity/file creation) against a
+     * double-click or two near-simultaneous sessions racing the same slug.
+     * @private
+     */
+    function _withLock(fn) {
+        const lock = LockService.getScriptLock();
+        if (!lock.tryLock(10000)) {
+            throw new Error('Could not acquire lock — another operation is in progress. Please try again.');
+        }
+        try {
+            return fn();
+        } finally {
+            lock.releaseLock();
+        }
+    }
+
+    /**
      * Creates the entity for `slug` if it doesn't exist yet, deriving
      * type/language/title from the slug itself (Phase 3 lazy-creation —
      * see _deriveEntityFieldsFromSlug). No-op if the entity already exists.
@@ -310,12 +328,14 @@ const LibraryService = (function() {
      * @private
      */
     function _ensureEntity(slug) {
-        const existing = _getEntityRow(slug);
-        if (existing) return existing;
-        const fields = _deriveEntityFieldsFromSlug(slug);
-        const taskTitle = _findEntityNameFromTask(slug);
-        addEntity({ slug: slug, type: fields.type, language: fields.language, title: taskTitle || fields.title });
-        return _getEntityRow(slug);
+        return _withLock(function() {
+            const existing = _getEntityRow(slug);
+            if (existing) return existing;
+            const fields = _deriveEntityFieldsFromSlug(slug);
+            const taskTitle = _findEntityNameFromTask(slug);
+            addEntity({ slug: slug, type: fields.type, language: fields.language, title: taskTitle || fields.title });
+            return _getEntityRow(slug);
+        });
     }
 
     /**
@@ -561,40 +581,45 @@ const LibraryService = (function() {
 
         // Refuse silent overwrite — any file already belonging to this slug
         // (bare legacy name or `<slug> <ts>`) means a current version exists.
-        const existingFiles = canonicalFolder.getFiles();
-        while (existingFiles.hasNext()) {
-            if (_slugFromFileName(existingFiles.next().getName()) === entityId) {
-                throw new Error(`A file for "${entityId}" already exists in the canonical folder; refusing silent overwrite`);
+        // Locked end-to-end through the move into canonicalFolder: otherwise two
+        // near-simultaneous calls can both pass the existence check before either
+        // file lands in the folder, creating two Docs for the same slug.
+        const docUrl = _withLock(function() {
+            const existingFiles = canonicalFolder.getFiles();
+            while (existingFiles.hasNext()) {
+                if (_slugFromFileName(existingFiles.next().getName()) === entityId) {
+                    throw new Error(`A file for "${entityId}" already exists in the canonical folder; refusing silent overwrite`);
+                }
             }
-        }
 
-        const doc = DocumentApp.create(_versionedFileName(entityId));
-        const docId = doc.getId();
+            const doc = DocumentApp.create(_versionedFileName(entityId));
+            const docId = doc.getId();
 
-        // Seed the Doc with any inline content the entity already carries.
-        // Templates/emails store slb_Subject/slb_Body inline; moving it into the
-        // Doc makes the Doc the editable source of truth so users can see/edit/
-        // translate it uniformly. Blogs carry no inline content, so their Doc
-        // stays blank (prior behavior). slb_Body is left intact — the
-        // pending-payment send still reads it until that runtime read is rewired
-        // to source from the Doc.
-        const seedSubject = entity.slb_Subject || '';
-        const seedBody = entity.slb_Body || '';
-        if (seedSubject || seedBody) {
-            const docBody = doc.getBody();
-            if (seedSubject) {
-                docBody.appendParagraph('Subject: ' + seedSubject);
-                docBody.appendParagraph('');
+            // Seed the Doc with any inline content the entity already carries.
+            // Templates/emails store slb_Subject/slb_Body inline; moving it into the
+            // Doc makes the Doc the editable source of truth so users can see/edit/
+            // translate it uniformly. Blogs carry no inline content, so their Doc
+            // stays blank (prior behavior). slb_Body is left intact — the
+            // pending-payment send still reads it until that runtime read is rewired
+            // to source from the Doc.
+            const seedSubject = entity.slb_Subject || '';
+            const seedBody = entity.slb_Body || '';
+            if (seedSubject || seedBody) {
+                const docBody = doc.getBody();
+                if (seedSubject) {
+                    docBody.appendParagraph('Subject: ' + seedSubject);
+                    docBody.appendParagraph('');
+                }
+                String(seedBody).split('\n').forEach(function(line) {
+                    docBody.appendParagraph(line);
+                });
+                doc.saveAndClose();
             }
-            String(seedBody).split('\n').forEach(function(line) {
-                docBody.appendParagraph(line);
-            });
-            doc.saveAndClose();
-        }
 
-        const file = DriveApp.getFileById(docId);
-        file.moveTo(canonicalFolder);
-        const docUrl = file.getUrl();
+            const file = DriveApp.getFileById(docId);
+            file.moveTo(canonicalFolder);
+            return file.getUrl();
+        });
 
         const now = new Date().toISOString();
         const updated = _updateEntityRow(entityId, {

@@ -104,6 +104,8 @@ No `LockService` anywhere in the file. `_ensureEntity` (called from `createBlank
 
 Needs care given this is the live content-creation path — wrap the check-then-write in `LockService.getScriptLock()` (or the project's existing lock pattern if one exists elsewhere in the codebase; check before inventing a new one) around `_ensureEntity` and the equivalent file-existence check in `createBlankDoc`. Smoke test: rapid double-click on "Create Content Tasks" / attach flows shouldn't produce duplicate entities.
 
+**Coded 2026-07-24.** Confirmed zero existing `LockService` usage anywhere in the codebase — no pattern to copy, introduced fresh. Added a `_withLock(fn)` helper (`LockService.getScriptLock()`, 10s `tryLock`, `finally`-released), wrapping: (1) `_ensureEntity`'s full read-check-then-append body, and (2) `createBlankDoc`'s existence-check through the Doc's move into `canonicalFolder` — locking only up to Doc creation wasn't enough, since a newly-created Doc isn't in the canonical folder yet until `moveTo()` runs, so a second concurrent call's existence-check could still race past it; the lock now covers through the move, closing the gap for real. `attachExistingDoc`/`createTranslationDraft` both call `_ensureEntity`, so they inherit the fix automatically without their own changes. Not smoke-testable passively — needs a deliberate rapid-double-click repro to verify live, flagged for whenever that's convenient rather than blocking this session.
+
 ---
 
 ## Tier 3 — structural, worth a dedicated effort
