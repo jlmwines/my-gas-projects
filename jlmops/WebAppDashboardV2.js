@@ -292,7 +292,10 @@ function _getOrdersData_v2(ordLog, webOrdM) {
       if (packingStatus === 'Ready') packingReady++;
       if (orderStatus === 'on-hold') onHold++;
       if (orderStatus === 'processing') processing++;
-      if (orderStatus === 'new' || orderStatus === 'pending') newOrders++;
+      // "New" = ready to pack and never printed yet (matches OrderService.getNewOrdersCount's
+      // definition, the only other place this concept exists in the codebase). Distinct from
+      // packingReady: an already-printed order can still sit in 'Ready' pending further action.
+      if (packingStatus === 'Ready' && !order.sol_PackingPrintedTimestamp) newOrders++;
     });
 
     // Count orders to export: processing status + not yet exported.

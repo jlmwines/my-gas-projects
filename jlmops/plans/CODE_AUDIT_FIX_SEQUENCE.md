@@ -17,7 +17,11 @@ Each session ends with the established cycle: commit → user OK → `clasp push
 
 All four are single-function, single-line-class fixes with a known-correct reference (or known-correct sibling calculation) already in the same codebase to copy from. Bundle into one session.
 
-**Coded 2026-07-24, not yet pushed/deployed.** Item 1 turned out to need more than the field rename: `sol_ComaxExportStatus`'s real values are `'Pending'`/`'Exported'` (confirmed in `OrderService.js`), not `'Yes'`/`'TRUE'`/`true` as the original comparison assumed — renaming the field alone would have kept `ordersToExport` broken. Fixed the comparison to match `OrderService.js`'s own case-insensitive `!== 'exported'` idiom. Item 4 required passing `allConfig` into `_getInventoryData` (both call sites) since it didn't previously receive it. All four changes are local edits only — no commit, push, or deploy yet.
+**Deployed 2026-07-24 (jlmops @530), smoke-tested.** Item 1 turned out to need more than the field rename: `sol_ComaxExportStatus`'s real values are `'Pending'`/`'Exported'` (confirmed in `OrderService.js`), not `'Yes'`/`'TRUE'`/`true` as the original comparison assumed — renaming the field alone would have kept `ordersToExport` broken. Fixed the comparison to match `OrderService.js`'s own case-insensitive `!== 'exported'` idiom. Item 4 required passing `allConfig` into `_getInventoryData` (both call sites) since it didn't previously receive it.
+
+**Smoke test (2026-07-24) surfaced a second bug in the same function, fixed same session:** `newOrders` showed 24 — implausible. Root cause: `_getOrdersData_v2`'s `newOrders` counted `sol_OrderStatus === 'new' || 'pending'`, an invented definition with no precedent elsewhere (`'new'` isn't a real WooCommerce status, and `'pending'` orders can sit unpaid/abandoned indefinitely, so the count only grows). The only other place "new orders" is defined in the codebase, `OrderService.getNewOrdersCount()` (itself only reachable from the dead v1 `_getOrdersData()` — a Tier-4 deletion candidate), uses packing-status `'Ready'` AND never-printed. Rewired `newOrders` to that definition, computed in-memory from `ordLog` (already has `sol_PackingPrintedTimestamp`) rather than a second sheet read. Distinct from `packingReady`: an already-printed order can still sit in `'Ready'` awaiting further action, so the two counts don't collapse to the same number.
+
+Task-date-edit and Brurya-days-since checks both confirmed correct live. SKU-tool check (item 3) still pending a real SKU rename/fix to test against.
 
 ---
 
