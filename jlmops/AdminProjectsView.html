@@ -258,16 +258,6 @@
                   </div>
                 </div>
               </div>
-              <div class="form-row">
-                <div class="col-md-12">
-                  <div class="form-group">
-                    <label class="small font-weight-bold">Marketing Campaign</label>
-                    <select class="form-control" id="field-campaign">
-                      <option value="">— None —</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
               <hr>
               <button type="button" id="btn-save-project" class="btn btn-light">Save Changes</button>
               <button type="button" id="btn-generate-outputs" class="btn btn-light ml-2">Generate Outputs</button>
@@ -396,12 +386,6 @@
             <option value="ACTIVE">Active</option>
           </select>
         </div>
-      </div>
-      <div class="form-group" style="margin-top:10px;">
-        <label for="new-project-campaign" style="font-size:12px;color:#6c757d;margin-bottom:4px;">Marketing Campaign (optional)</label>
-        <select class="form-control form-control-sm" id="new-project-campaign">
-          <option value="">— No campaign —</option>
-        </select>
       </div>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
@@ -1236,7 +1220,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   function handleNew() {
     if (state.mode === 'projects') {
       document.getElementById('new-project-name').value = '';
-      loadCampaignOptions();
       document.getElementById('newProjectModal').style.display = 'flex';
     } else {
       document.getElementById('new-task-title').value = '';
@@ -1281,22 +1264,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         // keep just the unassigned option
       })
       .WebAppTasks_getAssignableUsers();
-  }
-
-  function loadCampaignOptions() {
-    var select = document.getElementById('new-project-campaign');
-    if (!select) return;
-    google.script.run
-      .withSuccessHandler(function(result) {
-        var html = '<option value="">— No campaign —</option>';
-        if (result && !result.error && Array.isArray(result.data)) {
-          result.data.forEach(function(c) {
-            html += '<option value="' + TaskWidgets.escape(c.id) + '">' + TaskWidgets.escape(c.name) + '</option>';
-          });
-        }
-        select.innerHTML = html;
-      })
-      .WebAppCampaigns_getCampaignOptions();
   }
 
   // === RENDERING ===
@@ -1700,7 +1667,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('field-status').value = project.status || project.spro_Status || 'PLANNING';
     document.getElementById('field-start-date').value = TaskWidgets.formatDate(project.startdate || project.spro_StartDate);
     document.getElementById('field-end-date').value = TaskWidgets.formatDate(project.enddate || project.spro_EndDate);
-    populateCampaignField(project.campaignid || project.spro_CampaignId || '');
 
     // System projects (PROJ-SYS_*) are read-only
     var projectId = project.projectid || project.spro_ProjectId || '';
@@ -1711,36 +1677,31 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('field-status').disabled = isSystemProject;
     document.getElementById('field-start-date').readOnly = isSystemProject;
     document.getElementById('field-end-date').readOnly = isSystemProject;
-    document.getElementById('field-campaign').disabled = isSystemProject;
     document.getElementById('btn-save-project').style.display = isSystemProject ? 'none' : '';
     document.getElementById('btn-generate-outputs').style.display = isSystemProject ? 'none' : '';
   }
 
-  // Cache campaign options after first load. Empties on each loadData call.
+  // Cache campaign options (id/name/projectId) for the project→campaign reverse lookup
+  // Generate Outputs needs. Populated lazily on first use. The project-side "Campaign"
+  // field was removed 2026-07-24: it wrote to a dropped column (spro_CampaignId) and had
+  // been silently discarding every save since the campaign↔project FK direction reversed
+  // to SysMarketingCampaigns.sm_ProjectId. The real, working way to link a project to a
+  // campaign is PublishingView's New Campaign modal, which sets sm_ProjectId directly.
   var _campaignOptionsCache = null;
 
-  function populateCampaignField(selectedId) {
-    var select = document.getElementById('field-campaign');
-    if (!select) return;
-    if (_campaignOptionsCache) {
-      renderCampaignOptions(select, _campaignOptionsCache, selectedId);
-      return;
-    }
+  function _loadCampaignOptions(callback) {
+    if (_campaignOptionsCache) { callback(_campaignOptionsCache); return; }
     google.script.run
       .withSuccessHandler(function(result) {
         _campaignOptionsCache = (result && !result.error && Array.isArray(result.data)) ? result.data : [];
-        renderCampaignOptions(select, _campaignOptionsCache, selectedId);
+        callback(_campaignOptionsCache);
       })
       .WebAppCampaigns_getCampaignOptions();
   }
 
-  function renderCampaignOptions(select, options, selectedId) {
-    var html = '<option value="">— None —</option>';
-    options.forEach(function(c) {
-      var sel = (c.id === selectedId) ? ' selected' : '';
-      html += '<option value="' + TaskWidgets.escape(c.id) + '"' + sel + '>' + TaskWidgets.escape(c.name) + '</option>';
-    });
-    select.innerHTML = html;
+  function _findCampaignIdForProject(projectId) {
+    var match = (_campaignOptionsCache || []).find(function(c) { return c.projectId === projectId; });
+    return match ? match.id : '';
   }
 
   function populateTaskForm(task) {
@@ -1984,8 +1945,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       .WebAppProjects_createProject({
         name: name,
         type: document.getElementById('new-project-type').value,
-        status: document.getElementById('new-project-status').value,
-        campaignId: document.getElementById('new-project-campaign').value || ''
+        status: document.getElementById('new-project-status').value
       });
   }
 
@@ -1998,32 +1958,34 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var project = getSelectedProject();
     if (!project) { TaskWidgets.toast('Project not loaded', 'warning'); return; }
 
-    var campaignId = project.campaignid || project.spro_CampaignId || '';
-    if (!campaignId) {
-      TaskWidgets.toast('This project is not linked to a Marketing Campaign. Assign one via the Campaign field, save, and try again.', 'warning');
-      return;
-    }
+    _loadCampaignOptions(function() {
+      var campaignId = _findCampaignIdForProject(state.selectedProjectId);
+      if (!campaignId) {
+        TaskWidgets.toast('This project is not linked to a Marketing Campaign. Link it via the New Campaign modal in Publishing, then try again.', 'warning');
+        return;
+      }
 
-    // Reset form
-    document.getElementById('gen-out-target').value = '';
-    document.getElementById('gen-out-language').value = 'en';
-    document.getElementById('gen-out-slug').value = '';
-    document.getElementById('gen-out-medium').value = '';
-    document.getElementById('gen-out-source').value = '';
-    document.getElementById('gen-out-content').value = '';
-    document.getElementById('gen-out-notes').value = '';
-    document.getElementById('gen-out-results').style.display = 'none';
-    document.getElementById('gen-out-context').textContent =
-      (project.name || project.spro_Name || state.selectedProjectId) + ' → ' + campaignId;
+      // Reset form
+      document.getElementById('gen-out-target').value = '';
+      document.getElementById('gen-out-language').value = 'en';
+      document.getElementById('gen-out-slug').value = '';
+      document.getElementById('gen-out-medium').value = '';
+      document.getElementById('gen-out-source').value = '';
+      document.getElementById('gen-out-content').value = '';
+      document.getElementById('gen-out-notes').value = '';
+      document.getElementById('gen-out-results').style.display = 'none';
+      document.getElementById('gen-out-context').textContent =
+        (project.name || project.spro_Name || state.selectedProjectId) + ' → ' + campaignId;
 
-    // Pre-fill medium/source defaults based on campaign
-    var defaults = _defaultsForCampaign(campaignId);
-    if (defaults) {
-      document.getElementById('gen-out-medium').value = defaults.medium || '';
-      document.getElementById('gen-out-source').value = defaults.source || '';
-    }
+      // Pre-fill medium/source defaults based on campaign
+      var defaults = _defaultsForCampaign(campaignId);
+      if (defaults) {
+        document.getElementById('gen-out-medium').value = defaults.medium || '';
+        document.getElementById('gen-out-source').value = defaults.source || '';
+      }
 
-    document.getElementById('generateOutputsModal').style.display = 'flex';
+      document.getElementById('generateOutputsModal').style.display = 'flex';
+    });
   }
 
   function _defaultsForCampaign(campaignId) {
@@ -2047,7 +2009,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     if (!state.selectedProjectId) return;
     var project = getSelectedProject();
     if (!project) return;
-    var campaignId = project.campaignid || project.spro_CampaignId || '';
+    var campaignId = _findCampaignIdForProject(state.selectedProjectId);
     if (!campaignId) return;
 
     var targetUrl = document.getElementById('gen-out-target').value.trim();
@@ -2138,8 +2100,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         type: document.getElementById('field-type').value,
         status: document.getElementById('field-status').value,
         startDate: document.getElementById('field-start-date').value || null,
-        endDate: document.getElementById('field-end-date').value || null,
-        campaignId: document.getElementById('field-campaign').value || ''
+        endDate: document.getElementById('field-end-date').value || null
       });
   }
 

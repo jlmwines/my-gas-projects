@@ -258,6 +258,7 @@ const ProductImportService = (function() {
     // Get staging data (including header row)
     const webXltSData = webXltSSheet.getDataRange().getValues();
     const numStagingRows = webXltSData.length;
+    const webXltSHeaders = webXltSData[0] || [];
 
     // Clear the master sheet entirely
     webXltMSheet.clear();
@@ -270,9 +271,16 @@ const ProductImportService = (function() {
 
     // Copy data rows (skip staging header row at index 0) with correct headers
     if (numStagingRows > 1) {
-        const dataRows = webXltSData.slice(1); // Skip header row
-        const numDataRows = dataRows.length;
+        const stagingDataRows = webXltSData.slice(1); // Skip header row
+        const numDataRows = stagingDataRows.length;
         const numCols = webXltMHeaders.length;
+
+        // Remap by field name, not column position — WebXltS/WebXltM aren't guaranteed
+        // to list fields in the same order, and a future schema edit that reorders or
+        // appends a column in one but not the other would otherwise silently shift
+        // every row's data.
+        const sourceColIdx = webXltMHeaders.map(h => webXltSHeaders.indexOf(h));
+        const dataRows = stagingDataRows.map(row => sourceColIdx.map(idx => idx >= 0 ? row[idx] : ''));
 
         // Write data rows starting at row 2 (after header)
         webXltMSheet.getRange(2, 1, numDataRows, numCols).setValues(dataRows);

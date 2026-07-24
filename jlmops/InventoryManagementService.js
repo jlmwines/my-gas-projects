@@ -333,7 +333,7 @@ const InventoryManagementService = (function() {
                 // Map fields from comax to product audit
                 // This is a basic mapping, more may be needed depending on the sheet structure
                 newRow[auditHeaders.indexOf('pa_SKU')] = sku;
-                newRow[auditHeaders.indexOf('pa_ProdId')] = comaxProductRow[comaxHeaders.indexOf('cpm_ProdId')];
+                newRow[auditHeaders.indexOf('pa_CmxId')] = comaxProductRow[comaxHeaders.indexOf('cpm_CmxId')];
                 newRow[auditHeaders.indexOf('pa_NameHe')] = comaxProductRow[comaxHeaders.indexOf('cpm_NameHe')];
                 newRow[auditBruryaQtyColIdx] = quantity;
 
@@ -470,7 +470,7 @@ const InventoryManagementService = (function() {
                 const newRow = Array(auditHeaders.length).fill('');
                 // Map fields from comax to product audit
                 newRow[auditHeaders.indexOf('pa_SKU')] = sku;
-                newRow[auditHeaders.indexOf('pa_ProdId')] = comaxProductRow[comaxHeaders.indexOf('cpm_ProdId')];
+                newRow[auditHeaders.indexOf('pa_CmxId')] = comaxProductRow[comaxHeaders.indexOf('cpm_CmxId')];
                 newRow[auditHeaders.indexOf('pa_NameHe')] = comaxProductRow[comaxHeaders.indexOf('cpm_NameHe')];
                 newRow[auditCountColIdx] = quantity; // Set the quantity in the specified column
 
@@ -503,9 +503,11 @@ const InventoryManagementService = (function() {
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
         const sheetNames = allConfig['system.sheet_names'];
         const auditSheetName = sheetNames.SysProductAudit;
+        const comaxSheetName = sheetNames.CmxProdM;
 
         const ss = SheetAccessor.getDataSpreadsheet();
         const auditSheet = ss.getSheetByName(auditSheetName);
+        const comaxSheet = ss.getSheetByName(comaxSheetName);
 
         if (!auditSheet) {
             throw new Error(`Sheet not found: '${auditSheetName}'.`);
@@ -592,6 +594,19 @@ const InventoryManagementService = (function() {
             newRow[shopColIdx] = shopQty === null ? '' : shopQty;
             if (newQtyColIdx !== -1) {
               newRow[newQtyColIdx] = totalNewQty;
+            }
+            // Populate the real PK (pa_CmxId) so this row doesn't duplicate on the next
+            // Comax import — this fallback previously left it blank entirely.
+            const cmxIdColIdx = currentHeaders.indexOf('pa_CmxId');
+            if (cmxIdColIdx !== -1 && comaxSheet) {
+              const comaxData = comaxSheet.getDataRange().getValues();
+              const comaxHeaders = comaxData.shift();
+              const comaxSkuIndex = comaxHeaders.indexOf('cpm_SKU');
+              const comaxCmxIdIndex = comaxHeaders.indexOf('cpm_CmxId');
+              const comaxProductRow = comaxData.find(row => String(row[comaxSkuIndex]).trim() === String(sku).trim());
+              if (comaxProductRow) {
+                newRow[cmxIdColIdx] = comaxProductRow[comaxCmxIdIndex];
+              }
             }
             auditSheet.appendRow(newRow);
             LoggerService.info(serviceName, functionName, `SKU '${sku}' created a new row in '${auditSheetName}'. New Total: ${totalNewQty}.`);

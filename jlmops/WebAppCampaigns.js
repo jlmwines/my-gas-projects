@@ -60,7 +60,7 @@ function WebAppCampaigns_getCampaignDetail(campaignId) {
       return { error: 'Campaign not found: ' + campaignId, data: null };
     }
     const projects = ProjectService.getAllProjects()
-      .filter(p => p.spro_CampaignId === campaignId);
+      .filter(p => p.spro_ProjectId === campaign.sm_ProjectId);
     const shortUrls = MarketingCampaignService.listShortUrls({ campaignId: campaignId });
     return {
       error: null,
@@ -90,7 +90,8 @@ function WebAppCampaigns_getCampaignOptions() {
         .map(c => ({
           id: c.sm_CampaignId,
           name: c.sm_Name,
-          status: c.sm_Status
+          status: c.sm_Status,
+          projectId: c.sm_ProjectId || ''
         }))
     };
   } catch (e) {

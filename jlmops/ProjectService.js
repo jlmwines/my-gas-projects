@@ -128,7 +128,7 @@ const ProjectService = (function() {
 
   /**
    * Creates a new project.
-   * @param {Object} projectData - Project data (name, type, status, startDate, endDate, campaignId, projectId)
+   * @param {Object} projectData - Project data (name, type, status, startDate, endDate, projectId)
    * @returns {Object} The created project with ID
    */
   function createProject(projectData) {
@@ -158,8 +158,6 @@ const ProjectService = (function() {
           return projectData.startDate || '';
         case 'spro_EndDate':
           return projectData.endDate || '';
-        case 'spro_CampaignId':
-          return projectData.campaignId || '';
         default:
           return '';
       }
@@ -175,14 +173,12 @@ const ProjectService = (function() {
       status: projectData.status || PROJECT_STATUSES.PLANNING,
       startdate: projectData.startDate || '',
       enddate: projectData.endDate || '',
-      campaignid: projectData.campaignId || '',
       spro_ProjectId: projectId,
       spro_Name: projectData.name || '',
       spro_Type: projectData.type || PROJECT_TYPES.ONE_OFF,
       spro_Status: projectData.status || PROJECT_STATUSES.PLANNING,
       spro_StartDate: projectData.startDate || '',
-      spro_EndDate: projectData.endDate || '',
-      spro_CampaignId: projectData.campaignId || ''
+      spro_EndDate: projectData.endDate || ''
     };
   }
 
@@ -227,11 +223,6 @@ const ProjectService = (function() {
           const endIdx = headers.indexOf('spro_EndDate');
           if (endIdx !== -1) updatedRow[endIdx] = updates.endDate;
         }
-        if (updates.campaignId !== undefined) {
-          const campaignIdx = headers.indexOf('spro_CampaignId');
-          if (campaignIdx !== -1) updatedRow[campaignIdx] = updates.campaignId;
-        }
-
         sheet.getRange(i + 1, 1, 1, updatedRow.length).setValues([updatedRow]);
         logger.info(SERVICE_NAME, 'updateProject', `Project updated: ${projectId}`);
         return true;
