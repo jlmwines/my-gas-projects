@@ -80,20 +80,30 @@
           orders.forEach(order => {
             let giftButton = '';
             if (order.customerNote) {
-              giftButton = `<button class="btn btn-sm" onclick="createGiftMessage('${order.orderId}', '${order.customerNote}')">Create Gift Doc</button>`;
+              giftButton = `<button class="btn btn-sm gift-doc-btn" data-order-id="${TaskWidgets.escape(order.orderId)}">Create Gift Doc</button>`;
             }
             tableHtml += `<tr>
-                            <td data-label="Print this order"><input type="checkbox" class="order-checkbox" value="${order.orderId}"></td>
-                            <td data-label="Order #">${order.orderNumber || order.orderId}</td>
-                            <td data-label="Status">${order.status}</td>
-                            <td data-label="Billing">${order.billingName || ''}</td>
-                            <td data-label="Shipping">${order.shippingName || ''}</td>
-                            <td data-label="Note">${order.customerNote || ''}</td>
+                            <td data-label="Print this order"><input type="checkbox" class="order-checkbox" value="${TaskWidgets.escape(order.orderId)}"></td>
+                            <td data-label="Order #">${TaskWidgets.escape(order.orderNumber || order.orderId)}</td>
+                            <td data-label="Status">${TaskWidgets.escape(order.status)}</td>
+                            <td data-label="Billing">${TaskWidgets.escape(order.billingName || '')}</td>
+                            <td data-label="Shipping">${TaskWidgets.escape(order.shippingName || '')}</td>
+                            <td data-label="Note">${TaskWidgets.escape(order.customerNote || '')}</td>
                             <td>${giftButton}</td>
                           </tr>`;
           });
           tableHtml += '</tbody></table>';
           ordersListDiv.innerHTML = tableHtml;
+
+          // Gift Doc button reads the note from the already-loaded order object instead
+          // of re-embedding untrusted customer-supplied text into an inline onclick
+          // attribute (a quote or script markup in the note used to break out of it).
+          ordersListDiv.querySelectorAll('.gift-doc-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const order = orders.find(o => String(o.orderId) === btn.dataset.orderId);
+              if (order) createGiftMessage(order.orderId, order.customerNote);
+            });
+          });
         })
         .withFailureHandler(err => {
           ViewLoading.end();
@@ -140,12 +150,12 @@
           orders.forEach(order => {
             const email = order.billingEmail || '';
             tableHtml += `<tr>
-                            <td data-label="Order ID">${order.orderId}</td>
-                            <td data-label="Status">${order.status}</td>
-                            <td data-label="Order Date">${order.orderDate}</td>
-                            <td data-label="Billing">${order.billingName || ''}</td>
-                            <td data-label="Shipping">${order.shippingName || ''}</td>
-                            <td data-label="City">${order.shippingCity}</td>
+                            <td data-label="Order ID">${TaskWidgets.escape(order.orderId)}</td>
+                            <td data-label="Status">${TaskWidgets.escape(order.status)}</td>
+                            <td data-label="Order Date">${TaskWidgets.escape(order.orderDate)}</td>
+                            <td data-label="Billing">${TaskWidgets.escape(order.billingName || '')}</td>
+                            <td data-label="Shipping">${TaskWidgets.escape(order.shippingName || '')}</td>
+                            <td data-label="City">${TaskWidgets.escape(order.shippingCity)}</td>
                             <td data-label="Tier" class="oo-tier" data-email="${TaskWidgets.escape(email)}">…</td>
                             <td data-label="Last Order" class="oo-last-order" data-email="${TaskWidgets.escape(email)}">…</td>
                             <td data-label="Spend" class="oo-spend" data-email="${TaskWidgets.escape(email)}">…</td>

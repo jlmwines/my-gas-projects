@@ -34,6 +34,8 @@ Task-date-edit and Brurya-days-since checks both confirmed correct live. SKU-too
 2. For the Gift Doc button, stop building `onclick="...('${customerNote}')"` as a string; either move the note into a `data-` attribute read by an `addEventListener` handler, or pass an index/order-id to the handler and let it look up the note from the already-loaded order object. Either avoids re-embedding untrusted text into an attribute value at all.
 3. Smoke: an order with a `'` or `<` in its note must not break the Gift Doc button or render markup.
 
+**Coded 2026-07-24, not yet committed/pushed/deployed.** Escaped all cell fields in both `loadPackingSlipsData()` and `loadOpenOrdersData()` tables (orderId/orderNumber, status, orderDate, billingName, shippingName, shippingCity, customerNote) via `TaskWidgets.escape`. Gift Doc button now carries `data-order-id` and looks the order back up from the already-loaded `orders` array via `addEventListener`, matching the exact pattern `loadOpenOrdersData()`'s CRM/Log Reward buttons already use in this same file — no untrusted text re-enters an attribute. `createGiftMessage(orderId, noteContent)` still receives the raw, unescaped note (correct — it's sent server-side for Doc creation, not rendered as HTML).
+
 ---
 
 ### Session M — `TaskDetail.html` Done button skips content-entity locking (1 bug, decision needed)
