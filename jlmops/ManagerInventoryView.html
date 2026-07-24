@@ -318,8 +318,8 @@
                             <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="storage" value="${valStorage}"></td>
                             <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="office" value="${valOffice}"></td>
                             <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="shop" value="${valShop}"></td>
-                            <td class="text-center">${item.sku}</td>
-                            <td class="text-right">${item.productName}</td>
+                            <td class="text-center">${TaskWidgets.escape(item.sku)}</td>
+                            <td class="text-right">${TaskWidgets.escape(item.productName)}</td>
                             <td><input type="checkbox" class="product-count-checkbox" ${isChecked} disabled></td>
                         </tr>
                     `;
@@ -798,8 +798,8 @@
                         tableHtml += `
                             <tr data-sku="${item.sku}">
                                 <td data-label="Quantity"><input type="number" class="form-control form-control-sm brurya-qty-input" value="${item.bruryaQty}" min="0"></td>
-                                <td data-label="SKU">${item.sku}</td>
-                                <td data-label="Name" class="product-name-col">${item.Name}</td>
+                                <td data-label="SKU">${TaskWidgets.escape(item.sku)}</td>
+                                <td data-label="Name" class="product-name-col">${TaskWidgets.escape(item.Name)}</td>
                                 <td data-label="#">${index + 1}</td>
                             </tr>`;
                     });

@@ -810,9 +810,9 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="text-center"><input type="checkbox" class="suggestion-check" value="${index}" onchange="ManagerProductsView.updateSuggestButton()"></td>
-                <td>${p.sku}</td>
-                <td>${p.name}</td>
-                <td>${p.category}</td>
+                <td>${TaskWidgets.escape(p.sku)}</td>
+                <td>${TaskWidgets.escape(p.name)}</td>
+                <td>${TaskWidgets.escape(p.category)}</td>
                 <td>${p.price} ₪</td>
                 <td>${p.stock}</td>
             `;
@@ -1000,9 +1000,9 @@
           const tr = document.createElement('tr');
           const productName = task.productName || task.entityName || '';
           tr.innerHTML = `
-            <td data-label="Product">${productName}</td>
-            <td data-label="SKU">${task.sku}</td>
-            <td data-label="Task">${task.title}</td>
+            <td data-label="Product">${TaskWidgets.escape(productName)}</td>
+            <td data-label="SKU">${TaskWidgets.escape(task.sku)}</td>
+            <td data-label="Task">${TaskWidgets.escape(task.title)}</td>
             <td data-label="Date">${new Date(task.createdDate).toLocaleDateString()}</td>
             <td><button class="btn btn-sm" onclick="ManagerProductsView.openEditor('${task.taskId}')">Open</button></td>
           `;
@@ -1372,8 +1372,8 @@
         list.forEach((t, i) => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td data-label="Product">${t.title || ''}</td>
-            <td data-label="SKU">${t.sku || ''}</td>
+            <td data-label="Product">${TaskWidgets.escape(t.title || '')}</td>
+            <td data-label="SKU">${TaskWidgets.escape(t.sku || '')}</td>
             <td><button class="btn btn-sm" onclick="ManagerProductsView.startVerifyAt(${i})">Verify</button></td>
           `;
           body.appendChild(tr);
@@ -1407,8 +1407,8 @@
           const tr = document.createElement('tr');
           const statusLabel = task.status === 'Assigned' ? 'With admin' : 'Submitted';
           tr.innerHTML = `
-            <td data-label="Product">${task.title || ''}</td>
-            <td data-label="SKU">${task.sku || ''}</td>
+            <td data-label="Product">${TaskWidgets.escape(task.title || '')}</td>
+            <td data-label="SKU">${TaskWidgets.escape(task.sku || '')}</td>
             <td data-label="Date">${new Date(task.createdDate).toLocaleDateString()}</td>
             <td data-label="Status"><span class="badge badge-secondary">${statusLabel}</span></td>
           `;

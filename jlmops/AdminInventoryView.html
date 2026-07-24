@@ -285,10 +285,10 @@
       tableHtml += `
         <tr>
           <td>${dateStr}</td>
-          <td class="text-center">${task.sku || '-'}</td>
-          <td class="text-right">${task.productName || '-'}</td>
+          <td class="text-center">${TaskWidgets.escape(task.sku || '-')}</td>
+          <td class="text-right">${TaskWidgets.escape(task.productName || '-')}</td>
           <td class="text-center">${task.totalQty != null ? task.totalQty : '-'}</td>
-          <td>${task.title}</td>
+          <td>${TaskWidgets.escape(task.title)}</td>
         </tr>
       `;
     });
@@ -331,15 +331,15 @@
 
     tasks.forEach(task => {
       tableHtml += `
-        <tr data-task-id="${task.taskId}" data-sku="${task.sku}">
+        <tr data-task-id="${task.taskId}" data-sku="${TaskWidgets.escape(task.sku)}">
           <td class="text-center">${task.comaxQty}</td>
           <td class="text-center">${task.totalQty}</td>
           <td class="text-center">${task.bruryaQty}</td>
           <td class="text-center">${task.storageQty}</td>
           <td class="text-center">${task.officeQty}</td>
           <td class="text-center">${task.shopQty}</td>
-          <td class="text-center">${task.sku}</td>
-          <td class="text-right">${task.productName}</td>
+          <td class="text-center">${TaskWidgets.escape(task.sku)}</td>
+          <td class="text-right">${TaskWidgets.escape(task.productName)}</td>
           <td class="text-center"><input type="checkbox" class="review-checkbox"></td>
         </tr>
       `;
@@ -813,8 +813,8 @@
                 <td class="text-center">${task.storageQty}</td>
                 <td class="text-center">${task.officeQty}</td>
                 <td class="text-center">${task.shopQty}</td>
-                <td class="text-center">${task.sku}</td>
-                <td class="text-right">${task.productName}</td>
+                <td class="text-center">${TaskWidgets.escape(task.sku)}</td>
+                <td class="text-right">${TaskWidgets.escape(task.productName)}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -825,7 +825,7 @@
     }
 
     if (data.openComaxInventoryConfirmationTask) {
-        comaxMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.openComaxInventoryConfirmationTask.notes}</div>`;
+        comaxMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${TaskWidgets.escape(data.openComaxInventoryConfirmationTask.notes)}</div>`;
         comaxConfirmBtn.disabled = false;
         comaxConfirmBtn.onclick = function() { handleComaxConfirmClick(data.openComaxInventoryConfirmationTask.id); };
         const t = data.openComaxInventoryConfirmationTask;

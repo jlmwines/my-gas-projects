@@ -73,6 +73,8 @@ Same defect class as Session L but internal-data (product/task names, contact em
 
 One session, six mechanical edits, same pattern each time. Smoke: a product/task name containing `<` or `"` renders literally instead of breaking the row, across all six views.
 
+**Coded 2026-07-24, not yet committed/pushed/deployed.** Item 1: kept `AdminProductsView._escapeHtml` rather than deleting it — it already has 13 other call sites in the same file, all correctly using it, so ripping it out for `TaskWidgets.escape` would be a much larger, riskier rename than this session's scope. Instead added the missing apostrophe encoding to `_escapeHtml` itself (safe, backward-compatible) and wired it into the 4 previously-unescaped search renderers. Items 2-6 use `TaskWidgets.escape` as planned, copying each file's own established pattern.
+
 ---
 
 ### Session P — Quick batch, concrete fix shape (6 items)

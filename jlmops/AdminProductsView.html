@@ -1047,7 +1047,7 @@
                         div.className = 'p-2 border-bottom cursor-pointer';
                         div.style.cursor = 'pointer';
                         const webBadge = p.isWeb ? '<span class="badge badge-info ml-1" style="font-size:0.7em;">Web</span>' : '';
-                        div.innerHTML = `<strong>${p.sku}</strong>${webBadge} - ${p.name}`;
+                        div.innerHTML = `<strong>${AdminProductsView._escapeHtml(p.sku)}</strong>${webBadge} - ${AdminProductsView._escapeHtml(p.name)}`;
                         div.onclick = () => AdminProductsView.selectVendorCurrentProduct(p.sku);
                         resultsDiv.appendChild(div);
                     });
@@ -1232,7 +1232,7 @@
                         const div = document.createElement('div');
                         div.className = 'p-2 border-bottom';
                         div.style.cursor = 'pointer';
-                        div.innerHTML = `<strong>${p.sku}</strong> - ${p.nameEn || p.nameHe || ''}`;
+                        div.innerHTML = `<strong>${AdminProductsView._escapeHtml(p.sku)}</strong> - ${AdminProductsView._escapeHtml(p.nameEn || p.nameHe || '')}`;
                         div.onclick = () => AdminProductsView.selectCorrectNameProduct(p);
                         resultsDiv.appendChild(div);
                     });
@@ -1358,7 +1358,7 @@
                         const div = document.createElement('div');
                         div.className = 'p-2 border-bottom';
                         div.style.cursor = 'pointer';
-                        div.innerHTML = `<strong>${p.sku}</strong> - ${p.nameEn || p.nameHe || ''}`;
+                        div.innerHTML = `<strong>${AdminProductsView._escapeHtml(p.sku)}</strong> - ${AdminProductsView._escapeHtml(p.nameEn || p.nameHe || '')}`;
                         div.onclick = () => AdminProductsView.selectReplaceCurrentProduct(p.sku);
                         resultsDiv.appendChild(div);
                     });
@@ -1418,7 +1418,7 @@
                         const div = document.createElement('div');
                         div.className = 'p-2 border-bottom';
                         div.style.cursor = 'pointer';
-                        div.innerHTML = `<strong>${p.sku}</strong> - ${p.name}`;
+                        div.innerHTML = `<strong>${AdminProductsView._escapeHtml(p.sku)}</strong> - ${AdminProductsView._escapeHtml(p.name)}`;
                         div.onclick = () => AdminProductsView.selectReplaceNewProduct(p.sku);
                         resultsDiv.appendChild(div);
                     });
@@ -2357,7 +2357,7 @@
 
     AdminProductsView._escapeHtml = function(s) {
       if (s === null || s === undefined) return '';
-      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     };
 
     AdminProductsView._stateArrayName = function(section) {

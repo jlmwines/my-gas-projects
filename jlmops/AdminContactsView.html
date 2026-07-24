@@ -925,7 +925,7 @@
       var customerIcon = c.orderCount > 0 ? '<span title="Customer" style="font-size:14px;">🛍️</span>' : '<span style="opacity:0.2;font-size:14px;">🛍️</span>';
       var subscriberIcon = c.isSubscribed ? '<span title="Email Subscriber" style="font-size:14px;">📬</span>' : '<span style="opacity:0.2;font-size:14px;">📬</span>';
 
-      html += '<div class="contact-row px-2 py-1 border-bottom" data-email="' + c.email + '" style="cursor:pointer;">' +
+      html += '<div class="contact-row px-2 py-1 border-bottom" data-email="' + TaskWidgets.escape(c.email) + '" style="cursor:pointer;">' +
         '<div class="row align-items-center" style="font-size:12px;">' +
         '<div class="col-2 text-truncate font-weight-bold">' + TaskWidgets.escape(displayName) + '</div>' +
         '<div class="col-3 text-truncate text-muted">' + TaskWidgets.escape(c.email) + '</div>' +

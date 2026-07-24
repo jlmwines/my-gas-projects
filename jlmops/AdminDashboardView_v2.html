@@ -415,9 +415,9 @@
 
       var dueDisplay = formatDate(task.dueDate);
 
-      html += '<tr class="task-row ' + priorityClass + '" data-task-id="' + task.id + '" data-project-id="' + (task.projectId || '') + '" data-entity-id="' + (task.entityId || '') + '" style="cursor:pointer;">';
-      html += '<td title="' + task.typeId + '">' + task.name + '</td>';
-      html += '<td title="' + task.entityId + '">' + entityDisplay + '</td>';
+      html += '<tr class="task-row ' + priorityClass + '" data-task-id="' + TaskWidgets.escape(task.id) + '" data-project-id="' + TaskWidgets.escape(task.projectId || '') + '" data-entity-id="' + TaskWidgets.escape(task.entityId || '') + '" style="cursor:pointer;">';
+      html += '<td title="' + TaskWidgets.escape(task.typeId) + '">' + TaskWidgets.escape(task.name) + '</td>';
+      html += '<td title="' + TaskWidgets.escape(task.entityId) + '">' + TaskWidgets.escape(entityDisplay) + '</td>';
       html += '<td>' + dueDisplay + '</td>';
       html += '</tr>';
     });
