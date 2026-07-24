@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-24 — code-audit fix sequence executed end-to-end (Sessions K–U, jlmops @530→@543)
+
+- Planned and ran the entire `CODE_AUDIT_FIX_SEQUENCE.md` (Sessions K through U) in one sitting: ~21 findings fixed and deployed incrementally (one commit+deploy per session), including several bugs found live mid-session and folded in (Brurya dashboard field, Admin/Manager campaign-dropdown writing to a dropped column, `sc_TopWineries`, Drive-ownership unconditional transfer). Independent-review agent caught a documentation gap (missing appendix items) before implementation started, which got folded back in.
+- Real surprises worth remembering: `ProductService.js` had a complete unexported ~656-line duplicate of `ProductImportService.js`'s import pipeline (deleted); `WebAppOrders_getOrdersWidgetData`/`WebAppInventory_getInventoryWidgetData` were also orphaned-only-by-`WebAppDashboard.js` but `WebAppProducts_getProductsWidgetData` (the 4th sibling) was genuinely live — same-shape ≠ same-fate, verify each individually.
+- Left deliberately open: server-side authorization (Tier 3, needs its own `AUTHORIZATION_PLAN.md`), two dashboard-panel redesigns (owner downgraded — projects aren't a primary-use surface for either role), and a few Session U items that needed a design decision rather than a quick edit (SyncStateService polling, `createTask`'s de-dup scan, ActivityBackfillService archiving policy).
+- `CODE_AUDIT_PLAN.md`/`CODE_AUDIT_FIX_SEQUENCE.md` deliberately NOT archived despite being ~95% done — Session R (authorization) never started and Session Q (LockService) is unsmoked, so they still carry real open caveats per the archive convention.
+- Fixed stale doc lines found along the way: `docs/ARCHITECTURE.md` was citing `WebAppDashboard.js`, `KpiService`, and `WebAppOrders_getOrdersWidgetData()` as live examples — all now deleted; corrected.
+- Pushed to `origin/main` (`46093d2..f2c297f`).
+
 ## 2026-07-24 — Publishing view Library tab: HE translations were invisible, not missing
 
 - User reported Hebrew translations "not listed" in the admin Library tab despite tasks/Docs existing for them. Investigation ruled out (in order, with positive evidence each time): stale data, server caching, a stale deployment, client-side dedup, and a grouping-logic bug — the `SysLibrary` rows were correct and the JS grouping (verified by running it standalone against real row data) built the HE cell correctly.

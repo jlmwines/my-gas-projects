@@ -40,7 +40,7 @@ To ensure a clear separation of concerns, the interface between the HTML Views a
 *   **Benefit:** This reduces the number of `.js` files in the project.
 
 **2. Dedicated View Controller:**
-*   For standalone or highly complex views, a dedicated View Controller script may be used (e.g., `WebAppDashboard.js` for `Dashboard.html`).
+*   For standalone or highly complex views, a dedicated View Controller script may be used (e.g., `WebAppDashboardV2.js` for `AdminDashboardView_v2.html`/`ManagerDashboardView_v2.html`).
 *   **Responsibility:** This script is responsible *only* for the data and actions of its specific view.
 
 **Data Providers:**
@@ -52,7 +52,7 @@ The data flow is typically: `HTML View` -> `View Controller (Shared or Dedicated
 ### 2.1.2. Client-Side Patterns
 
 *   **HTML Generation via JavaScript:** To prevent duplicating markup in separate but similar HTML files (e.g., an inventory list seen by both an admin and a manager), shared JavaScript functions can be used to generate the HTML for common components. These functions are called from the client-side script within each HTML view, passing parameters to control variations (e.g., making a field read-only for an admin).
-*   **Load-once, filter client-side:** A view fetches its dataset in a single bulk call on mount — one per-view data provider, e.g. `WebAppBundles_getViewData()`, `WebAppLibrary_getData()`, `WebAppOrders_getOrdersWidgetData()`, `WebAppProducts_getProductsWidgetData()`. For bounded result sets, filter / sort / search then run **client-side over the cached result**, so there is no server round-trip per keystroke; an explicit Refresh re-fetches. (Provider function names are per-area, not a single uniform name. A few large or unbounded sets — e.g. `WebAppContacts_getContactList(filters)` — still pass filters to the server rather than caching the whole set.)
+*   **Load-once, filter client-side:** A view fetches its dataset in a single bulk call on mount — one per-view data provider, e.g. `WebAppBundles_getViewData()`, `WebAppLibrary_getData()`, `WebAppProducts_getProductsWidgetData()`. For bounded result sets, filter / sort / search then run **client-side over the cached result**, so there is no server round-trip per keystroke; an explicit Refresh re-fetches. (Provider function names are per-area, not a single uniform name. A few large or unbounded sets — e.g. `WebAppContacts_getContactList(filters)` — still pass filters to the server rather than caching the whole set.)
 
 ### 2.2. Backend: API-Driven & Service-Oriented
 
@@ -75,7 +75,7 @@ The backend is designed as a collection of services, each exposing global functi
     *   **`TaskService`**: Manages the creation, updating, and assignment of all tasks (product, content, etc.) in the `TaskQ`.
     *   **`HousekeepingService`**: Contains all logic for scheduled data cleanup and archiving.
     *   **`InventoryManagementService`**: Manages physical inventory at managed locations (e.g., BruryaStock).
-    *   **`KpiService`**: Calculates and stores Key Performance Indicators (KPIs) based on configurable definitions.
+    *   `KpiService` was a dead, broken legacy file (called a nonexistent global, targeted a sheet not in the schema) — deleted 2026-07-24. KPIs are calculated by `KPISummaryService`/`StatusReportService`.
     *   **`CampaignService`**: Manages promotional campaigns, their assets (posts, bundles, coupons), and the associated tasks.
     *   **`LoggerService`**: Handles centralized logging to the `SysLog` sheet and sends real-time alerts.
     *   **`ValidationService`**: Provides a central suite of tools for running all types of system validations.
