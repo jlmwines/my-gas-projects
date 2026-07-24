@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-07-24 10:31',
+  built: '2026-07-24 11:04',
   commit: "PublishingView Deploy 5 — Calendar tab wired: holiday rows from JLMops_Publishing merged into calendar list (non-clickable, distinct style); _loadHolidays() reads via SpreadsheetApp.openById(system.calendar.sheet_id)."
 };
 
@@ -93,7 +93,7 @@ function getView(viewName) {
 
   if (viewMap[viewName]) {
     // Use template evaluation so views can use scriptlets like `<?!= include('TaskWidgets') ?>`.
-    // Audited 2026-05-25: only AppView (rendered separately), LibraryView, and PublishingView use `<?` scriptlets;
+    // Audited 2026-05-25: only AppView (rendered separately) and PublishingView use `<?` scriptlets (LibraryView, audited same day, was deleted 2026-07-24 as dead code);
     // other views render unchanged through template evaluation (no false matches).
     return HtmlService.createTemplateFromFile(viewMap[viewName]).evaluate().getContent();
   }
