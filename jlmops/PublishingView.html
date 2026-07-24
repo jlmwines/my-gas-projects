@@ -89,8 +89,9 @@
       padding: 8px 4px;
       background: transparent;
     }
-    .pv-library-table.responsive-stack td { padding: 1px 0; }
+    .pv-library-table.responsive-stack thead,
     .pv-cal-table.responsive-stack thead { display: none; }
+    .pv-library-table.responsive-stack td,
     .pv-cal-table.responsive-stack td {
       display: flex;
       gap: 6px;
@@ -98,6 +99,7 @@
       font-size: 12px;
       align-items: baseline;
     }
+    .pv-library-table.responsive-stack td::before,
     .pv-cal-table.responsive-stack td::before {
       content: attr(data-label);
       font-size: 10px;
@@ -107,6 +109,7 @@
       min-width: 56px;
       flex-shrink: 0;
     }
+    .pv-library-table.responsive-stack td:first-child,
     .pv-cal-table.responsive-stack td:first-child { padding-top: 4px; }
     /* pv-tab mobile handled by AppView global ds-v2 */
   }
@@ -1192,25 +1195,28 @@
         // Title cell: click opens EN (or neutral) drawer; slug shown below
         var titleLink = '<a class="pv-entity-title-link" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(rep.slug) + '\')">' +
           '<strong>' + TaskWidgets.escape(rep.title || base) + '</strong></a>';
-        var docLink = rep.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(rep.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:4px">&#8599;</a>' : '';
+
+        function _docLink(url) {
+          return url ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:4px">&#8599;</a>' : '';
+        }
 
         var enCell, heCell;
         if (g.neutral) {
           // Language-neutral entity: span both EN+HE columns
           var neutralStatus = _entityStatus(g.neutral);
-          enCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(neutralStatus) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.neutral.slug) + '\')">' + TaskWidgets.escape(neutralStatus) + '</span>';
+          enCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(neutralStatus) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.neutral.slug) + '\')">' + TaskWidgets.escape(neutralStatus) + '</span>' + _docLink(g.neutral.docUrl);
           heCell = '—';
         } else {
           enCell = g.en
-            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(_entityStatus(g.en)) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.en.slug) + '\')">' + TaskWidgets.escape(_entityStatus(g.en)) + '</span>'
+            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(_entityStatus(g.en)) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.en.slug) + '\')">' + TaskWidgets.escape(_entityStatus(g.en)) + '</span>' + _docLink(g.en.docUrl)
             : '<span style="color:#adb5bd;">—</span>';
           heCell = g.he
-            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(_entityStatus(g.he)) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.he.slug) + '\')">' + TaskWidgets.escape(_entityStatus(g.he)) + '</span>'
+            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(_entityStatus(g.he)) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.he.slug) + '\')">' + TaskWidgets.escape(_entityStatus(g.he)) + '</span>' + _docLink(g.he.docUrl)
             : '<span style="color:#adb5bd;">—</span>';
         }
 
         html += '<tr>';
-        html += '<td data-label="Title">' + titleLink + docLink + '</td>';
+        html += '<td data-label="Title">' + titleLink + '</td>';
         html += '<td data-label="Type">' + TaskWidgets.escape(g.type || '—') + '</td>';
         html += '<td data-label="Slug"><span style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;color:#6c757d;">' + TaskWidgets.escape(base) + '</span></td>';
         html += '<td data-label="EN">' + enCell + '</td>';
