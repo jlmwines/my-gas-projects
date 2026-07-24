@@ -6,37 +6,6 @@
  */
 
 /**
- * Gets all data required for the Admin Orders Widget.
- * @returns {Object} An object containing counts and tasks for the orders widget.
- */
-function WebAppOrders_getOrdersWidgetData() {
-  try {
-    const orderService = new OrderService(ProductService);
-    const comaxExportOrderCount = orderService.getComaxExportOrderCount();
-    const onHoldCount = orderService.getOnHoldOrderCount();
-    const processingCount = orderService.getProcessingOrderCount();
-    const packingSlipsReadyCount = orderService.getPackingSlipsReadyCount();
-
-    const openComaxConfirmationTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.comax_order_export').map(task => ({
-      id: task.st_TaskId,
-      title: task.st_Title,
-      notes: task.st_Notes
-    }));
-
-    return {
-      comaxExportOrderCount: comaxExportOrderCount,
-      onHoldCount: onHoldCount,
-      processingCount: processingCount,
-      packingSlipsReadyCount: packingSlipsReadyCount,
-      openComaxConfirmationTasks: openComaxConfirmationTasks
-    };
-  } catch (e) {
-    LoggerService.error('WebAppOrders', 'getOrdersWidgetData', e.message, e);
-    return { error: 'Could not load order data.' };
-  }
-}
-
-/**
  * Gets a list of open orders (on-hold or processing) with detailed information for the manager view.
  * @returns {Array<Object>} An array of open orders, each with orderId, orderDate, billing/shipping names, and shippingCity.
  */

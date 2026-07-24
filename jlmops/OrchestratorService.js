@@ -598,10 +598,7 @@ const OrchestratorService = (function() {
     }
     SpreadsheetApp.flush(); // Ensure updates are written immediately
     // --- End Zombie Killer ---
-    
-    SpreadsheetApp.flush(); // Ensure updates are written immediately
-    // --- End Zombie Killer ---
-    
+
     let jobFoundAndProcessed = true; // Initialize to true to enter loop
     let jobsProcessedCount = 0;
     const MAX_JOBS_PER_RUN = 5; // Safety limit

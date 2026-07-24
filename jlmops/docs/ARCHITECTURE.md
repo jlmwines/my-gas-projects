@@ -71,7 +71,7 @@ The backend is designed as a collection of services, each exposing global functi
         *   If an active component is low on stock, it consults the eligibility rules for that bundle slot (defined in `SysBundleRows`) to find and suggest suitable replacements.
         *   Creating tasks via the `TaskService` to alert users to low-stock situations and provide replacement suggestions.
         *   Logging all component changes to the `SysBundleComponentHistory` sheet to provide a complete audit trail.
-    *   **`PromotionsEngineService`**: Automatically calculates dynamic cross-sell and up-sell links during the sync process.
+    *   `PromotionsEngineService` was never wired in — read a `"Promotions"` sheet that never existed in the schema. Retired dead code (deleted 2026-07-24). No cross-sell/up-sell link generation currently runs during sync.
     *   **`TaskService`**: Manages the creation, updating, and assignment of all tasks (product, content, etc.) in the `TaskQ`.
     *   **`HousekeepingService`**: Contains all logic for scheduled data cleanup and archiving.
     *   **`InventoryManagementService`**: Manages physical inventory at managed locations (e.g., BruryaStock).

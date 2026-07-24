@@ -15,8 +15,6 @@
  */
 
 const LibraryService = (function() {
-    const _cache = new Map();
-
     const LIBRARY_SHEET = 'SysLibrary';
 
     // §6 entity types — physical library rows. Matches content/scripts/register-library.js TYPES.
@@ -182,8 +180,6 @@ const LibraryService = (function() {
         const newRow = headers.map(h => (fieldMap[h] !== undefined ? fieldMap[h] : ''));
         sheet.appendRow(newRow);
         SpreadsheetApp.flush();
-
-        _cache.delete('library.entities');
 
         // Re-shape persisted row for return.
         const persisted = {};
@@ -404,7 +400,6 @@ const LibraryService = (function() {
                 });
                 sheet.getRange(rowNum, 1, 1, headers.length).setValues([row]);
                 SpreadsheetApp.flush();
-                _cache.delete('library.entities');
                 const persisted = {};
                 headers.forEach((h, idx) => { persisted[h] = row[idx]; });
                 return persisted;

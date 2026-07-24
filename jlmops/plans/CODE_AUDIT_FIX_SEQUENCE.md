@@ -155,6 +155,14 @@ Grep-confirmed zero callers on all of these; low-risk deletions, good single cle
 
 Re-grep each immediately before deleting (audit is a few weeks old by the time this session runs) rather than trusting the finding at face value.
 
+**Done 2026-07-24.** All items above deleted/cleaned as scoped, plus what fresh re-grepping surfaced:
+- `ProductService.js`: deleted lines 236-892 (657 lines) — also caught `_runStagingValidation` (236-248), a fully separate dead function immediately preceding the named block that the original finding hadn't listed. Confirmed doubly dead: not only is `processJob` unexported, the whole block calls `_updateJobStatus`/`_populateStagingSheet`, which are **never defined anywhere in this file** — it would have thrown `ReferenceError` even if somehow reached.
+- **Correction to the `WebAppDashboard.js` item:** re-grepping its three other callees (besides `WebAppSystem_getSystemHealthDashboardData`) found `WebAppOrders_getOrdersWidgetData` and `WebAppInventory_getInventoryWidgetData` were **also** orphaned-only-by-`WebAppDashboard.js` and not mentioned in the original finding — deleted both. But `WebAppProducts_getProductsWidgetData` (the fourth) turned out to be **genuinely live** — called directly by `AdminProductsView.html:974` — did not delete it. Good reminder that "same shape as its siblings" isn't proof; checked each individually.
+- `WebAppSystem.js`: deleted `WebAppSystem_getSystemHealthMetrics` + `WebAppSystem_getSystemHealthDashboardData` (the "Inventory Cycle Checklist" logic was inline within the latter, not a separate function — removed as part of the same deletion).
+- `WebAppDashboardV2.js`: deleted `_getSystemHealthData()`, `_getLastSyncStatus()`, `_getOrdersData()` (v1) — kept `_parseTimestamp()`, which sits between two of them but is still called by the live `_getLastSyncStatus_v2`.
+- `LibraryView.html`: deleted, plus its `WebApp.js` `viewMap` entry (`'Library': 'LibraryView'`). Left the adjacent `'AdminProjects': 'AdminProjectsView'` entry alone — that one's an intentional "soak fallback" per its own comment, not the same situation.
+- All brace-balance-checked after editing; no syntax breakage.
+
 ---
 
 ### Session U — Efficiency batch (optional, low priority — do if time allows)

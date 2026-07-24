@@ -187,7 +187,6 @@ const ContactImportService = (function () {
       const shippingPhone = row[womIdx['wom_ShippingPhone']] || '';
       const shippingCity = row[womIdx['wom_ShippingCity']] || '';
       const customerNote = row[womIdx['wom_CustomerNote']] || '';
-      const couponItems = row[womIdx['wom_CouponItems']] || '';
       const customerUser = row[womIdx['wom_CustomerUser']] || '';
       const orderLanguage = (row[womIdx['wom_MetaWpmlLanguage']] || '').toLowerCase().trim() || 'en';
 
@@ -759,7 +758,6 @@ const ContactImportService = (function () {
       const customerUser = row[womIdx['wom_CustomerUser']] || '';
       const customerNote = row[womIdx['wom_CustomerNote']] || '';
       const shippingLastName = row[womIdx['wom_ShippingLastName']] || '';
-      const couponItems = row[womIdx['wom_CouponItems']] || '';
       const orderLanguage = (row[womIdx['wom_MetaWpmlLanguage']] || '').toLowerCase().trim() || 'en';
 
       const items = itemsByOrder.get(orderId) || [];

@@ -87,7 +87,6 @@ function getView(viewName) {
     'AdminCampaigns': 'AdminCampaignsView',
     'AdminContacts': 'AdminContactsView',
     'ManagerContacts': 'ManagerContactView',
-    'Library': 'LibraryView',
     'Publishing': 'PublishingView',
     'Development': 'DevelopmentView'
   };
