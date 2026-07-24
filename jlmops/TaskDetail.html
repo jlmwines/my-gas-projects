@@ -159,7 +159,11 @@ window.TaskDetail = (function() {
 
     // ── Action row ─────────────────────────────────────────────────────
     var showSave   = !isSystem || allowsDateEdit || isContent;
-    var showDone   = !isData;
+    // Typed packs (content_edit/content_publish/confirmation) own their own completion
+    // action (e.g. "Editing Done", "Mark Published") which runs the entity-locking/
+    // versioning steps the generic Done button skips entirely. hasTypedPack() already
+    // existed for exactly this purpose but was never called here.
+    var showDone   = !isData && !TaskPacks.hasTypedPack(typeId);
     var showDelete = !isData && !isManager;
     var showRevert = isManager && !isDone;
     var hasMore    = showSave || showDelete || isContent || !!task.createdDate;

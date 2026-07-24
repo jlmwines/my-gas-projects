@@ -42,7 +42,9 @@ Task-date-edit and Brurya-days-since checks both confirmed correct live. SKU-too
 
 Generic "Done" button renders for `content_edit`/`content_publish` tasks; `TaskPacks.hasTypedPack(typeId)` exists specifically to suppress it for typed packs but is never called. Closing a content task this way skips `WebAppLibrary_lockVersion` — entity never versions/locks, translation-draft trigger never fires.
 
-**Decision needed before implementing:** should `showDone` simply hide the generic button whenever `hasTypedPack()` is true (forcing the typed-pack action instead), or should it stay visible but reroute to the typed pack's completion path? Recommend the hide approach — matches `hasTypedPack()`'s apparent original intent and needs no new routing logic. Confirm with user before coding since it changes visible button behavior on every content task.
+**Decision (2026-07-24): hide the generic button.** Confirmed `content_edit`/`content_publish` packs have their own completion actions ("Editing Done" / "Mark Published") that already run the correct locking/versioning path — hiding Done doesn't remove the manager's ability to close the task, it just forces the already-correct button.
+
+**Coded 2026-07-24, not yet committed/pushed/deployed.** One-line change: `showDone = !isData && !TaskPacks.hasTypedPack(typeId)`. `.td-done-btn`'s click wiring already null-checks (`if (doneBtn)`), so no further change needed there.
 
 ---
 
