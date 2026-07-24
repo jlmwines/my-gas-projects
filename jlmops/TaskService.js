@@ -632,7 +632,7 @@ const TaskService = (function() {
             const dueVal = dueDate ? new Date(dueDate) : '';
             sheet.getRange(sheetRow, dueDateCol + 1).setValue(dueVal);
           }
-          _invalidateWebAppTasksCache();
+          invalidateTaskCache();
           logger.info('TaskService', 'updateTaskDates', `Task '${taskId}' dates updated.`);
           return true;
         }

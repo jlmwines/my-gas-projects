@@ -1,7 +1,7 @@
 # jlmops Code Audit Plan
 
 **Created:** 2026-06-04
-**Status:** All 6 planned clusters reviewed and synthesized 2026-06-04→2026-07-23. Phases 1/2/3/5 complete as scoped; Phase 4 (error-handling) partially covered (Content Library pass onward only) — see §10 for the cross-cutting synthesis, fix-priority tiers, and the one remaining gap. No fixes shipped yet — this was a findings-only audit; all findings are logged in §9 and `.claude/bugs.md`.
+**Status:** All 6 planned clusters reviewed and synthesized 2026-06-04→2026-07-23. Phases 1/2/3/5 complete as scoped; Phase 4 (error-handling) partially covered (Content Library pass onward only) — see §10 for the cross-cutting synthesis, fix-priority tiers, and the one remaining gap. Findings sequenced into implementation sessions at `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md` (2026-07-24) — no fixes shipped yet, each session still needs explicit go-ahead.
 **Owner:** Session-driven. User observes and tests; does not co-author.
 
 ## 1. Why this exists
@@ -321,4 +321,4 @@ Every single pass, from Product/Inventory through Manager UI, independently reco
 
 ### Status
 
-All 6 planned clusters done (2026-07-23). `CODE_AUDIT_PLAN.md` Phases 1 (definitively resolved), 2 (code-quality, covered across every subsystem), 3 (CRM/campaigns, done), and 5 (dead-code/test-coverage baseline, covered per-cluster) are complete as originally scoped. Phase 4 (error-handling) is partially covered (Content Library onward only) — the one legitimate remaining gap if this audit continues. No fixes have shipped from this audit; all findings are logged above and in `.claude/bugs.md`, ranked by tier above, awaiting prioritization.
+All 6 planned clusters done (2026-07-23). `CODE_AUDIT_PLAN.md` Phases 1 (definitively resolved), 2 (code-quality, covered across every subsystem), 3 (CRM/campaigns, done), and 5 (dead-code/test-coverage baseline, covered per-cluster) are complete as originally scoped. Phase 4 (error-handling) is partially covered (Content Library onward only) — the one legitimate remaining gap if this audit continues. No fixes have shipped from this audit; all findings are logged above and in `.claude/bugs.md`, ranked by tier above. Sequenced into sessions K–U at `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md` (2026-07-24), awaiting go-ahead per session.

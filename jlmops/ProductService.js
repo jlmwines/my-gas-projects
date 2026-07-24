@@ -2085,7 +2085,7 @@ const ProductService = (function() {
       const webXltSheet = spreadsheet.getSheetByName('WebXltM');
       if (webXltSheet) {
         const webXltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
-        const webXltSkuIdx = webXltHeaders.indexOf('wxl_SKU');
+        const webXltSkuIdx = webXltHeaders.indexOf('wxm_SKU');
         if (webXltSkuIdx >= 0) {
           const updated = _updateSkuInSheet(webXltSheet, webXltSkuIdx, oldSku, newSku);
           if (updated) updatedSheets.push('WebXltM');
@@ -2342,7 +2342,7 @@ const ProductService = (function() {
       const webXltSheet = spreadsheet.getSheetByName('WebXltM');
       if (webXltSheet && allConfig['schema.data.WebXltM']) {
         const headers = allConfig['schema.data.WebXltM'].headers.split(',');
-        const skuIdx = headers.indexOf('wxl_SKU');
+        const skuIdx = headers.indexOf('wxm_SKU');
         if (skuIdx >= 0) {
           const updated = _updateSkuInSheet(webXltSheet, skuIdx, oldSku, newSku);
           if (updated) updatedSheets.push('WebXltM');
@@ -2487,7 +2487,7 @@ const ProductService = (function() {
       const webXltSheet = spreadsheet.getSheetByName('WebXltM');
       if (webXltSheet && oldSku) {
         const webXltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
-        const webXltSkuIdx = webXltHeaders.indexOf('wxl_SKU');
+        const webXltSkuIdx = webXltHeaders.indexOf('wxm_SKU');
         if (webXltSkuIdx >= 0) {
           const updated = _updateSkuInSheet(webXltSheet, webXltSkuIdx, oldSku, newSku);
           if (updated) updatedSheets.push('WebXltM');

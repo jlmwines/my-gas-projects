@@ -43,7 +43,7 @@ function WebAppDashboardV2_getData() {
       systemHealth: _getSystemHealthData_v2(allTasks, allConfig),
       integrationHeartbeats: _getIntegrationHeartbeats_v2(allConfig),
       orders: _getOrdersData_v2(ordLog, webOrdM),
-      inventory: _getInventoryData(openTasks),
+      inventory: _getInventoryData(openTasks, allConfig),
       products: _getProductsData(openTasks),
       projects: _getProjectSummaries(openTasks),
       adminTasks: _getAdminTasksList(openTasks)
@@ -287,7 +287,7 @@ function _getOrdersData_v2(ordLog, webOrdM) {
 
     ordLog.forEach(order => {
       const packingStatus = order.sol_PackingStatus;
-      const orderStatus = order.sol_Status;
+      const orderStatus = order.sol_OrderStatus;
 
       if (packingStatus === 'Ready') packingReady++;
       if (orderStatus === 'on-hold') onHold++;
@@ -295,13 +295,11 @@ function _getOrdersData_v2(ordLog, webOrdM) {
       if (orderStatus === 'new' || orderStatus === 'pending') newOrders++;
     });
 
-    // Count orders to export: processing status + not yet exported
-    // An order needs export if it's processing and sol_ComaxExported is not 'Yes'
+    // Count orders to export: processing status + not yet exported.
+    // sol_ComaxExportStatus holds 'Pending'/'Exported' (see OrderService.js), not 'Yes'/true.
     const ordersToExport = ordLog.filter(o =>
-      o.sol_Status === 'processing' &&
-      o.sol_ComaxExported !== 'Yes' &&
-      o.sol_ComaxExported !== 'TRUE' &&
-      o.sol_ComaxExported !== true
+      o.sol_OrderStatus === 'processing' &&
+      String(o.sol_ComaxExportStatus || '').trim().toLowerCase() !== 'exported'
     ).length;
 
     return {
@@ -534,21 +532,18 @@ function _getOrdersData() {
  * Gets inventory widget data.
  * @private
  */
-function _getInventoryData(allTasks) {
+function _getInventoryData(allTasks, allConfig) {
   try {
-    // Brurya days since update - read from task notes
-    let bruryaDaysSince = null;
-    const bruryaTask = allTasks.find(t => t.st_TaskTypeId === 'task.inventory.brurya_update');
-    if (bruryaTask && bruryaTask.st_Notes) {
-      try {
-        const notes = typeof bruryaTask.st_Notes === 'string'
-          ? JSON.parse(bruryaTask.st_Notes)
-          : bruryaTask.st_Notes;
-        bruryaDaysSince = notes.daysSinceUpdate;
-      } catch (parseErr) {
-        // Notes not valid JSON, ignore
-      }
-    }
+    // Brurya days since update - computed straight from system.brurya.last_update,
+    // same arithmetic as HousekeepingService.checkBruryaReminder(). Not derived from
+    // the reminder task's notes: that task only exists once overdue (>=7 days), so
+    // reading it left this null the rest of the time even though the timestamp is
+    // available in config regardless of whether a reminder task exists.
+    const bruryaConfig = allConfig && allConfig['system.brurya.last_update'];
+    const bruryaLastUpdate = bruryaConfig && bruryaConfig.value ? new Date(bruryaConfig.value) : null;
+    const bruryaDaysSince = bruryaLastUpdate
+      ? Math.floor((Date.now() - bruryaLastUpdate.getTime()) / (1000 * 60 * 60 * 24))
+      : 999;
 
     // Count tasks by type
     const negativeInventory = _countTasksByType(allTasks, 'task.validation.comax_internal_audit');
@@ -896,7 +891,7 @@ function WebAppDashboardV2_getManagerData() {
     const result = {
       timestamp: new Date().toISOString(),
       orders: _getOrdersData_v2(ordLog, webOrdM),
-      inventory: _getInventoryData(allOpenTasks),
+      inventory: _getInventoryData(allOpenTasks, allConfig),
       products: _getProductsData(allOpenTasks),
       projects: _getProjectSummaries(allOpenTasks),
       managerTasks: managerTasks,

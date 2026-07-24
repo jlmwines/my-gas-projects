@@ -11,6 +11,8 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Open
 
+- [ ] 2026-07-24: `WebAppDashboardV2._getInventoryData` derives the dashboard's Brurya days-since-count from the open reminder task's notes instead of `system.brurya.last_update` directly — shows nothing when the count was done within 7 days (no reminder task exists yet to read from), even though the timestamp is available in config the whole time. `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md` Session K.
+- [ ] 2026-07-24: `LibraryService.attachExistingDoc` (`LibraryService.js:641-642`) unconditionally calls `file.setOwner(adminEmail)` on every attach with no check against the file's current owner — reassigns ownership even when the attaching admin already created and owns the file. `createTranslationDraft` relies on the same call, so it inherits the same gap. `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md` Session P.
 - [ ] 2026-07-23: `WebXltM` upsert copies data by column position, not field name — silent column-shift risk if `WebXltS`/`WebXltM` schemas ever diverge in order. `jlmops/plans/CODE_AUDIT_PLAN.md` §9 #1.
 - [ ] 2026-07-23: `vendorSkuUpdate`/`fixOrphanSku`/`webProductReassign` reference retired field `wxl_SKU` instead of live `wxm_SKU` — WebXltM update silently no-ops on SKU rename/fix until next full sync. `jlmops/plans/CODE_AUDIT_PLAN.md` §9 #2.
 - [ ] 2026-07-23: `setBruryaQuantity`/`setInventoryCount`/`updatePhysicalCounts` audit-row fallback never populates `pa_CmxId` (real PK) — can create a duplicate SysProductAudit row for a SKU not yet seeded. `jlmops/plans/CODE_AUDIT_PLAN.md` §9 #2.
