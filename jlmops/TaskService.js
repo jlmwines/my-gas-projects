@@ -142,7 +142,7 @@ const TaskService = (function() {
         throw new Error(`Task type configuration for '${taskTypeId}' not found.`);
       }
 
-      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
       const sheetName = 'SysTasks';
 
@@ -312,7 +312,7 @@ const TaskService = (function() {
 
   function hasOpenTasks(taskTypeId) {
     try {
-      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
       const sheetName = 'SysTasks';
 
@@ -344,7 +344,7 @@ const TaskService = (function() {
    */
   function completeTask(taskId) {
     try {
-      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
       const sheetName = 'SysTasks';
 
@@ -432,7 +432,7 @@ const TaskService = (function() {
    */
   function updateTaskStatus(taskId, newStatus) {
     try {
-      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
       const sheetName = 'SysTasks';
 
@@ -510,7 +510,7 @@ const TaskService = (function() {
    */
   function getTasksByProject(projectId) {
     try {
-      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
       const sheetName = 'SysTasks';
 
@@ -556,7 +556,7 @@ const TaskService = (function() {
    */
   function updateTaskNotes(taskId, notes) {
     try {
-      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
       const sheet = dataSpreadsheet.getSheetByName('SysTasks');
 
@@ -604,7 +604,7 @@ const TaskService = (function() {
    */
   function updateTaskDates(taskId, startDate, dueDate) {
     try {
-      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const sheetName = 'SysTasks';
       const sheet = dataSpreadsheet.getSheetByName(sheetName);
 
@@ -655,7 +655,7 @@ const TaskService = (function() {
    */
   function findOpenTaskByType(taskTypeId, linkedEntityId) {
     try {
-      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
       const sheet = dataSpreadsheet.getSheetByName('SysTasks');
 

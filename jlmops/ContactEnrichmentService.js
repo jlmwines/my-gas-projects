@@ -740,6 +740,7 @@ const ContactEnrichmentService = (function () {
     let errors = [];
     let processed = 0;
     const totalContacts = itemsByEmail.size;
+    const contactsToUpsert = [];
 
     LoggerService.info(SERVICE_NAME, fnName, `Processing ${totalContacts} contacts with order history`);
 
@@ -944,7 +945,7 @@ const ContactEnrichmentService = (function () {
 
         // Always set LastEnriched when we process a contact (even if no changes)
         contact.sc_LastEnriched = new Date().toISOString();
-        ContactService.upsertContact(contact, true);  // Skip cache clear for batch performance
+        contactsToUpsert.push(contact);  // Written once in a single batch after the loop
 
         if (updated) {
           enriched++;
@@ -957,8 +958,12 @@ const ContactEnrichmentService = (function () {
       }
     });
 
-    // Clear cache once at end of batch
-    ContactService.clearCache();
+    // One sheet read + one batch write for all contacts, instead of a full-sheet
+    // read+write per contact (batchUpsertContacts clears the cache itself).
+    if (contactsToUpsert.length > 0) {
+      const batchResult = ContactService.batchUpsertContacts(contactsToUpsert);
+      (batchResult.errors || []).forEach(err => errors.push(`${err.email}: ${err.error}`));
+    }
 
     LoggerService.info(SERVICE_NAME, fnName, `Enriched ${enriched}, skipped ${skipped}, errors ${errors.length}`);
     return { enriched, skipped, errors };

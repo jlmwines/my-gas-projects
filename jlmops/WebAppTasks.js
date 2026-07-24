@@ -399,9 +399,10 @@ function WebAppTasks_updateTaskDates(taskId, startDate, dueDate) {
  */
 function WebAppTasks_updateTask(taskId, updates) {
   try {
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
     const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+    const sheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
 
     if (!sheet) {
       return { error: 'SysTasks sheet not found', success: false };
@@ -549,9 +550,10 @@ function WebAppTasks_deleteTasks(taskIds) {
     // Dedupe + normalize to strings.
     const wanted = Array.from(new Set(taskIds.map(t => String(t).trim()).filter(Boolean)));
 
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
     const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+    const sheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
 
     if (!sheet) {
       return { deleted: [], failed: wanted.map(t => ({ taskId: t, reason: 'SysTasks sheet not found' })) };
@@ -609,9 +611,10 @@ function WebAppTasks_deleteTasks(taskIds) {
  */
 function WebAppTasks_deleteTask(taskId) {
   try {
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
     const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+    const sheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
 
     if (!sheet) {
       return { error: 'SysTasks sheet not found', success: false };

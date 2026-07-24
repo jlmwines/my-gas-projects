@@ -905,7 +905,7 @@ function HousekeepingService() {
       const syncSession = SyncStateService.getActiveSession();
       const lastSync = syncSession?.lastUpdated ? new Date(syncSession.lastUpdated) : null;
 
-      if (lastRefresh && lastSync && syncSession.currentStage === 'COMPLETE') {
+      if (lastRefresh && lastSync && syncSession.stage === 'COMPLETE') {
         if (lastSync <= lastRefresh) {
           logger.info('HousekeepingService', functionName, 'No sync since last refresh, skipping CRM contacts');
           return true;
@@ -1560,7 +1560,7 @@ function HousekeepingService() {
       const syncSession = SyncStateService.getActiveSession();
       const lastSync = syncSession?.lastUpdated ? new Date(syncSession.lastUpdated) : null;
 
-      if (lastCheck && lastSync && syncSession.currentStage === 'COMPLETE') {
+      if (lastCheck && lastSync && syncSession.stage === 'COMPLETE') {
         if (lastSync <= lastCheck) {
           logger.info('HousekeepingService', functionName, 'No sync since last check, skipping bundle health');
           return;

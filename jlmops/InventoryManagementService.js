@@ -726,30 +726,6 @@ const InventoryManagementService = (function() {
             }
         
             /**
-             * Retrieves the count of open 'Negative Inventory' tasks.
-             * @returns {number} The count of open tasks.
-             */
-            function getOpenNegativeInventoryTasksCount() {
-              return _getOpenTaskCountByTypeId('task.inventory.negative');
-            }
-        
-            /**
-             * Retrieves the count of open 'Inventory Count' tasks.
-             * @returns {number} The count of open tasks.
-             */
-            function getOpenInventoryCountTasksCount() {
-              return _getOpenTaskCountByTypeId('task.inventory.count');
-            }
-        
-            /**
-             * Retrieves the count of open 'Inventory Count Review' tasks.
-             * @returns {number} The count of open tasks.
-             */
-            function getOpenInventoryCountReviewTasksCount() {
-              return _getOpenTaskCountByTypeId('task.inventory.count_review');
-            }
-        
-            /**
              * Retrieves the count of items with stock ready for Comax Inventory Export.
              * @returns {number} The count of items with stock > 0.
              */
@@ -758,11 +734,31 @@ const InventoryManagementService = (function() {
               const functionName = 'getComaxInventoryExportCount';
               try {
                 // Count tasks with 'Accepted' status for inventory count types
-                // We check both standard counts and validation counts (negative inventory)
-                const acceptedCounts = _getOpenTaskCountByTypeIdAndStatus('task.inventory.count', 'Accepted');
-                const acceptedValidations = _getOpenTaskCountByTypeIdAndStatus('task.validation.comax_internal_audit', 'Accepted');
-                
-                return acceptedCounts + acceptedValidations;
+                // We check both standard counts and validation counts (negative inventory).
+                // Single sheet read + single pass for both, instead of two separate
+                // full-sheet scans (one per type/status pair).
+                const allConfig = ConfigService.getAllConfig();
+                const sheetNames = allConfig['system.sheet_names'];
+                const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks);
+
+                if (!taskSheet || taskSheet.getLastRow() <= 1) {
+                  return 0;
+                }
+
+                const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
+                const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
+                const taskTypeCol = taskHeaders.indexOf('st_TaskTypeId');
+                const statusCol = taskHeaders.indexOf('st_Status');
+
+                let count = 0;
+                for (let i = 0; i < taskData.length; i++) {
+                  const row = taskData[i];
+                  if (row[statusCol] !== 'Accepted') continue;
+                  if (row[taskTypeCol] === 'task.inventory.count' || row[taskTypeCol] === 'task.validation.comax_internal_audit') {
+                    count++;
+                  }
+                }
+                return count;
               } catch (e) {
                 LoggerService.error(serviceName, functionName, `Error getting Comax inventory export count: ${e.message}`, e);
                 return 0;
@@ -1110,77 +1106,6 @@ const InventoryManagementService = (function() {
               }
             }
         
-            /**
-             * Helper function to get count of open tasks by type ID.
-             * @param {string} taskTypeId The ID of the task type to count.
-             * @returns {number} The count of open tasks.
-             */
-            function _getOpenTaskCountByTypeId(taskTypeId) {
-              const serviceName = 'InventoryManagementService';
-              const functionName = '_getOpenTaskCountByTypeId';
-              try {
-                const allConfig = ConfigService.getAllConfig();
-                const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-                const sheetNames = allConfig['system.sheet_names'];
-                const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks);
-        
-                if (!taskSheet || taskSheet.getLastRow() <= 1) {
-                  return 0;
-                }
-        
-                const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
-                const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-                const taskTypeCol = taskHeaders.indexOf('st_TaskTypeId');
-                const statusCol = taskHeaders.indexOf('st_Status');
-        
-                let count = 0;
-                for (let i = 0; i < taskData.length; i++) {
-                  const row = taskData[i];
-                  if (row[taskTypeCol] === taskTypeId && row[statusCol] !== 'Done' && row[statusCol] !== 'Cancelled') {
-                    count++;
-                  }
-                }
-                return count;
-              } catch (e) {
-                LoggerService.error(serviceName, functionName, `Error getting task count for type ${taskTypeId}: ${e.message}`, e);
-                return 0;
-              }
-            }
-
-            /**
-             * Helper function to get count of tasks by type ID and Status.
-             */
-            function _getOpenTaskCountByTypeIdAndStatus(taskTypeId, status) {
-              const serviceName = 'InventoryManagementService';
-              const functionName = '_getOpenTaskCountByTypeIdAndStatus';
-              try {
-                const allConfig = ConfigService.getAllConfig();
-                const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-                const sheetNames = allConfig['system.sheet_names'];
-                const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks);
-        
-                if (!taskSheet || taskSheet.getLastRow() <= 1) {
-                  return 0;
-                }
-        
-                const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
-                const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-                const taskTypeCol = taskHeaders.indexOf('st_TaskTypeId');
-                const statusCol = taskHeaders.indexOf('st_Status');
-        
-                let count = 0;
-                for (let i = 0; i < taskData.length; i++) {
-                  const row = taskData[i];
-                  if (row[taskTypeCol] === taskTypeId && row[statusCol] === status) {
-                    count++;
-                  }
-                }
-                return count;
-              } catch (e) {
-                LoggerService.error(serviceName, functionName, `Error getting task count for type ${taskTypeId} status ${status}: ${e.message}`, e);
-                return 0;
-              }
-            }
         
             /**
              * Creates count tasks in bulk for a client-supplied list of SKUs.
@@ -1258,9 +1183,6 @@ const InventoryManagementService = (function() {
                 setInventoryCount: setInventoryCount,
                 updatePhysicalCounts: updatePhysicalCounts,
                 getBruryaSummaryStatistic: getBruryaSummaryStatistic,
-                getOpenNegativeInventoryTasksCount: getOpenNegativeInventoryTasksCount,
-                getOpenInventoryCountTasksCount: getOpenInventoryCountTasksCount,
-                getOpenInventoryCountReviewTasksCount: getOpenInventoryCountReviewTasksCount,
                 getComaxInventoryExportCount: getComaxInventoryExportCount,
                 getAcceptedSyncTasks: getAcceptedSyncTasks,
                 generateComaxInventoryExport: generateComaxInventoryExport,
