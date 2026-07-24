@@ -188,7 +188,9 @@ const WooOrderPullService = (function() {
    * @param {Array} apiLineItems - Raw API line items
    */
   function _populateFlatLineItemFields(order, apiLineItems) {
-    for (var i = 0; i < Math.min(apiLineItems.length, 24); i++) {
+    var lineItemSchema = ConfigService.getConfig('web.order.line_item_schema');
+    var maxLineItems = parseInt(lineItemSchema && lineItemSchema.max_line_items, 10) || 24;
+    for (var i = 0; i < Math.min(apiLineItems.length, maxLineItems); i++) {
       var num = i + 1;
       var item = apiLineItems[i];
       order['wos_Product_Item_' + num + '_Name'] = item.name || '';

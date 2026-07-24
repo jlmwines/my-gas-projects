@@ -638,8 +638,19 @@ const LibraryService = (function() {
         // Ownership-transfer fix generalized from createTranslationDraft (which
         // already does this after forking a Doc) — whoever pasted this URL may
         // not be the admin, and only the admin can reliably reopen it later.
+        // Skip the transfer when the admin already owns it (e.g. they created the
+        // Doc themselves) — setOwner() was previously called unconditionally.
         const adminEmail = TaskService.getUserByRole('admin');
-        if (adminEmail) file.setOwner(adminEmail);
+        if (adminEmail) {
+            let currentOwnerEmail = '';
+            try {
+                currentOwnerEmail = file.getOwner().getEmail();
+            } catch (ownerErr) {
+                // Owner not resolvable (e.g. shared-drive file) — fall back to
+                // attempting the transfer, matching the prior unconditional behavior.
+            }
+            if (currentOwnerEmail !== adminEmail) file.setOwner(adminEmail);
+        }
         // Move if not already in canonical folder.
         const parents = file.getParents();
         let inCanonical = false;

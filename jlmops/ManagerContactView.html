@@ -158,6 +158,11 @@
           <label><input type="radio" name="mc-channel" value="phone"> Phone</label>
         </div>
 
+        <label>Direction</label>
+        <div class="mc-radio-group" id="mc-direction-group">
+          <label><input type="radio" name="mc-direction" value="Outbound" checked> Outbound</label>
+          <label><input type="radio" name="mc-direction" value="Inbound"> Inbound</label>
+        </div>
 
         <div id="mc-subject-row" style="display:none;">
           <label>Subject</label>
@@ -449,6 +454,7 @@
     if (!state.currentEmail) return;
     // Reset
     document.querySelector('input[name="mc-channel"][value="whatsapp"]').checked = true;
+    document.querySelector('input[name="mc-direction"][value="Outbound"]').checked = true;
     document.getElementById('mc-subject').value = '';
     document.getElementById('mc-message').value = '';
     document.getElementById('mc-mark-task-done').checked = false;

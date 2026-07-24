@@ -131,7 +131,7 @@ const CrmIntelligenceService = (function () {
     const wineryCounts = {};
 
     contacts.forEach(c => {
-      const wineries = (c.sc_TopWineries || '').split(',').map(w => w.trim()).filter(w => w);
+      const wineries = (c.sc_TopWineries_En || '').split(',').map(w => w.trim()).filter(w => w);
       // Count the first (top) winery
       if (wineries.length > 0) {
         const topWinery = wineries[0];
@@ -321,7 +321,7 @@ const CrmIntelligenceService = (function () {
     // Find top winery cluster
     const wineryCounts = {};
     contacts.forEach(c => {
-      const wineries = (c.sc_TopWineries || '').split(',').map(w => w.trim()).filter(w => w);
+      const wineries = (c.sc_TopWineries_En || '').split(',').map(w => w.trim()).filter(w => w);
       if (wineries.length > 0) {
         const topWinery = wineries[0];
         wineryCounts[topWinery] = (wineryCounts[topWinery] || 0) + 1;
