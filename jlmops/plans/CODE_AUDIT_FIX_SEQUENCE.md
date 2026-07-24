@@ -44,7 +44,7 @@ Generic "Done" button renders for `content_edit`/`content_publish` tasks; `TaskP
 
 **Decision (2026-07-24): hide the generic button.** Confirmed `content_edit`/`content_publish` packs have their own completion actions ("Editing Done" / "Mark Published") that already run the correct locking/versioning path — hiding Done doesn't remove the manager's ability to close the task, it just forces the already-correct button.
 
-**Coded 2026-07-24, not yet committed/pushed/deployed.** One-line change: `showDone = !isData && !TaskPacks.hasTypedPack(typeId)`. `.td-done-btn`'s click wiring already null-checks (`if (doneBtn)`), so no further change needed there.
+**Deployed 2026-07-24 (jlmops @533), smoke-tested and confirmed working.** One-line change: `showDone = !isData && !TaskPacks.hasTypedPack(typeId)`. `.td-done-btn`'s click wiring already null-checks (`if (doneBtn)`), so no further change needed there. Live check: content task shows "Editing Done" (typed pack), generic "Done" button gone.
 
 ---
 
@@ -52,7 +52,9 @@ Generic "Done" button renders for `content_edit`/`content_publish` tasks; `TaskP
 
 `CampaignService.js`'s `filterYearInWine`/`exportYearInWine2025`/`exportYearInWineSimple`/`exportLapsed2024Customers` all gate on `c.sc_DoNotContact`, which doesn't exist in `SysContacts`' schema — always `undefined`.
 
-**Decision (owner, 2026-07-24): no do-not-contact mechanism exists anywhere in jlmops today, and none is needed right now** — no customer has asked to be excluded from all contact. Mailchimp unsubscribe already covers the actual opt-out case that occurs in practice (email specifically); there's no broader "don't contact this person at all" requirement yet. **Not a fix — a cleanup:** remove or clearly comment the dead `sc_DoNotContact` checks so the code stops implying a suppression that doesn't exist, rather than building real infrastructure for a need that hasn't materialized. If a genuine do-not-contact requirement shows up later, it's a fresh feature, not a continuation of this bug. Folded into Session P-shaped cleanup rather than its own session — see Session T (dead-code) or handle alongside Session P.
+**Decision (owner, 2026-07-24): no do-not-contact mechanism exists anywhere in jlmops today, and none is needed right now** — no customer has asked to be excluded from all contact. Mailchimp unsubscribe already covers the actual opt-out case that occurs in practice (email specifically); there's no broader "don't contact this person at all" requirement yet. **Not a fix — a cleanup:** remove or clearly comment the dead `sc_DoNotContact` checks so the code stops implying a suppression that doesn't exist, rather than building real infrastructure for a need that hasn't materialized. If a genuine do-not-contact requirement shows up later, it's a fresh feature, not a continuation of this bug.
+
+**Coded 2026-07-24.** Removed the dead `!c.sc_DoNotContact`/`if (c.sc_DoNotContact) return;` checks from all 4 functions in `CampaignService.js` — deleted rather than commented, since a condition that's always true is pure dead weight. No behavior change (the checks never fired either way); this only removes the misleading implication that suppression was happening.
 
 ---
 

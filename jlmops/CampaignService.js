@@ -1554,7 +1554,7 @@ function filterYearInWine(options = {}) {
     const email = (c.sc_Email || '').toLowerCase().trim();
     const contactSpend = parseFloat(c.sc_Spend12Month) || 0;
 
-    if (contactSpend >= minSpend && !c.sc_DoNotContact) {
+    if (contactSpend >= minSpend) {
       emails.push(email);
     }
   });
@@ -1619,8 +1619,6 @@ function exportYearInWine2025(options = {}) {
   const qualifyingContacts = [];
 
   allContacts.forEach(c => {
-    if (c.sc_DoNotContact) return;
-
     const email = (c.sc_Email || '').toLowerCase().trim();
     if (!email) return;
 
@@ -1959,8 +1957,6 @@ function exportYearInWineSimple(options = {}) {
   // Filter by spend
   const qualifyingContacts = [];
   allContacts.forEach(c => {
-    if (c.sc_DoNotContact) return;
-
     const email = (c.sc_Email || '').toLowerCase().trim();
     if (!email) return;
 
@@ -2062,7 +2058,6 @@ function exportLapsed2024Customers() {
   const lapsedContacts = [];
   allContacts.forEach(c => {
     try {
-      if (c.sc_DoNotContact) return;
       if (!c.sc_LastOrderDate) return;
 
       const lastOrder = c.sc_LastOrderDate instanceof Date
