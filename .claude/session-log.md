@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-24 — Publishing view Library tab: HE translations were invisible, not missing
+
+- User reported Hebrew translations "not listed" in the admin Library tab despite tasks/Docs existing for them. Investigation ruled out (in order, with positive evidence each time): stale data, server caching, a stale deployment, client-side dedup, and a grouping-logic bug — the `SysLibrary` rows were correct and the JS grouping (verified by running it standalone against real row data) built the HE cell correctly.
+- Actual root cause, found only once the user pasted the rendered table: `pv-library-table.responsive-stack` never got the mobile CSS that `pv-cal-table.responsive-stack` already had (`thead:none` / flex `td` / `td::before` label). On a narrow viewport the HE (and Touched) columns could get squeezed/clipped instead of stacking into visible rows — present in the DOM (hence visible when copy-pasted), invisible on screen.
+- Fixed both the CSS gap and a related affordance gap the user flagged: the doc-open "↗" link previously sat only next to the title (i.e., only ever opened the EN doc); each language's status pill now gets its own open-link. Deployed live via `deploy.ps1` → jlmops @540. Committed `8264f54`, not yet pushed to origin.
+- Next session: no follow-up needed unless the user reports the fix didn't resolve it on their actual device — if so, check actual viewport width first, not the code again.
+
+---
+
 ## 2026-07-23 (cont'd) — first-ever comprehensive jlmops code audit executed
 
 - Ran the never-executed `jlmops/plans/CODE_AUDIT_PLAN.md` (drafted 2026-06-04) as 6 subsystem passes, each a background `general-purpose` Agent call: Sync/Orders, Products/Inventory, CRM/Campaigns (=Phase 3), Content Library, Core Plumbing, WebApp controllers, Admin UI, Manager/shared UI (Platform and UI clusters each split in two for size). Started as a separate new `CODE_REVIEW_PLAN.md` before discovering the pre-existing, more mature `CODE_AUDIT_PLAN.md` mid-session — merged into it (single home for the fact), duplicate file deleted.
