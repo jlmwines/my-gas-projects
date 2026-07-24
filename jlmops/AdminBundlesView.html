@@ -1311,7 +1311,7 @@
     pickerCid = cid;
     document.getElementById('picker-search').value = '';
     document.getElementById('picker-results').innerHTML = '<div class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm mr-2"></span>Loading products…</div>';
-    document.getElementById('product-picker-modal').style.display = 'flex';
+    ModalOverlay.open('product-picker-modal');
 
     // The row may be new or have unsaved criteria, so pass a draftSlot (backend uses it directly
     // instead of resolving by slotId) + the SKUs already chosen in other live draft rows to exclude.
@@ -1381,7 +1381,7 @@
   }
 
   function closePicker() {
-    document.getElementById('product-picker-modal').style.display = 'none';
+    ModalOverlay.close('product-picker-modal');
     pickerCid = null;
     pickerProducts = [];
   }

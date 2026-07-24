@@ -389,7 +389,7 @@
       </div>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('newProjectModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('newProjectModal')">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="btn-create-project">Create</button>
     </div>
   </div>
@@ -475,7 +475,7 @@
       </div>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('generateOutputsModal').style.display='none'">Close</button>
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('generateOutputsModal')">Close</button>
       <button type="button" class="btn btn-sm btn-light" id="btn-generate-outputs-submit">Generate</button>
     </div>
   </div>
@@ -540,7 +540,7 @@
       </div>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('newTaskModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('newTaskModal')">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="btn-create-task">Create</button>
     </div>
   </div>
@@ -571,7 +571,7 @@
       <p class="small text-muted mt-2 mb-0">Drive URL added to each task when working on it.</p>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('contentStreamModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('contentStreamModal')">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="btn-create-content-stream">Create Tasks</button>
     </div>
   </div>
@@ -596,7 +596,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       <div id="import-result" class="small" style="display:none;"></div>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('contentImportModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('contentImportModal')">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="btn-import-content">Import</button>
     </div>
   </div>
@@ -968,13 +968,13 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       document.getElementById('content-stream-id').value = '';
       // Uncheck all stage checkboxes
       document.querySelectorAll('.content-stage-cb').forEach(function(cb) { cb.checked = false; });
-      document.getElementById('contentStreamModal').style.display = 'flex';
+      ModalOverlay.open('contentStreamModal');
     });
 
     document.getElementById('btn-content-import').addEventListener('click', function() {
       document.getElementById('content-import-csv').value = '';
       document.getElementById('import-result').style.display = 'none';
-      document.getElementById('contentImportModal').style.display = 'flex';
+      ModalOverlay.open('contentImportModal');
     });
 
     document.getElementById('btn-create-content-stream').addEventListener('click', createContentStream);
@@ -1014,7 +1014,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         if (result.error) {
           TaskWidgets.toast('Error: ' + result.error, 'error');
         } else {
-          document.getElementById('contentStreamModal').style.display = 'none';
+          ModalOverlay.close('contentStreamModal');
           TaskWidgets.toast('Created ' + result.data.tasksCreated + ' task(s) with stream ID: ' + result.data.streamCode, 'success');
           loadData();
         }
@@ -1220,7 +1220,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   function handleNew() {
     if (state.mode === 'projects') {
       document.getElementById('new-project-name').value = '';
-      document.getElementById('newProjectModal').style.display = 'flex';
+      ModalOverlay.open('newProjectModal');
     } else {
       document.getElementById('new-task-title').value = '';
       document.getElementById('new-task-notes').value = '';
@@ -1231,7 +1231,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       document.getElementById('new-task-assignee').value = '';
       populateTaskProjectOptions();
       populateTaskAssigneeOptions();
-      document.getElementById('newTaskModal').style.display = 'flex';
+      ModalOverlay.open('newTaskModal');
     }
   }
 
@@ -1922,11 +1922,11 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   function showConfirm(message, callback) {
     document.getElementById('confirm-message').textContent = message;
     confirmCallback = callback;
-    document.getElementById('confirmModal').style.display = 'flex';
+    ModalOverlay.open('confirmModal');
   }
 
   function hideConfirm() {
-    document.getElementById('confirmModal').style.display = 'none';
+    ModalOverlay.close('confirmModal');
     confirmCallback = null;
   }
 
@@ -1939,7 +1939,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-        document.getElementById('newProjectModal').style.display = 'none';
+        ModalOverlay.close('newProjectModal');
         loadData();
       })
       .WebAppProjects_createProject({
@@ -1984,7 +1984,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         document.getElementById('gen-out-source').value = defaults.source || '';
       }
 
-      document.getElementById('generateOutputsModal').style.display = 'flex';
+      ModalOverlay.open('generateOutputsModal');
     });
   }
 
@@ -2072,7 +2072,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-        document.getElementById('newTaskModal').style.display = 'none';
+        ModalOverlay.close('newTaskModal');
         loadData();
       })
       .WebAppTasks_createTask({

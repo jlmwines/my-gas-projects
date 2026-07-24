@@ -517,13 +517,6 @@
       if (drawerAttachSubmitBtn) drawerAttachSubmitBtn.addEventListener('click', submitDrawerAttachDoc);
 
       document.getElementById('pv-btn-create-campaign').addEventListener('click', createCampaign);
-
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' || e.keyCode === 27) {
-          var drawer = document.getElementById('pvEntityDrawer');
-          if (drawer && drawer.style.display === 'flex') closeEntityDrawer();
-        }
-      });
     }
 
     function _loadData() {
@@ -823,11 +816,11 @@
         opt.textContent = p.name || p.projectId;
         projectSel.appendChild(opt);
       });
-      document.getElementById('pvNewCampaignModal').style.display = 'flex';
+      ModalOverlay.open('pvNewCampaignModal');
     }
 
     function closeNewCampaignModal() {
-      document.getElementById('pvNewCampaignModal').style.display = 'none';
+      ModalOverlay.close('pvNewCampaignModal');
     }
 
     var DISTRIBUTE_CAMPAIGNS = ['newsletter-print', 'email-broadcast', 'flyer-acquisition'];
@@ -1307,7 +1300,7 @@
       state.currentEntitySlug = slug;
       _setDrawerLoading(slug);
       _updateDrawerBackButton();
-      document.getElementById('pvEntityDrawer').style.display = 'flex';
+      ModalOverlay.open('pvEntityDrawer');
       google.script.run
         .withSuccessHandler(function(res) {
           if (!res || !res.success) { TaskWidgets.toast((res && res.error) || 'Drawer load failed', true); return; }
@@ -1404,7 +1397,7 @@
     }
 
     function closeEntityDrawer() {
-      document.getElementById('pvEntityDrawer').style.display = 'none';
+      ModalOverlay.close('pvEntityDrawer');
       state.entityStack = [];
       state.currentEntitySlug = null;
       state.currentEntity = null;

@@ -133,6 +133,8 @@ Recommend spinning this into its own `AUTHORIZATION_PLAN.md` once picked up, rat
 
 One consistency pass, same underlying fix (`ModalOverlay` adoption) across all flagged files.
 
+**Coded 2026-07-24.** Converted all 12 raw-toggled modals: `AdminTasksView.html` (confirmModal, newProjectModal, generateOutputsModal, newTaskModal, contentImportModal), `AdminProjectsView.html` (same 5 plus contentStreamModal), `AdminBundlesView.html` (product-picker-modal), `PublishingView.html` (pvNewCampaignModal, pvEntityDrawer). `pvDrawerAttachModal` in `PublishingView.html` turned out already converted (someone had fixed it previously) — only the New Campaign modal and the entity drawer itself were still raw. Removed the drawer's own unconditional `document.addEventListener('keydown', ...)` Escape listener now that `ModalOverlay`'s stack-based handler covers it correctly (closes only the topmost modal). Verified the one behavior difference this creates — Esc-driven drawer close now skips `closeEntityDrawer()`'s extra `state.entityStack`/`currentEntity` reset — is harmless: `openEntityDrawer()`, the only real entry point, already resets `state.entityStack = []` itself before every fresh open, and every other read of `state.currentEntity` is gated behind drawer buttons that are invisible once the drawer is hidden.
+
 ---
 
 ## Tier 4 — cleanup, no urgency
