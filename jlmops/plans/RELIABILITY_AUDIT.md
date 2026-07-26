@@ -377,6 +377,65 @@ Adversarial inputs fail closed: **(A)** WC response size cap in `WooApiService._
 
 **CCP audit.** CCP-1 the clobber-detector calls reportFailure with High; CCP-2 sessionId passed through both calls.
 
+#### 1.5 Master clear-and-rewrite hardening — from 2026-07-26 WebXltM incident
+
+**Incident.** `WebXltM` was found empty (headers only), stopping every sync: `job.periodic.validation.master` and `pullAndImportAll`'s own `web_xlt_staging` check both crashed trying to read it. **Original trigger, confirmed via SysLog (2026-07-26):** `_upsertWebXltData` wrote 766 rows that logged as written but landed blank — `WebXltM` uses `wxm_*` headers, `WebXltS` uses `wxs_*` headers (`config/schemas.json:112,127`), and the Session P fix (`1fe6f0c`, 2026-07-24) remapped columns by exact header-name match, which can never succeed across those prefixes. **Fixed and deployed** (jlmops @544): `_upsertWebXltData` now uses the existing, already-correct `map.staging_to_master.web_translations` config mapping via `ConfigService.getValidatedMapping`, mirroring `_upsertWebProductsData`'s established pattern — no schema/config change needed, only the code. Separate from that root cause, the *crash* that blocked every retry (confirmed via live stack trace) is still unfixed: `ConfigService._getSheetDataAsMap` (`ConfigService.js:190-193`) hardcodes a hard `throw` for `WebXltM` specifically when empty — every other sheet just warns and returns an empty map. That preload runs in `ValidationLogic.runValidationSuite`'s setup loop (`ValidationLogic.js:431-438`), **outside** the per-rule try/catch, so the throw isn't a normal validation failure — it kills the whole pipeline before the existing `web_translations.row_count_decrease` quarantine guard (`config/validation.json:46-59`) ever gets to run again. That guard also only fires on the *first* clear+rewrite in a run — see 1.6 below for why a later failure in the same run can bypass it. Recovered manually from Sheets version history (2026-07-16 copy) while root-causing.
+
+**Goal.** (a) An empty/critical master sheet reports as a normal detected failure (task + `reportFailure`), never an uncaught exception that blocks the pipeline. (b) The same clear-and-rewrite pattern is audited across all masters that use it, not just `WebXltM`.
+
+**Scope — sheets using full clear()-then-rewrite (grepped, not inferred):** `WebXltM` (`ProductImportService.js:264`), `CmxProdM` (`:514`), `SysProductAudit` (`:594`). `WebProdM` (`_upsertWebProductsData`) does NOT use this pattern — no `.clear()` call, row-level upsert instead, lower risk.
+
+**Anchors.**
+- `ConfigService._getSheetDataAsMap` — `ConfigService.js:186-198` (the WebXltM-only special case).
+- `ValidationLogic.runValidationSuite` preload — `ValidationLogic.js:431-438` (uncaught).
+- `ProductImportService._upsertWebXltData` — `:242-296`; `CmxProdM` upsert — `:495-522`; `SysProductAudit` upsert — around `:594`.
+- Existing guard that should have prevented this class of loss: `config/validation.json:46-59` (`web_translations.row_count_decrease`, `on_failure_quarantine: TRUE`).
+
+**Implementation.**
+1. Remove the `WebXltM`-only hard-throw in `_getSheetDataAsMap`; replace with the same warn-and-continue every other sheet gets, PLUS a `reportFailure('data.master_sheet_empty', ..., 'Critical', {sheetName}, sessionId)` call so it's detected and surfaced instead of silently degrading.
+2. For each of the 3 clear-and-rewrite sites: guard against writing zero/near-zero data over a populated master — if new row count is 0 (or drops more than a configurable threshold) and the sheet currently has data, skip the write, `reportFailure` Critical, leave the existing master untouched. This is the same intent as the existing staging-level quarantine guard, applied as a last-line defense directly at the write site so it can't be bypassed by an earlier crash.
+3. Feeds Tier 1A's detection register as a new invariant class: "clear-and-rewrite masters never write empty over populated."
+
+**CCPs.** CCP-1 (reportFailure on both the read-guard and write-guard paths), CCP-2 (sessionId threaded).
+
+**Smoke.** (a) Temporarily point config at a throwaway copy of one master sheet, clear it, run the relevant pull — confirm a task/alert appears instead of a crash. (b) Confirm a normal sync with real data still writes normally (no false-positive block).
+
+**Rollback.** Git revert + redeploy, no schema change.
+
+**Depends on.** Nothing. Independent; should ship before or alongside 4.1 below (4.1 gives a restore path once data is lost — this session reduces how it's lost or noticed late in the first place).
+
+**Open.**
+- `[start]` Decide the "near-zero" drop threshold for the write-guard (exact-zero only, or a % drop like the staging quarantine rule).
+
+**CCP audit.** CCP-1 reportFailure on read-guard and write-guard; CCP-2 sessionId passed through.
+
+#### 1.6 Multi-phase pull has no atomicity — a later-phase failure leaves earlier phases committed with a shifted baseline
+
+**Goal.** A failure partway through `pullAndImportAll` (EN → HE → orders) doesn't leave already-upserted masters as the new "baseline" that the next retry's decrease-guard compares against.
+
+**Problem (user-identified, 2026-07-26, same incident as 1.5).** `pullAndImportAll` (`WooProductPullService.js:313-386`) upserts `WebProdM` (Phase A, `:340`) and fully commits it **before** Phase B (HE) is even staged or validated. There is no rollback across phases. If Phase B then fails (as in the 1.5 incident), `WebProdM` is left on the new pull while `WebXltM`/orders are not. On retry, Phase A runs again: it re-pulls EN and its own `web_staging` row-count-decrease guard (`config/validation.json:32-45`) compares the fresh pull against the **already-updated** `WebProdM` — not the pre-incident baseline. If EN data genuinely regressed during the same window (not just the HE-side bug that triggered 1.5), the guard's reference point has already moved and can't catch it. Same shape as 1.3's lost-update class, but at the phase-commit level rather than a single-write race.
+
+**Anchors.**
+- `WooProductPullService.pullAndImportAll` — Phase A commit `:340`; Phase B validate+commit `:357-362`; no shared transaction/rollback across phases.
+- `config/validation.json:32-45` (`web.row_count_decrease`) — the guard whose baseline this shifts.
+
+**Implementation (sketch — needs a design pass, not a quick patch).**
+1. Options to weigh at session start: (a) snapshot pre-run master row counts once at the top of `pullAndImportAll` and compare every phase's guard against that frozen baseline, not the live (possibly already-mutated) master; (b) stage all phases (EN + HE + orders) before committing any master, committing only after all validate clean; (c) accept partial commits but make the *next* retry aware it's resuming a partially-completed run (carry the original baseline forward via session state) rather than starting a fresh comparison.
+2. Whichever option: must not regress the existing per-phase quarantine guards (1.5, `config/validation.json`) — this is about what baseline they compare against, not removing them.
+
+**CCPs.** CCP-2 (sessionId already threaded through all phases — reuse for baseline correlation if going with option (a) or (c)).
+
+**Smoke.** Force Phase B to fail after Phase A commits (e.g., temporarily break `web_xlt_staging`); confirm a real EN regression on the retry's fresh pull is still caught, not masked by the shifted baseline.
+
+**Rollback.** Git revert + redeploy.
+
+**Depends on.** Independent of 1.5, but same incident surfaced both — reasonable to sequence together.
+
+**Open.**
+- `[start]` Pick option (a)/(b)/(c) above before coding — real design tradeoff, not a detail.
+
+**CCP audit.** CCP-2 sessionId correlation if applicable to the chosen option.
+
 ### Tier 2, operational reliability now
 
 #### 2.1 Drift detection — RESOLVED AT ROOT 2026-06-03 (not built)

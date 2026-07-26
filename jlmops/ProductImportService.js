@@ -252,7 +252,7 @@ const ProductImportService = (function() {
     if (!webXltMSheet) throw new Error('WebXltM sheet not found in JLMops_Data spreadsheet.');
     if (!webXltSSheet) throw new Error('WebXltS sheet not found in JLMops_Data spreadsheet.');
 
-    // Get the correct headers for master sheet from config (wxl_ prefix)
+    // Get the correct headers for master sheet from config (wxm_ prefix)
     const webXltMHeaders = ConfigService.getConfig('schema.data.WebXltM').headers.split(',');
 
     // Get staging data (including header row)
@@ -275,11 +275,26 @@ const ProductImportService = (function() {
         const numDataRows = stagingDataRows.length;
         const numCols = webXltMHeaders.length;
 
-        // Remap by field name, not column position — WebXltS/WebXltM aren't guaranteed
-        // to list fields in the same order, and a future schema edit that reorders or
-        // appends a column in one but not the other would otherwise silently shift
-        // every row's data.
-        const sourceColIdx = webXltMHeaders.map(h => webXltSHeaders.indexOf(h));
+        // Remap by field name via the config-driven staging->master mapping, not by
+        // name equality — WebXltS/WebXltM intentionally use different prefixes
+        // (wxs_/wxm_), so a same-name lookup can never match (2026-07-26 incident:
+        // every row silently wrote blank, wiping WebXltM on every sync). Mirrors the
+        // established pattern in _upsertWebProductsData (map.staging_to_master.web_products).
+        const criticalMappings = {
+            'wxs_ID': 'wxm_ID',
+            'wxs_SKU': 'wxm_SKU',
+            'wxs_PostTitle': 'wxm_PostTitle',
+            'wxs_WpmlOriginalId': 'wxm_WpmlOriginalId'
+        };
+        const stagingToMasterMap = ConfigService.getValidatedMapping('map.staging_to_master.web_translations', criticalMappings);
+        const masterToStagingHeader = {};
+        for (const sKey in stagingToMasterMap) {
+            masterToStagingHeader[stagingToMasterMap[sKey]] = sKey;
+        }
+        const sourceColIdx = webXltMHeaders.map(mHeader => {
+            const sHeader = masterToStagingHeader[mHeader];
+            return sHeader ? webXltSHeaders.indexOf(sHeader) : -1;
+        });
         const dataRows = stagingDataRows.map(row => sourceColIdx.map(idx => idx >= 0 ? row[idx] : ''));
 
         // Write data rows starting at row 2 (after header)
