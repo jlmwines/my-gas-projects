@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-24. jlmops @543 live, stable — the full code-audit fix sequence (Sessions K–U, `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md`) shipped this session: ~21 findings fixed (dashboard/SKU/campaign/contact/UI-escaping/ModalOverlay/dead-code), the only genuine holdouts being server-side authorization (its own future program) and two dashboard panels needing a redesign, not a quick fix (`.claude/bugs.md`). `SysCategories` consolidated as the category authority (see `jlmops/plans/CONFIG_COMPLIANCE_PLAN.md`, one cleanup step held for a production soak period). Woo API push confirmed working end-to-end; known gap — the `attributes` array doesn't prune Region/Grape/Harmonize/Contrast as originally assumed, owner OK'd leaving as-is. Vintage-drift tasks fixed to stop showing/saving stale Comax data — deployed, awaiting a live vintage change to smoke-test.
+**Updated:** 2026-07-27. jlmops @544 live, stable — WebXltM (translation master) was found empty 2026-07-26, blocking every sync; root cause was Friday's Session P column-remap fix using a same-name lookup across sheets that intentionally use different header prefixes (`wxs_`/`wxm_`), so every row silently wrote blank. Fixed via the existing `map.staging_to_master.web_translations` config mapping (matching `_upsertWebProductsData`'s established pattern), deployed @544, confirmed healthy (`WebXltM`/`WebProdM` both 766 rows, 0 recent errors in `jlmops-status.md`). Two related reliability gaps logged, not yet fixed: `jlmops/plans/RELIABILITY_AUDIT.md` §1.5 (empty-master hard-crash blocks retries) and §1.6 (multi-phase pull has no atomicity). Flyer distribution began 2026-07-26 in Talbiye. Prior to this incident: code-audit fix sequence (Sessions K–U) shipped 2026-07-24, `SysCategories` consolidated as category authority, Woo API push confirmed working end-to-end.
 
 ## At a glance
 
@@ -9,17 +9,17 @@ One current-state line per business area. The umbrella has no single phase label
 - **jlmops** (GAS backend) — live, stable (current version in Metrics below); 2026-07-14/15 fixes smoke-tested and confirmed clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`, `jlmops/docs/WORKFLOWS.md` §16).
 - **jlmwines.com** (storefront/theme) — live (current version in Metrics below); Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
-- **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW July email HTML built EN+HE, ready to send); calendar filled through December.
+- **marketing** — flyer distribution began 2026-07-26, Talbiye; newsletter cadence current (July print out, AYIW July email HTML built EN+HE, ready to send); calendar filled through December.
 - **business** — strategy/brand docs current.
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-07-24 |
+| Last Active | 2026-07-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @543 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-24 · theme 2026-07-09 |
+| Deploy Version | jlmops @544 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-07-26 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |

@@ -1,11 +1,11 @@
 # JLM Wines Calendar
 
-**Updated:** 2026-07-23 (plan-driven queue summary reconciled against `BUG_FIX_SEQUENCE.md`'s current state).
+**Updated:** 2026-07-27 (reliability-audit summary refreshed post WebXltM incident).
 
 ## Plan-driven queues (not date-bound)
 
 The bulk of forward work now lives in dated plan documents, not in this calendar:
-- **`jlmops/plans/RELIABILITY_AUDIT.md`** — ~7 of 16 sessions shipped (2026-06-03); open: 1.3 concurrency, 3.3 Mailchimp per-recipient activity, 3.4 aggregate check, Tiers 4-6 (DR / capacity / human-process).
+- **`jlmops/plans/RELIABILITY_AUDIT.md`** — 8 of 18 sessions shipped; open: 1.3 concurrency, 1.5 empty-master hard-crash (new, from 2026-07-26 incident), 1.6 multi-phase pull atomicity (new, same incident), 3.3 Mailchimp per-recipient activity, 3.4 aggregate check, Tiers 4-6 (DR / capacity / human-process).
 - **`jlmops/plans/UI_AUDIT.md`** — Tiers 1-5 essentially all shipped 2026-05-29; open: T5.2 (btn cleanup), T5.3 (shared-list, conditional), T2.1 (bundles, deprioritized). T2.4 resolved 2026-07-08 (folded into `CALENDAR_LIBRARY_LOOP_PLAN`'s shared `ContentStreamModal.html`).
 - **`jlmops/plans/BUG_FIX_SEQUENCE.md`** — Sessions A-E, G, and J shipped; open: F (sync hardening, needs staging repro), H (timestamp audit), I (count-task audit). validateDeployment resolved at root (Session E, removed not fixed).
 

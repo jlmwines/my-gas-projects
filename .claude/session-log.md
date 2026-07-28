@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-26 — WebXltM sync-blocking incident root-caused and fixed (jlmops @544)
+
+- User reported "Master Validation failed" on sync; investigation traced it through a hardcoded empty-sheet hard-throw in `ConfigService._getSheetDataAsMap` (crashes the whole validation pipeline instead of a normal task) down to the real cause: `_upsertWebXltData` (Session P, `1fe6f0c`, 2026-07-24) remapped `WebXltS`→`WebXltM` columns by exact header-name match, but the two sheets intentionally use different prefixes (`wxs_`/`wxm_`) — every lookup failed, every row wrote blank, silently emptying `WebXltM` on every sync since Friday's deploy.
+- Recovered data from Sheets version history (2026-07-16 copy) while root-causing; self-healed to current data once the fix landed since `_upsertWebXltData` fully overwrites on each sync.
+- Fix: use the existing, already-correct `map.staging_to_master.web_translations` config mapping via `ConfigService.getValidatedMapping`, matching `_upsertWebProductsData`'s established pattern. No config/schema change needed — the mapping was already right, only the code wasn't using it. Deployed @544, confirmed healthy next morning (`WebXltM`/`WebProdM` both 766 rows, 0 recent errors).
+- Two related gaps logged as new open items in `jlmops/plans/RELIABILITY_AUDIT.md` (not fixed): §1.5 the empty-master hard-crash blocks every retry once triggered; §1.6 the multi-phase pull (EN→HE→orders) has no atomicity, so a later-phase failure leaves an earlier phase's master committed with a shifted retry baseline.
+- Next session: no follow-up needed unless `WebXltM` empties again — if so, check the two open 1.5/1.6 gaps first before re-diagnosing from scratch.
+
+---
+
 ## 2026-07-24 — code-audit fix sequence executed end-to-end (Sessions K–U, jlmops @530→@543)
 
 - Planned and ran the entire `CODE_AUDIT_FIX_SEQUENCE.md` (Sessions K through U) in one sitting: ~21 findings fixed and deployed incrementally (one commit+deploy per session), including several bugs found live mid-session and folded in (Brurya dashboard field, Admin/Manager campaign-dropdown writing to a dropped column, `sc_TopWineries`, Drive-ownership unconditional transfer). Independent-review agent caught a documentation gap (missing appendix items) before implementation started, which got folded back in.
