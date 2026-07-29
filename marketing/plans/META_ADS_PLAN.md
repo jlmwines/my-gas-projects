@@ -10,10 +10,13 @@
 
 ## Creative Strategy
 
-**Testing approach — two phases, cheapest-first.**
+**Testing approach — champion/challenger, cheapest-first.**
 
-- **Phase 1 (smoke test).** Default test unit is a **short video stitched from stills with Canva transitions** (slide/fade/wipe) — not filming, not full animation, just stills + a transition. Revised 2026-07-29: plain static images work fine for concepts that don't need a reveal (e.g. the proof/aftermath bucket), but carousels were ruled out — swipe-through engagement on cold feed traffic is unreliable, so any concept that relied on a carousel "swipe reveal" (e.g. the app-bucket scanner→JLM reveal) gets restaged as a stills-with-transitions video instead. **No text baked into the visuals** either way — headline/primary text lives in Meta's ad-copy fields, so the same asset can be paired with several copy variants without new Canva work. Run several hooks in one ad set on a small daily budget (~₪20–50/day) for a few days; let Meta's delivery data (CTR, cost-per-click, cost-per-result) show which hook wins before spending more effort on it.
-- **Phase 2 (scale the winner).** Once a hook proves out, invest the heavier production (full animation, Evyatar's advisor entrance, full Reel sequences) only on that validated concept. Keeps expensive production limited to what's already proven — this is what serves the "lowest cost long-term" goal, not skipping testing to go straight to polished video.
+- **Method (revised 2026-07-29).** Not a multi-cell simultaneous test — a small daily budget spread across many variants at once doesn't generate a readable signal per variant. Instead: **champion/challenger**, two hooks at a time. Current champion runs against one fresh challenger from the library each round; winner stays up, loser gets replaced by the next untested concept. Each round = one pairing in the existing Bulk Edit round structure (see Step-by-step below). Slow by design — the point is a clean read each round, not maximum coverage per round.
+- **Phase 1 unit.** Default is a **short video stitched from stills with Canva transitions** (slide/fade/wipe) — not filming, not full animation. Plain static images are fine for concepts that don't need a reveal (proof/aftermath, unboxing). Carousels are ruled out — swipe-through engagement on cold feed traffic is unreliable, so any "reveal" concept is staged as stills-with-transitions instead of a tappable carousel. **No text baked into the visuals** — headline/primary text lives in Meta's ad-copy fields, so one asset can pair with several copy variants without new Canva work.
+- **Phase 2 (scale the winner).** Once a hook wins enough rounds to be trusted, invest heavier production (full animation, Evyatar's advisor entrance, full Reel sequences) only on that concept.
+
+**Budget & schedule (researched 2026-07-29).** Israel-wide Meta CPM averaged **$8.38** in 2025 (range $4.85–$14.90 depending on season; source: superads.ai Israel benchmark). A Jerusalem-only geo-test likely sits at or a little below that range. Starting budget: **₪30–60/day** for the ad set — same order of magnitude as the flyer's ₪2,000/round test scale. **No ads Friday afternoon through Saturday night** (Shabbat) — extending the pause through Sunday noon is also reasonable (Sunday is the start of the Israeli work week, not a lazy weekend morning). Two independent reasons behind the Friday pause, not just observance: delivery can't happen same-night regardless, and Friday-night planning genuinely starts Wednesday/Thursday in Israel, so that's when intent (and the ad) should show up. **Dayparting should also track staffing, not just browsing hours** — if responsiveness to on-site questions is a real differentiator, ads should run when someone's actually available to answer, so a visitor's question doesn't hit a quiet site.
 
 **Visual format.** Subject/scenario large (fills the frame — this is the scroll-stopping hook), Evyatar as a small constant inset rather than the hero. Produce **one** Evyatar cutout/inset asset once, reuse it across every scenario's stills — only the scenario art changes per variant. Mirrors the flyer's "large hero + small resolution inset" logic, with the roles flipped to suit a cold-scroll hook instead of an already-warm local audience.
 
@@ -36,7 +39,37 @@
 - **Finding wines to try** — *"An app that suggests something new you wouldn't have picked yourself — and gets it right? You already have one."*
 - **Cutting shelf noise (promote/demote/accept)** — *"An app that turns a wall of a hundred bottles into a short list — you promote, demote, accept? You already have one."* Richest of the set: the promote/demote/accept motion maps onto an actual swipe/decision interaction, so it's staged as a stills-with-transitions video showing cards being sorted, not a literal tappable carousel.
 
-**Note:** buckets 1–4 are different tonal registers (luck / confusion / proof / sci-fi-gadget) — keep them as separate hook candidates rather than mixing metaphors within one ad, so each stays legible on its own.
+**5. Occasion.** Maps directly to "Context" — one of the documented core content topics in `business/CONTENT_STRATEGY.md` (weather, guests, occasion → confidence in choosing). Same "sorted" closer across each: *"Friends just showed up? Wine's already sorted."* / *"Invited to dinner? Bring the bottle, not the anxiety — it's sorted."* / *"Something worth celebrating? Wine's already sorted."* / *"Just a quiet night in? Still sorted."* / *"Game night, wine sorted too."* / *"Friday night wine, sorted"* — this last one needs Wednesday/Thursday lead-time framing, not same-day (see Budget & schedule above). Cheapest bucket to test in volume since occasion-lines can likely share one visual template, swapping only the text field. **Montage format:** rapid-fire split-screen cycling through all the occasions on one side, a calm phone-tap-to-bundle on the other — works as a standalone "hero" piece demonstrating breadth, separate from testing individual occasion lines.
+
+**6. Buy-ahead / stop the gamble permanently.** Sharper reframe of the gambling bucket (2026-07-29): the real problem isn't a single bad bottle, it's that buying reactively (last-minute, wherever's nearby) means gambling *every time*, so bad outcomes stack up. The fix isn't speed/convenience, it's deciding once, in advance, and never having to gamble again — buy a 9–10 bottle bundle (free-delivery threshold) before any specific occasion exists in mind, and every occasion after is already covered. **Don't state the economics — show it.** Audience is assumed sophisticated enough to infer that a ₪400 bundle means more wine bought at once than a reactive purchase would be; no need to explain. Best execution found so far: **split-screen, no narration, no text at all** — real bundle-unboxing footage on one side (bottles coming out of the box, rack getting stocked), the various occasions playing out successfully on the other (nobody scrambling, because there's nothing to scramble for). Ties `CONTENT_STRATEGY.md`'s own principle — contrast should be "felt, not stated" — about as literally as an ad can. Candidate lines if any text is used at all: *"Buy it before you need it, and you'll never have to gamble when you do,"* *"Stock up once. Stop gambling every single time you need a bottle."*
+
+**7. Proof of curation.** New bucket, distinct from bucket 3 (which shows customer outcomes) — this one shows JLM's own process. A case of bottles, most crossed out/rejected, one survives and ships. No joke, no metaphor, no advisor — just the actual curation the brand claims (`CONTENT_STRATEGY.md`: "We taste everything. We reject what doesn't meet the bar"), made visible. Lowest risk of misfire in the library since it isn't inventing a claim, just showing one already made. Could also draw on the documented "10 AM tasting ritual" as a few seconds of real, undressed documentary footage.
+
+**Note:** buckets are different tonal registers (luck / confusion / proof / sci-fi-gadget / occasion / buy-ahead / curation) — keep them as separate hook candidates rather than mixing metaphors within one ad, so each stays legible on its own. This is a library to draw from over many rounds, not a shortlist to test all at once.
+
+---
+
+## Format & Angle Library
+
+Ideas that aren't tied to one specific bucket — reusable across whichever hooks get tested.
+
+**Copy angles (pull from documented brand content, not invented):**
+- *"You'll know by the second sip. We already did."* — from the brand's own "second sip rule" content topic.
+- *"We reject the wine so you don't have to."* — near-verbatim from `CONTENT_STRATEGY.md`.
+- *"Stop paying to find out."*
+
+**Video formats (not yet assigned to a specific bucket):**
+- **Split-screen, same night** — one side mid-gamble/scramble, other side calm and already covered (general version of the bucket-6 execution above; could restage with any bucket's "problem" side).
+- **POV shelf-scan** — camera as the viewer's own eyes, quick disorienting cuts across labels, hard cut to calm. Native-feeling first-person format for Reels.
+- **UGC-style unboxing** — shot to look like a real customer's own phone recording, deliberately unpolished; native-feeling ads often outperform produced ones on Meta. A production-style choice, could apply to any bucket's message, not just bucket 6/7.
+
+**Targeting/local angles:**
+- **Neighborhood-name personalization** — *"Katamon, meet your new wine guy"* — digital version of the flyer's local-first logic; copy-only via Meta's geo-targeting, same image, near-free to test.
+- **Social proof, local numbers** — *"X Jerusalem households already stopped guessing."*
+
+**Policy flag (media-buyer catch, unresolved):** casino/gambling imagery (bucket 1) may trip Meta's ad-review policies on gambling-related content even though the ad isn't promoting gambling. Needs a policy check before producing anything for that bucket specifically.
+
+**Brand-voice flag (unresolved):** `CONTENT_STRATEGY.md` — customers "don't want to feel stupid or talked down to." Casino and dictionary buckets both risk reading as mocking the *viewer's* past choice rather than rescuing a friend from one. Needs the Evyatar-advisor delivery to land as warm, not corrective, or it cuts against brand.
 
 ---
 
@@ -87,14 +120,37 @@ Until the Pixel is installed, rely on the same mechanism the flyer plan uses: **
 
 ---
 
+## Team review (2026-07-29, pass over buckets 5–7 + library)
+
+Five-lens pass (copywriter / video CD / media buyer / local Jerusalem read / brand-voice guardian), grounded in `business/CONTENT_STRATEGY.md` and `website/BRAND.md`.
+
+- **Buckets 6 (buy-ahead/unboxing) and 7 (proof of curation) are the strongest on brand-fit** — both enact the doc's own principle that contrast should be "felt, not stated," need no invented metaphor, and carry no risk of reading as talking down to the customer (the "don't want to feel stupid" line in `CONTENT_STRATEGY.md`) since there's no joke to land.
+- **Also the cheapest and lowest-risk to produce first** — real footage (unboxing, a case of bottles) rather than staged scenario art, and no localization risk (no pun/jargon-joke that might not translate to the Hebrew side).
+- **Bucket 1 (gambling) still needs a Meta ad-policy check** before any production spend — casino/gambling imagery can trip Meta's review even when not promoting gambling.
+- **Occasion bucket (5)** is the cheapest to test in *volume* (shared visual template, copy-only swaps) but is a breadth play, not a single strong hook — better suited to many quick low-cost rounds than an opening test.
+
+## Round 1 — proposed first pairing (not yet decided)
+
+Given the review above, a reasonable **champion vs. challenger** opening pair:
+
+- **A — Buy-ahead unboxing split-screen (bucket 6).** Real bundle unboxing vs. occasions going well, no narration, no text.
+- **B — Proof of curation (bucket 7).** Case of bottles, most rejected, one ships.
+
+Both are cheap, safe, and high brand-fit, and the pairing itself tests something genuinely useful: does proof of *your* good outcome (A) resonate more than proof of *our* process (B)? Winner becomes the champion for round 2 against the next challenger from the library (occasion bucket or app bucket are reasonable next challengers).
+
+**This is a proposal, not a lock** — flag if a different opening pair is preferred before anything gets built.
+
+---
+
 ## Open items
 
 1. Confirm partner's Business Manager / ad account access (or create one).
 2. Decide: install Meta Pixel before Round 1, or start UTM-only.
 3. Round 1 specifics — budget, audience definition, offer, minimum run duration. (Flyer plan's local-first framing — warm/nearby audience before cold/wide — is a reasonable starting logic to borrow, but Meta's audience targeting works differently, so this needs its own pass, not a copy-paste.)
 4. Whether Round 1 reuses the `50NEW` coupon or gets its own code (own code would sharpen attribution once volume is real).
-5. Pick which 3–4 hooks (from the four creative buckets above, including the app-bucket's individual benefit variants) go into the first Phase 1 test set.
-6. Produce the one reusable Evyatar inset asset (photo/cutout), then the scenario stills for the chosen hooks.
+5. Confirm or revise the proposed Round 1 pairing (A vs. B above).
+6. Produce the bucket-6/7 footage (unboxing, rejected-case) for whichever pairing is confirmed; Evyatar inset asset only needed once a bucket that uses the advisor character gets tested.
+7. Meta ad-policy check on casino/gambling imagery before bucket 1 is ever produced.
 
 ## Out of scope (for now)
 
