@@ -12,10 +12,10 @@
 
 **Testing approach — two phases, cheapest-first.**
 
-- **Phase 1 (smoke test).** Static single images only, no video/animation. One image per message hook, **no text baked into the image** — headline/primary text lives in Meta's ad-copy fields instead, so the same image can be paired with several copy variants without new Canva work (Meta's own dynamic-creative testing multiplies combinations for free). Run several hooks in one ad set on a small daily budget (~₪20–50/day) for a few days; let Meta's delivery data (CTR, cost-per-click, cost-per-result) show which hook wins before spending more effort on it.
-- **Phase 2 (scale the winner).** Once a hook proves out, invest the heavier production (animation, Evyatar's advisor entrance, full Reel sequences) only on that validated concept. Keeps expensive production limited to what's already proven — this is what serves the "lowest cost long-term" goal, not skipping testing to go straight to polished video.
+- **Phase 1 (smoke test).** Default test unit is a **short video stitched from stills with Canva transitions** (slide/fade/wipe) — not filming, not full animation, just stills + a transition. Revised 2026-07-29: plain static images work fine for concepts that don't need a reveal (e.g. the proof/aftermath bucket), but carousels were ruled out — swipe-through engagement on cold feed traffic is unreliable, so any concept that relied on a carousel "swipe reveal" (e.g. the app-bucket scanner→JLM reveal) gets restaged as a stills-with-transitions video instead. **No text baked into the visuals** either way — headline/primary text lives in Meta's ad-copy fields, so the same asset can be paired with several copy variants without new Canva work. Run several hooks in one ad set on a small daily budget (~₪20–50/day) for a few days; let Meta's delivery data (CTR, cost-per-click, cost-per-result) show which hook wins before spending more effort on it.
+- **Phase 2 (scale the winner).** Once a hook proves out, invest the heavier production (full animation, Evyatar's advisor entrance, full Reel sequences) only on that validated concept. Keeps expensive production limited to what's already proven — this is what serves the "lowest cost long-term" goal, not skipping testing to go straight to polished video.
 
-**Image format (Phase 1).** Single image, subject/scenario large (fills the frame — this is the scroll-stopping hook), Evyatar as a small constant inset rather than the hero. Produce **one** Evyatar cutout/inset asset once, reuse it across every scenario image — only the scenario art changes per variant. Mirrors the flyer's "large hero + small resolution inset" logic, with the roles flipped to suit a cold-scroll hook instead of an already-warm local audience.
+**Visual format.** Subject/scenario large (fills the frame — this is the scroll-stopping hook), Evyatar as a small constant inset rather than the hero. Produce **one** Evyatar cutout/inset asset once, reuse it across every scenario's stills — only the scenario art changes per variant. Mirrors the flyer's "large hero + small resolution inset" logic, with the roles flipped to suit a cold-scroll hook instead of an already-warm local audience.
 
 **Advisor character — Evyatar, decided.** Evyatar plays the recurring "I know a guy" advisor across scenes. Stronger than an anonymous actor since he's already the brand's face (see `FLYER_PLAN.md` — "it's Evyatar's palate," not "we sell wine"). For Phase 1, use a still photo (cutout, transparent background) animated into frame with Canva's built-in Pan/Fade/Rise effects — no video shoot needed. A fully stylized/illustrated version is an option if a photo reads too literal next to the more graphic scenario art, but needs a consistent look nailed down first.
 
@@ -27,7 +27,14 @@
 
 **3. Proof / aftermath.** Quiet, evidence-based, no actors needed — cheapest bucket to actually produce (still-life shots only). Apt 4 (half-full bottles, morning-after leftovers nobody finished) vs. Apt 7 (JLM box, all empties) comparison. Dinner table where only the JLM glasses/bottles are empty — makes "no wasted money" literal instead of stated.
 
-**4. App / gadget wish-fulfillment.** Twist: "you already have one." Started as a sci-fi ray gun (scans wine, flags bad bottles), refined to a phone-scanner-app framing since that's a real, relatable behavior (Vivino-style apps already exist) rather than sci-fi. Current best line: *"Click to enable your phone to detect wines you'll enjoy, match the occasion, and make them appear at your door."* Visual: person mid-gesture about to scan/translate a label with their phone → reveal it's just the JLM site. The literal fade-transition version needs motion (Phase 2 Reel); Phase 1 static equivalent is a 2-card carousel (fake scanner UI → real JLM screen) or a single split-frame image implying the transition without animating it.
+**4. App / gadget wish-fulfillment.** Twist: "you already have one." Started as a sci-fi ray gun (scans wine, flags bad bottles), refined to a phone-scanner-app framing since that's a real, relatable behavior (Vivino-style apps already exist) rather than sci-fi. Visual template: person mid-gesture about to scan/translate a label with their phone → reveal it's just the JLM site (a stills-with-transitions video, not a carousel — see testing-approach note above). Stacked/combined line: *"Click to enable your phone to detect wines you'll enjoy, match the occasion, and make them appear at your door."* Splits into individually testable single-benefit hooks:
+
+- **Selection** — *"An app that narrows down hundreds of bottles to the one you'll actually like? You already have one."*
+- **Transporting** — *"An app that gets your wine from the shelf to your door without you carrying a thing? You already have one."*
+- **Pairing to food/context** — *"An app that knows exactly what goes with tonight's dinner? You already have one."*
+- **Finding special value** — *"An app that finds the bottle that punches above its price, before everyone else does? You already have one."*
+- **Finding wines to try** — *"An app that suggests something new you wouldn't have picked yourself — and gets it right? You already have one."*
+- **Cutting shelf noise (promote/demote/accept)** — *"An app that turns a wall of a hundred bottles into a short list — you promote, demote, accept? You already have one."* Richest of the set: the promote/demote/accept motion maps onto an actual swipe/decision interaction, so it's staged as a stills-with-transitions video showing cards being sorted, not a literal tappable carousel.
 
 **Note:** buckets 1–4 are different tonal registers (luck / confusion / proof / sci-fi-gadget) — keep them as separate hook candidates rather than mixing metaphors within one ad, so each stays legible on its own.
 
@@ -86,8 +93,8 @@ Until the Pixel is installed, rely on the same mechanism the flyer plan uses: **
 2. Decide: install Meta Pixel before Round 1, or start UTM-only.
 3. Round 1 specifics — budget, audience definition, offer, minimum run duration. (Flyer plan's local-first framing — warm/nearby audience before cold/wide — is a reasonable starting logic to borrow, but Meta's audience targeting works differently, so this needs its own pass, not a copy-paste.)
 4. Whether Round 1 reuses the `50NEW` coupon or gets its own code (own code would sharpen attribution once volume is real).
-5. Pick which 3–4 hooks (from the four creative buckets above) go into the first Phase 1 static test set.
-6. Produce the one reusable Evyatar inset asset (photo/cutout), then the scenario images for the chosen hooks.
+5. Pick which 3–4 hooks (from the four creative buckets above, including the app-bucket's individual benefit variants) go into the first Phase 1 test set.
+6. Produce the one reusable Evyatar inset asset (photo/cutout), then the scenario stills for the chosen hooks.
 
 ## Out of scope (for now)
 
