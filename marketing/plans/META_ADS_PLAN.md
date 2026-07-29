@@ -66,6 +66,8 @@ Ideas that aren't tied to one specific bucket — reusable across whichever hook
 **Targeting/local angles:**
 - **Neighborhood-name personalization** — *"Katamon, meet your new wine guy"* — digital version of the flyer's local-first logic; copy-only via Meta's geo-targeting, same image, near-free to test.
 - **Social proof, local numbers** — *"X Jerusalem households already stopped guessing."*
+- **Language sequencing (2026-07-29):** English speakers in Jerusalem are an easier-to-acquire segment per direct experience. Test English-only first (English targeting + English creative + English landing pages — site has a full parallel Hebrew page for every English page, product/blog included, so this isn't a coverage gap). Only build Hebrew versions of hooks that already win in English — avoids doubling every round's cost before a hook is proven.
+- **Demographic axis (2026-07-29):** same hooks, age-targeted delivery, not new creative. Older buyers → lead with delivery/convenience (bucket 4's "gets your wine from the shelf to your door without carrying a thing" — harder for this segment to transport wine themselves). Younger buyers → lead with value/consistency (bucket 6's stop-gambling-once framing, or bucket 7's proof-of-curation).
 
 **Policy flag (media-buyer catch, unresolved):** casino/gambling imagery (bucket 1) may trip Meta's ad-review policies on gambling-related content even though the ad isn't promoting gambling. Needs a policy check before producing anything for that bucket specifically.
 
