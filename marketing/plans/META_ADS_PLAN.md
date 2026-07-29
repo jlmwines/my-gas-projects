@@ -43,7 +43,7 @@
 
 **6. Buy-ahead / stop the gamble permanently.** Sharper reframe of the gambling bucket (2026-07-29): the real problem isn't a single bad bottle, it's that buying reactively (last-minute, wherever's nearby) means gambling *every time*, so bad outcomes stack up. The fix isn't speed/convenience, it's deciding once, in advance, and never having to gamble again — buy a 9–10 bottle bundle (free-delivery threshold) before any specific occasion exists in mind, and every occasion after is already covered. **Don't state the economics — show it.** Audience is assumed sophisticated enough to infer that a ₪400 bundle means more wine bought at once than a reactive purchase would be; no need to explain. Best execution found so far: **split-screen, no narration, no text at all, wine-rack framing** (revised 2026-07-29 — avoids an empties/overconsumption read): one side shows the rack filling (unboxing footage, bottles going in), the other shows it gradually emptying across occasion clips (glasses raised, people enjoying — not empty bottles) as the rack gets used well over time. Inventory metaphor, not a drinking-pace one. **Production note (2026-07-29):** can be done as pure stills, no live-fill footage needed — one static rack photo as background, individual bottle graphics as separate Canva elements with Appear/Disappear animation timed per slot (six pop-in/pop-out beats for a "six bottles, six quick solutions" cut — fits a ~20–25s Reel). Cheaper than shooting real fill levels. Ties `CONTENT_STRATEGY.md`'s own principle — contrast should be "felt, not stated" — about as literally as an ad can. Candidate lines if any text is used at all: *"Buy it before you need it, and you'll never have to gamble when you do,"* *"Stock up once. Stop gambling every single time you need a bottle."*
 
-**7. Proof of curation.** New bucket, distinct from bucket 3 (which shows customer outcomes) — this one shows JLM's own process. A case of bottles, most crossed out/rejected, one survives and ships. No joke, no metaphor, no advisor — just the actual curation the brand claims (`CONTENT_STRATEGY.md`: "We taste everything. We reject what doesn't meet the bar"), made visible. Lowest risk of misfire in the library since it isn't inventing a claim, just showing one already made. Could also draw on the documented "10 AM tasting ritual" as a few seconds of real, undressed documentary footage.
+**7. Proof of curation.** New bucket, distinct from bucket 3 (which shows customer outcomes) — this one shows JLM's own process. A case of bottles, most crossed out/rejected, one survives and ships. No joke, no metaphor, no advisor — just the actual curation the brand claims (`CONTENT_STRATEGY.md`: "We taste everything. We reject what doesn't meet the bar"), made visible. Lowest risk of misfire in the library since it isn't inventing a claim, just showing one already made. Could also draw on the documented "10 AM tasting ritual" as a few seconds of real, undressed documentary footage. **Independently validated 2026-07-29** — three of four fresh, unbriefed agents (see Fresh-eyes library below) landed on this same core idea without seeing this bucket, a good signal it's genuinely strong. **Visual mechanic (2026-07-29):** stills-with-transitions sequence — a run of bottles being rejected/dismissed in quick succession (wipe/slide off-frame, left side or just vanishing), then the few survivors sliding to the right side of the frame into a box graphic that fills up as they land. Simple to build in Canva: one background, bottle elements animated out on reject, animated into the box on survive.
 
 **Note:** buckets are different tonal registers (luck / confusion / proof / sci-fi-gadget / occasion / buy-ahead / curation) — keep them as separate hook candidates rather than mixing metaphors within one ad, so each stays legible on its own. This is a library to draw from over many rounds, not a shortlist to test all at once.
 
@@ -72,6 +72,44 @@ Ideas that aren't tied to one specific bucket — reusable across whichever hook
 **Policy flag (media-buyer catch, unresolved):** casino/gambling imagery (bucket 1) may trip Meta's ad-review policies on gambling-related content even though the ad isn't promoting gambling. Needs a policy check before producing anything for that bucket specifically.
 
 **Brand-voice flag (unresolved):** `CONTENT_STRATEGY.md` — customers "don't want to feel stupid or talked down to." Casino and dictionary buckets both risk reading as mocking the *viewer's* past choice rather than rescuing a friend from one. Needs the Evyatar-advisor delivery to land as warm, not corrective, or it cuts against brand.
+
+---
+
+## Fresh-eyes library (2026-07-29)
+
+Four agents, run independently and in parallel, each briefed only with `business/CONTENT_STRATEGY.md` + `website/BRAND.md` — none saw this document or the conversation that built it. Purpose: concepts genuinely unanchored to buckets 1–7 above. Notably, three of the four independently converged on the same core idea as bucket 7 (proof of curation) — see the validation note on that bucket.
+
+### Copywriter lens
+1. **"We Tasted 40 Wines This Week. We're Selling 6."** — Slideshow of bottle stills, most dimmed/crossed out in sequence, one stays lit. Ends: "The ones that made the cut."
+2. **"You Don't Have to Know Wine. You Just Have to Like It."** — Static image, relaxed home dinner scene, no sommelier cues.
+3. **"New in Jerusalem? You Don't Need Hebrew to Order Wine You'll Actually Enjoy."** — Slideshow aimed at English-speaking olim/expats: package arrives at a Jerusalem-stone apartment → opened → poured at a small gathering.
+4. **"The Price Isn't About the Label. It's About What's In the Bottle."** — Single modest glass shot, deliberately no luxury cues.
+5. **"The Second Sip Is the One That Tells You the Truth."** — Close-up slideshow of a glass being lifted and sipped, slow fades, unhurried pacing.
+6. **"Someone Tastes Every Bottle Before It Reaches You. It's Not You."** — Tasting-ritual stills wiping to a sealed box on a doorstep.
+
+### Visual/art-director lens
+1. **The Rejection Table** — Tasting table, several bottles corked/crossed out, one lit alone. Hook: "We open a lot of bottles so you don't have to."
+2. **Evyatar's Hands** — Tight, warm shot of hands mid-pour, notebook with tasting notes in soft background. Hook: "One palate. One job: finding the good stuff."
+3. **The Almost-Empty Shelf** — Curated shelf with deliberate gaps, not packed like a supermarket aisle. Hook: "Fewer bottles. Better odds you'll like every one."
+4. **Jerusalem Doorstep, Golden Hour** — Box on Jerusalem stone steps, warm late light. Hook: "Good wine, on your doorstep, no guesswork."
+5. **Second Sip** — Two-frame fade: hesitant first sip → relaxed second sip. Hook: "You'll know by the second sip."
+6. **The Never-Empty Note Card** — Flat-lay of a handwritten note card beside a glass and candle. Hook: "Every bottle picked with you in mind."
+
+### Category-strategist lens (borrowing patterns from other industries)
+1. **"1 in 10 Makes the Cut"** — Bottles wipe away except one, with a ticking "Tasted: 40 → 4 → 1" counter. *Borrows from specialty coffee/artisan food brands showing their rejection rate.*
+2. **"Swipe Right on Tonight's Wine"** — Dating-app card-stack visual language (no real swiping, just the aesthetic): cards slide away, one stays with a "match" glow. *Borrows from dating-app matchmaking UI — instantly legible, reframes wine-picking as an effortless match.*
+3. **"One Less Thing to Decide This Week"** — To-do list with "wine for Friday??" crossed out → doorstep delivery → relaxed dinner. *Borrows from meal-kit/subscription-box advertising (relief from a weekly decision).*
+4. **"Try It Before You Trust It"** — Small first order arrives, genuine shrug-into-smile reaction. *Borrows from Warby Parker/mattress-in-a-box "try before you commit."*
+5. **"Today's Verdict, 10 AM"** — Daily tasting-ritual log with a date stamp, "Approved." *Borrows from bakery/coffee-shop "today's batch" content.*
+6. **"Skip the Vocabulary, Keep the Wine"** — Jargon words appear and strike through one by one, ending on "We handled the hard part." *Borrows from "permission granted" messaging used by wellness/snack D2C brands.*
+
+### Customer-psychology lens (each tagged with its mechanism)
+1. **"You Already Know What You Like — You Just Never Had a Way to Say It"** — Customer's own words as text overlay ("not too sweet," "the one from last time"). *Mechanism: identity/self-image protection — validates existing vocabulary as sufficient.*
+2. **"The One That Got Rejected So Yours Wouldn't Have To"** — Implied tasting/rejection sequence, no competitor shown. *Mechanism: delegation/trust transfer.*
+3. **"Dinner's at 7. You Don't Need to Think About the Wine."** — Static set table, one glass poured, calm light. *Mechanism: decision-fatigue relief.*
+4. **"So You're Not Standing in the Aisle Again"** — Overwhelming shelf → uncertain hand → doorstep arrival. *Mechanism: anticipated regret + loss aversion.*
+5. **"Same Bottle. Every Time You Want It To Be."** — Two-panel visual rhyme (reach for bottle / same glass, same light). *Mechanism: consistency-seeking, targets the "not what I expected" pain point directly.*
+6. **"You Don't Have to Get This Right. We Already Did."** — Person mid-laugh, bottle almost incidental in frame. *Mechanism: social proof of process (not popularity) — neutralizes fear of choosing wrong, not fear of others' opinions.*
 
 ---
 
