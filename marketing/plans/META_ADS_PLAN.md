@@ -183,10 +183,9 @@ Four agents, run independently and in parallel, each briefed only with `business
 
 ## Prerequisites (confirm all before Step 1)
 
-1. **Business Manager access** — partner has admin/advertiser access to the JLM Wines Facebook Page and an ad account under it (or can create one).
+1. **Business Manager access — confirmed (2026-07-30).** Partner already has proven access to the Meta account.
 2. **Payment method** attached to the ad account.
-3. **Meta Pixel — currently NOT installed.** Grepped `website/` for `fbq(`, pixel script tags, `connect.facebook.net` — no matches. Without it, Meta can't see on-site purchases, so ad-level "it converted" signals won't exist and campaign auto-optimization (which relies on the Pixel) won't have data to learn from.
-   - **Decision needed:** install the Pixel (website/theme change, one-time) before running paid traffic, or accept UTM-only attribution (see below) for this first round and treat it as a click/traffic test rather than a conversion-optimized one. Recommend installing it — cheap, one-time, and every future round benefits.
+3. **Meta Pixel — not installed; recommendation reversed (2026-07-30), skip it for now.** Grepped `website/` for `fbq(`, pixel script tags, `connect.facebook.net` — no matches. Originally recommended installing it; reconsidered given (a) iOS ATT / browser tracking-prevention / cookie-consent rules block or degrade a large share of client-side Pixel events today, so its data would be incomplete regardless; (b) WooCommerce already captures first-party, server-side order attribution independent of the Pixel — real order exports include `_wc_order_attribution_utm_source/medium/campaign` meta fields, populated at checkout from session data, unaffected by client-side tracking restrictions; (c) at this test's actual scale (₪30–60/day, solo-first, learning-phase, new-customer acquisition), conversions will be genuinely rare — nowhere near the weekly volume Meta's Pixel-driven auto-optimization needs to exit its own learning phase, so that benefit likely wouldn't materialize yet even with the Pixel installed; (d) the engagement-level signal (clicks, sessions, reach) that a rare-conversion round *can* actually read is already available without the Pixel, via the existing GA4 setup (`jlmops-status.md`'s GA4 organic-traffic tracking — the same GA4 tag picks up any UTM-tagged session regardless of source, paid or organic). **Net: UTM + WooCommerce's existing order-attribution meta + GA4's existing engagement tracking covers this phase's actual need** (which creative/round produced which orders and how it engaged) **without the Pixel's incompleteness risk.** Revisit installing it if the program scales to where Meta's on-platform optimization or retargeting/lookalike audiences (both genuinely require the Pixel) become worth the investment.
 4. **Landing page + offer — confirmed (2026-07-30).** Reuses the flyer plan's (`FLYER_PLAN.md`) bundles category page + `50NEW` first-order coupon rather than a Meta-specific offer/code. **Economics confirmed (2026-07-29):** a ~₪400 bundle order has enough margin to cover both delivery and the ₪50 first-order discount, so offering `50NEW` on bundle-sized orders is financially sound, not just a message-consistency choice. **State the ₪50 off upfront in the ad copy itself** (Meta's primary text/description field, not baked into the image — consistent with the no-text-in-image rule) rather than saving it as a landing-page surprise; the offer is strong enough to work as part of the hook, not just a checkout-time incentive.
 
 ---
@@ -207,13 +206,13 @@ Bulk Edit iterates on an *existing* campaign structure — it's not for building
 
 ---
 
-## Attribution (no Pixel yet)
+## Attribution (UTM-based by choice, not just absence of a Pixel)
 
-Until the Pixel is installed, rely on the same mechanism the flyer plan uses: **UTM parameters + order data**, not on-platform conversion tracking.
+Same mechanism the flyer plan uses: **UTM parameters + WooCommerce's own order attribution data**, not on-platform Pixel conversion tracking (see Prerequisites #3 for why this is now a deliberate choice for this phase, not a placeholder).
 
 - Every ad's destination URL carries UTM parameters (e.g. `utm_source=facebook&utm_medium=paid&utm_campaign=jerusalem-round1`) unique enough to distinguish rounds/variants.
-- Cross-reference order source/referrer data (or the same coupon-code approach as the flyer, if the offer uses one) against the campaign's spend and reach numbers to read results manually, round over round.
-- Once the Pixel is installed, this manual step becomes a cross-check rather than the only signal.
+- WooCommerce already writes these into each order's meta at checkout (`_wc_order_attribution_utm_source/medium/campaign` and related fields) — first-party, server-side, unaffected by iOS ATT or browser tracking-prevention. Cross-reference this against the round's spend/reach numbers (or the `50NEW` coupon-code approach, same as the flyer) to read results manually, round over round.
+- If the program later scales to where Meta's on-platform optimization or retargeting/lookalikes are worth it, installing the Pixel adds a second, complementary signal — it wouldn't replace this mechanism, since UTM+order data survives regardless of Pixel status.
 
 ---
 
