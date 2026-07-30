@@ -96,6 +96,34 @@ Ideas that aren't tied to one specific bucket — reusable across whichever hook
 
 ---
 
+## Prompt Formula & Asset Reuse
+
+**Division of labor (confirmed).** No Canva MCP, in this or any workflow — the user handles Canva directly. This project's only job is to write the prompt/instruction; it never generates or touches the actual asset.
+
+**Prompt formula — adapted from `content/_resources/IMAGE_RECIPE.md`, not copied as-is.** That doc's formula shape is reusable; its style line isn't — it specifies "Impressionist oil painting," chosen for blog editorial images to contrast with the site's commercial look. Ad creative wants the opposite (real/native-feeling, per the buckets above), so the style slot gets swapped, not the formula:
+
+```
+[Style: realistic photo / candid phone-shot / UGC-style, not painterly], [Subject, close-up or wide], [Background], [Color tones], [Lighting], [Mood], 9:16 vertical (Reel/Story)
+```
+
+- **Style, by bucket:** buckets 6/7 (unboxing, case of bottles) → "candid, real-feeling photo, not staged" — deliberately un-polished per the Format & Angle Library's UGC note above. App/gadget bucket (4) → "realistic phone-in-hand photo, natural home lighting." Occasion montage (5) → flat, simple icon/photo style that can share one template across many copy swaps.
+- **Say what should be in frame, don't negate.** Same caveat `IMAGE_RECIPE.md` already flags for blog images: Canva-style generation follows positive instructions poorly when phrased as "no X" — say "empty glass" not "no wine left," say "plain label, no text" rather than "avoid jargon on the label." Several buckets here are literally about absence (no confusion, no gambling, no jargon) — the prompt still has to describe the positive scene, never the negation.
+- **Name hands/people explicitly when needed.** Same note carried over: generation tends to skip people/hands unless the prompt asks for them — buckets needing a pour, a phone in hand, or bottles being placed into a box must say so directly.
+
+**Asset reuse map — build once, reuse across a round or across buckets, rather than re-briefing Canva work per variant:**
+
+| Asset | Built once for | Reused across |
+|---|---|---|
+| Evyatar cutout (background removed) | Any bucket using the advisor character | Every scenario still — only the scenario art changes, the inset doesn't (Visual format, above) |
+| Wine-rack background photo | Bucket 6 | All six pop-in/pop-out bottle beats — only the small bottle-graphic elements change per beat |
+| Rejection/box background | Bucket 7 | Every reject/survive beat in the sequence — only which bottle element animates out vs. in changes |
+| Occasion bucket's shared visual template | Bucket 5 | Every individual occasion line ("Friends just showed up," "Game night," etc.) — copy-only swap, no new Canva build per line |
+| Any no-text-baked-in visual | Any bucket (Phase 1 rule, above) | Every ad-copy variant tested against that same visual — the biggest single reuse lever, since one Canva asset can serve several rounds' worth of copy tests |
+
+This table consolidates reuse points already stated within individual buckets above — it doesn't add new creative decisions, just makes the "build once" discipline checkable in one place before briefing the manager on a new asset.
+
+---
+
 ## Fresh-eyes library (2026-07-29)
 
 Four agents, run independently and in parallel, each briefed only with `business/CONTENT_STRATEGY.md` + `website/BRAND.md` — none saw this document or the conversation that built it. Purpose: concepts genuinely unanchored to buckets 1–7 above. Notably, three of the four independently converged on the same core idea as bucket 7 (proof of curation) — see the validation note on that bucket.
