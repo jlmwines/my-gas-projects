@@ -13,6 +13,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Reorganized the doc's section order (fresh-eyes/analysis pass had drifted downstream of the buckets they're about) before pushing.
 - Next: Round 1 candidate pick (bucket 8 leading) and asset production — see `plans/STATUS.md` Next Action #4.
 
+## 2026-07-30 (cont'd) — bucket 8 detailed into a shot list, moved into real Canva production
+
+- Built a full 14→15-beat shot list for bucket 8 with per-beat Canva prompts; a fresh-agent red-team pass caught a real Meta ad-policy risk (faked notification banner + tap indicator resembling mimicked system UI), a wrong technical claim about Canva's Zoom transition, and several smaller gaps — all fixed. Fake tap indicator dropped entirely in favor of Meta's real "Shop Now" CTA button.
+- User found and confirmed real assets: a falling-box stock video for the doorbell/delivery loop (no real doorbell app needed — sidesteps a trademark/privacy risk the red-team also flagged), a genuinely-empty calendar-background photo (needs a tighter crop to remove baked-in English signage before use, English-only asset — Hebrew needs a separate background later), and a finalized 7-icon set built live in Canva (solid black for the six problem days, terra-cotta package for the resolution, white-circle question-mark badges needing a dark outline to read against the white calendar background).
+- Real-world tie-in: JLM's custom-printed carton plan was canceled (shipping cost vs. carton cost) and replaced with natural-brown cartons + a large logo stamp — recorded in `plans/STATUS.md` Next Action #2 too, and the ad's box treatment now matches where real packaging is actually headed.
+- Session behavior note: user corrected verbosity on simple factual answers hard, twice, mid-session — lead with the number/fact, stop, no reasoning unless asked.
+- Next: finish Canva assembly (badge outlines, per-element timing, site/WhatsApp screenshot, captions), then Prerequisites #1 (Round 1 specifics: budget/audience/duration) before anything runs.
+
 ## 2026-07-26 — WebXltM sync-blocking incident root-caused and fixed (jlmops @544)
 
 - User reported "Master Validation failed" on sync; investigation traced it through a hardcoded empty-sheet hard-throw in `ConfigService._getSheetDataAsMap` (crashes the whole validation pipeline instead of a normal task) down to the real cause: `_upsertWebXltData` (Session P, `1fe6f0c`, 2026-07-24) remapped `WebXltS`→`WebXltM` columns by exact header-name match, but the two sheets intentionally use different prefixes (`wxs_`/`wxm_`) — every lookup failed, every row wrote blank, silently emptying `WebXltM` on every sync since Friday's deploy.
