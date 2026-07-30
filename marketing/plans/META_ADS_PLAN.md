@@ -6,6 +6,13 @@
 
 **Decision (2026-07-29).** No Meta Ads MCP connector exists in the registry (checked — only read-only analytics connectors like Windsor.ai/Supermetrics are available, and they don't do campaign management). A custom MCP against Meta's Marketing API is technically possible but requires app registration, tokens, and hosted code — not worth it for a first test. Ads Manager's native Bulk Edit spreadsheet is the right tool: no dev work, and it's exactly the "upload/download control over time" mechanism needed.
 
+**Roles (2026-07-30, confirmed).** Two Claude accounts, split by function, not by task-copying. The partner already holds the jlmops **manager** role and already publishes content through it (posts, etc.) — this reuses that existing channel rather than inventing a new one:
+
+- **This project (JLM Wines sessions)** — the strategy/creative side: develops the creative buckets and hooks (Creative Strategy below), writes the Canva prompts for each asset (same mechanism already used for blog/newsletter images — a session crafts the prompt, it never produces the asset itself), designs the test structure (champion/challenger method, round pairings), maintains round results and next-challenger decisions locally in this doc (see Round Log below), and reviews exported performance data.
+- **Manager (partner, jlmops manager role, assisted by a separate Claude account)** — creates each Canva asset from this project's prompt, stores it and registers it in the Content Library (existing `image`/`social` library workflow, canonical Drive path, attach via the live jlmops app — same mechanism as any other content asset, per `jlmops/plans/CONTENT_CREATION_CHECKLIST.md`), then does all the hands-on Meta Business Platform work: builds/edits the campaign in Ads Manager, runs the Bulk Edit download → edit → upload cycle (Step-by-step below), and exports performance data at round end back to this project for review.
+
+**jlmops does not manage the ad test itself.** No new Library content type, task type, or schema is needed. Only the creative-asset production/registration step reuses the existing Library mechanism; everything about the test — round definitions, results, decisions — lives in this plan doc, not in jlmops.
+
 ---
 
 ## Creative Strategy
@@ -125,17 +132,17 @@ Four agents, run independently and in parallel, each briefed only with `business
 
 ## Step-by-step: Bulk Edit workflow
 
-Bulk Edit iterates on an *existing* campaign structure — it's not for building from a blank sheet. First round is built by hand in the UI; every round after is spreadsheet-driven.
+Bulk Edit iterates on an *existing* campaign structure — it's not for building from a blank sheet. First round is built by hand in the UI; every round after is spreadsheet-driven. **Steps 1–7 below are manager-side** (executed in Meta Business Platform, per Roles above); this project supplies the creative/copy/audience direction going in and reviews the exported results coming out.
 
 1. **Build the base structure manually, once**, in Ads Manager UI: one campaign, one ad set (audience, budget, placements), one ad (creative, copy, destination URL with UTM parameters — see Attribution below).
-   → **CONFIRM before continuing:** campaign name, objective, and initial budget reported back and agreed.
+   → **CONFIRM before continuing:** campaign name, objective, and initial budget reported back to this project and agreed.
 2. Select the campaign in Ads Manager → **⋯ menu → Bulk Edit** (sometimes labeled Bulk Create/Edit) → **Export/Download** as `.xlsx`.
 3. **Before editing anything, save an untouched copy** of the downloaded file with a timestamp in the name (e.g. `meta-ads-round1-backup-260729.xlsx`). This is the rollback point if an upload goes wrong.
 4. Edit the working copy. **Change only one variable per round** — audience OR budget OR creative, not several at once. Same discipline as the flyer plan's neighborhood rotation: mixing changes makes results unreadable.
 5. Re-upload the edited sheet via the same **Bulk Edit → Upload/Import** path.
    → **CONFIRM before publishing:** Ads Manager shows a review/diff screen after upload — read it and confirm the changes shown match intent *before* clicking Publish/Apply. This is the checkpoint that catches a bad edit before it goes live.
 6. Let the round run a **minimum set duration** (agree the number of days before launching — don't judge or edit mid-flight; Meta's delivery needs a stabilization window and early numbers are noisy).
-7. At the end of the round, export fresh performance data (same Bulk Edit export, or Ads Manager's reporting export) and log results before starting the next round's edit.
+7. At the end of the round, export fresh performance data (same Bulk Edit export, or Ads Manager's reporting export) and **hand it back to this project** for the results review + next-challenger call (see Roles above), before starting the next round's edit.
 
 ---
 
@@ -179,6 +186,14 @@ Given the review above, a reasonable **champion vs. challenger** opening pair:
 Both are cheap, safe, and high brand-fit, and the pairing itself tests something genuinely useful: does proof of *your* good outcome (A) resonate more than proof of *our* process (B)? Winner becomes the champion for round 2 against the next challenger from the library (occasion bucket or app bucket are reasonable next challengers).
 
 **This is a proposal, not a lock** — flag if a different opening pair is preferred before anything gets built.
+
+---
+
+## Round Log
+
+Results and decisions live here, not in jlmops (see Roles above). One entry per completed round: what ran, what the manager exported, what this project decided for the next round.
+
+_(No rounds run yet.)_
 
 ---
 
