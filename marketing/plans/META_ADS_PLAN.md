@@ -14,6 +14,8 @@
 
 **jlmops does not manage the ad test itself.** No new Library content type, task type, or schema is needed. Only the creative-asset production/registration step reuses the existing Library mechanism; everything about the test — round definitions, results, decisions — lives in this plan doc, not in jlmops.
 
+**Data flow (confirmed).** Long-term data lives **locally, in this repo** (this doc, the Round Log) — Drive is a transfer location between the two sessions, not a store. Per round: this project updates the local round plan, exports the round's Bulk Edit values as a file to Drive, and the manager's session retrieves it there for the manual Meta work. At round end, the manager's session exports the performance data and passes it back via Drive; this project retrieves it, updates the Round Log locally, and plans the next round from it. Nothing about the test's state persists in Drive between rounds — it's the two-way transfer bus, not the record.
+
 ---
 
 ## Creative Strategy
