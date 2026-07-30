@@ -187,7 +187,7 @@ Bulk Edit iterates on an *existing* campaign structure — it's not for building
 5. Re-upload the edited sheet via the same **Bulk Edit → Upload/Import** path.
    → **CONFIRM before publishing:** Ads Manager shows a review/diff screen after upload — read it and confirm the changes shown match intent *before* clicking Publish/Apply. This is the checkpoint that catches a bad edit before it goes live.
 6. Let the round run a **minimum set duration** (agree the number of days before launching — don't judge or edit mid-flight; Meta's delivery needs a stabilization window and early numbers are noisy).
-7. At the end of the round, export fresh performance data (same Bulk Edit export, or Ads Manager's reporting export) and **hand it back to this project** for the results review + next-challenger call (see Roles above), before starting the next round's edit.
+7. At the end of the round, export fresh performance data (same Bulk Edit export, or Ads Manager's reporting export) and **hand it back to this project** for the results review + next-round call (see Roles above), before starting the next round's edit.
 
 ---
 
@@ -246,8 +246,8 @@ _(No rounds run yet.)_
 2. Decide: install Meta Pixel before Round 1, or start UTM-only.
 3. Round 1 specifics — budget, audience definition, offer, minimum run duration. (Flyer plan's local-first framing — warm/nearby audience before cold/wide — is a reasonable starting logic to borrow, but Meta's audience targeting works differently, so this needs its own pass, not a copy-paste.)
 4. Whether Round 1 reuses the `50NEW` coupon or gets its own code (own code would sharpen attribution once volume is real).
-5. Confirm or revise the proposed Round 1 pairing (A vs. B above).
-6. Produce the bucket-6/7 footage (unboxing, rejected-case) for whichever pairing is confirmed; Evyatar inset asset only needed once a bucket that uses the advisor character gets tested.
+5. Confirm or revise which candidate (A or B above) runs first, given the solo-first method.
+6. Produce the bucket-6/7 footage (unboxing, rejected-case) for whichever candidate is confirmed; Evyatar inset asset only needed once a bucket that uses the advisor character gets tested.
 7. Meta ad-policy check on casino/gambling imagery before bucket 1 is ever produced.
 
 ## Out of scope (for now)
