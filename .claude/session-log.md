@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-30 — Meta Ads plan recovered, developed, and reorganized (marketing)
+
+- Recovered `marketing/plans/META_ADS_PLAN.md` from an unmerged branch (`claude/jlmwines-meta-ads-7vpiod`, an earlier archived session's work) via a real `git merge` — first materialized a copy by hand, then redid it properly once asked, so the file carries real commit history/authorship.
+- Independent review (fresh agent) caught the plan reading far more "decided" than reality and one real technical error (a Bulk Edit values sheet can't be a `SysLibrary` asset — no tabular content type exists); both fixed. Full pass afterward softened decision-language throughout per explicit user correction ("we are exploring, not deciding").
+- Long collaborative brainstorm produced bucket 8 ("Calendar of confidence" — phone-screen-recording format, a calendar of recurring wine-decision moments resolving via a real WhatsApp/site breakout) plus buckets 9–12; user named it their favorite but nothing is locked in.
+- Resolved several real open questions: Meta Pixel recommendation reversed to skip-for-now (tracking restrictions + WooCommerce's existing UTM order-attribution + GA4 already cover this phase's needs); `50NEW` coupon reuse confirmed; Business Manager access confirmed by the user directly.
+- Reorganized the doc's section order (fresh-eyes/analysis pass had drifted downstream of the buckets they're about) before pushing.
+- Next: Round 1 candidate pick (bucket 8 leading) and asset production — see `plans/STATUS.md` Next Action #4.
+
 ## 2026-07-26 — WebXltM sync-blocking incident root-caused and fixed (jlmops @544)
 
 - User reported "Master Validation failed" on sync; investigation traced it through a hardcoded empty-sheet hard-throw in `ConfigService._getSheetDataAsMap` (crashes the whole validation pipeline instead of a normal task) down to the real cause: `_upsertWebXltData` (Session P, `1fe6f0c`, 2026-07-24) remapped `WebXltS`→`WebXltM` columns by exact header-name match, but the two sheets intentionally use different prefixes (`wxs_`/`wxm_`) — every lookup failed, every row wrote blank, silently emptying `WebXltM` on every sync since Friday's deploy.
