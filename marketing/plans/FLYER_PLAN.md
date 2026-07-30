@@ -2,7 +2,7 @@
 
 **Purpose.** Two-sided printed flyer (EN / HE) distributed via mailbox insertion in selected Jerusalem neighborhoods. Acquisition channel: drive new (first-order) customers to jlmwines.com using the existing ₪50-off-first-order coupon as the incentive.
 
-**Status.** Printed (EN+HE). Distribution scheduled for after 9 Av to 5,000 Talbiye residences (first drop within the Round 1 radius). Coupon code: `50NEW`. QR links to bundles category (UTM-tagged).
+**Status.** Printed (EN+HE). Round 1 (Talbiye, 5,000 residences) distributed 2026-07-26/27. Site traffic from the campaign tag confirms visits across neighborhoods (billing address does the per-neighborhood split, per Attribution below); redemptions pending, no orders yet as of 2026-07-30 — too soon to read. Coupon code: `50NEW`. QR links to bundles category (UTM-tagged). Round 2 target selected: **Emek Refaim** (see Round 2+ strategy below).
 
 **Strategic frame.** Acquisition test, not a proven channel. ₪2,000/round is right-scaled as a test, not a campaign. Round 1 produces the data that decides whether the channel scales. Round 1 targets the local area first: new-customer acquisition is the goal, in a warm, well-matched, Evyatar-aware audience, with some offline-only regulars converting online as a secondary benefit; colder, further-out neighborhoods come in Round 2+. Going in with that expectation makes a "this didn't work" outcome a useful result, not a sunk cost.
 
@@ -37,6 +37,8 @@ The existing ₪50-off-first-order coupon fits both: a genuinely new customer an
 - A round-1 winner can return *later* with a different angle (seasonal, holiday tie-in) — but not as round 2.
 
 Candidate alternates (outward / cold): French Hill (EN), Beit HaKerem (HE), Arnona (EN-rising), Kiryat HaYovel (HE, younger demo), Ein Kerem, Nayot. The existing 8-neighborhood list from `.claude/wishlist.md` (2026-02-09) is the candidate pool. (Talbiyeh now falls partly inside the Round 1 radius, so it drops from the outward list.)
+
+**Round 2 target (selected 2026-07-30): Emek Refaim.** High-English, high-income population — a strong match for the offer — currently disrupted by light rail construction, which likely suppresses walk-in/local awareness and raises the value of a direct mailbox touch. Timing is the binding constraint, not Round 1 performance data: many residents are away for the summer until late August (back before the Sept 1 school start), so an early-August drop would land on empty mailboxes/inattentive recipients. **Target window: 3rd week of August** — the practical sweet spot between "people are home with bandwidth" and the shop's holiday-season crunch starting to eat into follow-up capacity. This decision was made ahead of Round 1's redemption data because the summer-return/holiday-season window is narrow and independent of Round 1's outcome; if Round 1 signal changes the offer or creative before then, apply the update to this drop too.
 
 ---
 
@@ -129,10 +131,10 @@ LTV math: if a repeat customer's first-year revenue lands at ₪1,500–₪3,000
 (Roughly in order. None scheduled.)
 
 1. **Bundles category description copy** — write 1–2 sentences in EN + HE, install via WC category description (pre-print polish item above; confirm done before distribution).
-2. **Post-drop attribution read** — after distribution, group `50NEW` redemptions by billing postal code to isolate Talbiye response; feeds the decision triggers below.
-3. **Round 2 neighborhood pre-selection** — defer until round 1 redemption data is in. Round 2 is the first outward / cold drop (French Hill, Beit HaKerem, wider pool).
+2. **Post-drop attribution read** — group `50NEW` redemptions by billing postal code to isolate Talbiye response; feeds the decision triggers below. Not yet due (dropped 2026-07-26/27).
+3. **Round 2 (Emek Refaim) execution** — target window 3rd week of August 2026 (see Targeting above). Needs: vendor route mapping for Emek Refaim mailboxes, drop-date confirmation within the window, print run (same creative/coupon unless Round 1 data suggests a change).
 
-Done: vendor outreach, design, photo asset, coupon code (`50NEW`), print run, drop-date scheduling (after 9 Av).
+Done: vendor outreach, design, photo asset, coupon code (`50NEW`), print run, Round 1 drop (Talbiye, 2026-07-26/27), Round 2 neighborhood + timing decision (Emek Refaim, 3rd week August).
 
 ---
 
