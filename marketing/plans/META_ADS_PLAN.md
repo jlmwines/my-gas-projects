@@ -86,6 +86,22 @@ Confirms and details the "stills stitched with transitions" approach already ass
 
 **Note:** buckets are different tonal registers (luck / confusion / proof / sci-fi-gadget / occasion / buy-ahead / curation / calendar-of-confidence / meta-interruption / group-decisiveness / Shabbat-specific / empty-glass) — keep them as separate hook candidates rather than mixing metaphors within one ad, so each stays legible on its own. This is a library to draw from over many rounds, not a shortlist to test all at once. Buckets 9–12 and the portable line above are freshly generated (2026-07-30), unweighed by any review pass — genuinely unknowns, same candidate status as everything else here.
 
+### Bucket 8 shot list (2026-07-30, first pass, not locked)
+
+~20–22s total. Text/language handling (resolved 2026-07-30): the underlying imagery is built to work with **zero text, in either language** — captions (the closing five-line sequence, the offer) ride as a separate, timed overlay layer rather than being baked into the pixels. Keeps the base asset genuinely language-agnostic (test English captions first, swap to Hebrew cheaply once a piece wins, per the existing language-sequencing rule) while still allowing tight sync to Evyatar's growth, since a caption layer doesn't fight with baked-in text the way in-image text would. This is a deliberate difference from the general no-baked-text rule elsewhere in the library — fine, since this piece isn't meant to pair with swappable ad copy the way the simpler buckets are.
+
+| # | Beat | ~Duration | Visual | Canva prompt |
+|---|------|-----------|--------|-----|
+| 1 | Cold open — doorbell cam | 1s | Doorbell-cam app view, fisheye, package at the door, "Package Delivered" banner | *Realistic doorbell-camera app screenshot, fisheye view of a package at a front door, timestamp and "Package Delivered" notification banner, natural daylight, neutral mood, 9:16 vertical, phone-screen-recording style* |
+| 2 | Cut to calendar app | 0.5s (transition) | Tap/swipe into the calendar app, lands on month grid | *Flat, minimal phone calendar app interface, month grid, clean muted color scheme, empty day cells, 9:16 vertical* |
+| 3–8 | Six occasion callouts | ~1.3s each (≈8s) | Day cell zooms forward, pictogram + question mark, releases back | One prompt per icon, same formula — e.g. dining: *flat icon-style illustration, a cooking island with pot and ingredients, muted warm tones, soft flat lighting, question mark overlay, 9:16, no text*; same pattern for hosting (coals+food), Shabbat (table set), attending (door+balloons), gifting (calendar+birthday mark), personal enjoyment (reading nook) |
+| 9 | "Order wine" — 7th, tappable entry | 1s | Day cell with a glass/JLM-mark icon, warmer resolved tone, tap indicator | *Flat icon-style illustration, wine glass icon on a calendar cell, tap indicator, warm resolved color tone (contrast with the question-mark days), 9:16, no text* |
+| 10 | Loop back — doorbell footage replays | 1.5s | Same asset as beat 1, no new build | Reused, per the Asset Reuse map |
+| 11 | Site + WhatsApp | 1.5s | jlmwines.com view, floating WhatsApp button visible | *Realistic phone screenshot, wine e-commerce homepage, floating WhatsApp icon in the corner, bright clean product photography style, warm mood, 9:16* |
+| 12 | Breakout — chrome falls away | 0.5s (transition) | Phone bezel/UI dissolves, expands full-bleed | Canva element-animation only, no new image needed |
+| 13 | Evyatar full-bleed + closing beats | ~5s | Real photo, full-frame, five-line caption sequence timed over it | Reused Evyatar cutout, per Visual format above; captions as overlay, not baked in |
+| 14 | Offer end card | 2s | `50NEW` / ₪50 off, stated plainly | Caption overlay, same layer as beat 13 |
+
 ---
 
 ## Fresh-eyes library (2026-07-29)
