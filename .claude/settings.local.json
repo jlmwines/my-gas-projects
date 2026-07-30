@@ -119,7 +119,8 @@
       "Bash(TESTFILE=C:/Users/B/projects/jlmwines/plans/STATUS.md node -e ' *)",
       "WebFetch(domain:wpml.org)",
       "WebFetch(domain:woocommerce.github.io)",
-      "WebFetch(domain:developer.woocommerce.com)"
+      "WebFetch(domain:developer.woocommerce.com)",
+      "Bash(git merge *)"
     ],
     "deny": [
       "Bash(git -C:*)",
