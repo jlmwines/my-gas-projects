@@ -100,7 +100,10 @@ Confirms and details the "stills stitched with transitions" approach already ass
 | 11 | Site + WhatsApp | 1.5s | jlmwines.com view, floating WhatsApp button visible | *Realistic phone screenshot, wine e-commerce homepage, floating WhatsApp icon in the corner, bright clean product photography style, warm mood, 9:16* |
 | 12 | Breakout — chrome falls away | 0.5s (transition) | Phone bezel/UI dissolves, expands full-bleed | Canva element-animation only, no new image needed |
 | 13 | Evyatar full-bleed + closing beats | ~5s | Real photo, full-frame, five-line caption sequence timed over it | Reused Evyatar cutout, per Visual format above; captions as overlay, not baked in |
-| 14 | Offer end card | 2s | `50NEW` / ₪50 off, stated plainly | Caption overlay, same layer as beat 13 |
+| 14 | Offer end card | 2s | `50NEW` / ₪50 off **and** free delivery, "to your door" — direct address, ties the offer back to the doorbell/door motif the whole piece opened on | Caption overlay, same layer as beat 13 |
+| 15 | Loop point — doorbell cam, once more | 1s | Returns to the exact beat-1 asset as the piece's last frame | Reused, no new build |
+
+**Loop point (2026-07-30):** the piece's last visual is the same doorbell-cam footage it opened on, so if it autoplays on repeat (standard Reels/TikTok behavior), the ending flows straight back into the opening instead of hard-cutting — free delivery is stated right before this return, so the copy ("to your door") and the image (a door) land on the same beat, then the loop closes.
 
 ---
 
