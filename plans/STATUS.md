@@ -6,7 +6,7 @@
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live, stable (current version in Metrics below); 2026-07-14/15 fixes smoke-tested and confirmed clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`, `jlmops/docs/WORKFLOWS.md` §16).
+- **jlmops** (GAS backend) — live, stable (current version in Metrics below); recent fixes smoke-tested clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`).
 - **jlmwines.com** (storefront/theme) — live (current version in Metrics below); Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer active (Round 1 pending, Round 2 planned); Meta Ads bucket 8 in Canva production, not launched; newsletter cadence current.
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-07-27 |
+| Last Active | 2026-07-30 |
 | Revenue | Steady |
 | Deploy Version | jlmops @544 · theme v1.2.31 |
 | Deploy Date | jlmops 2026-07-26 · theme 2026-07-09 |
