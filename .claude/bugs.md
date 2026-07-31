@@ -3,7 +3,7 @@
 Known bugs across all projects. Use `/bug [project] description` to add.
 Projects: jlmops, web, marketing, content
 
-One line per item: date + symptom + pointer to the plan doc holding the analysis, where one exists. The analysis itself lives in the plan doc, a git commit, or `.claude/session-log.md` — not here.
+One line per item: date + symptom + pointer to the plan doc holding the analysis, where one exists. The analysis itself lives in the plan doc or a git commit — not here, and not in `.claude/session-log.md` (that file's own rule bans root-cause essays and commit hashes; see portfolio kernel, "Claude session documents").
 
 ---
 
@@ -30,9 +30,9 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Resolved (recent)
 
-_One line each; full root-cause analysis lives in the git commit + `.claude/session-log.md`._
+_One line each; full root-cause analysis lives in the git commit._
 
-- [x] 2026-07-26: `WebXltM` found empty, blocking every sync — root cause + fix in `.claude/session-log.md` (2026-07-26 entry) and commit `27bd2cd`, deployed @544. Related gaps tracked in `jlmops/plans/RELIABILITY_AUDIT.md` §1.5/§1.6.
+- [x] 2026-07-26: `WebXltM` found empty, blocking every sync — root cause + fix in commit `27bd2cd`, deployed @544. Related gaps tracked in `jlmops/plans/RELIABILITY_AUDIT.md` §1.5/§1.6.
 - [x] 2026-07-24: Code-audit fix sequence — ~21 findings fixed/deployed (jlmops @530-@543); full list in `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md`. Deferred: server-side authorization (see Open list above), two dashboard-panel redesigns.
 - [x] 2026-07-16: Publishing view Calendar tab crashed on load for both roles ("slug.slice is not a function") — `renderCalendar()`'s task loop had no content-type filter, so non-content tasks with numeric entityIds (exposed by the 2026-07-10 `_deriveEntityId` priority fix) reached `.slice()` unguarded. Fixed @509: loop now filters to `task.content.*` (matching `renderTasks()`); Calendar-tab error routing also fixed (was writing failures only to the Campaigns tab's container). Confirmed working live, both roles.
 - [x] 2026-07-16: Admin Inventory failed to load live (Comax Sync card's file-link buttons) — reverted to pre-@489 state @507; root mechanism never found.
