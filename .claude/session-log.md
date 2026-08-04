@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-04 — Meta launch-mechanics research: bulk-import-creates-campaign and an official MCP server, both unverified (marketing)
+
+- User asked whether a campaign could be created via file upload rather than the plan's established manual-build-first step. Confirmed the plan doc's existing understanding (Bulk Edit only edits existing campaigns) still holds for that specific tool, then researched further per user request.
+- Found third-party (not Meta-primary) sources describing a separate "Import ads in bulk" menu where blank ID columns allegedly create new campaigns, and separately, claims of an official Meta-hosted MCP server (`mcp.facebook.com/ads`) for natural-language campaign management via Claude/ChatGPT. Neither confirmed against Meta's or Anthropic's own primary channels — WebFetch on Meta's official help page returned no usable content. Recorded as unverified in `marketing/plans/META_ADS_PLAN.md` (Bulk Edit workflow section) and `plans/STATUS.md` Next Action #4 — next session or the manager should check both directly (Ads Manager's actual menu; Anthropic's official MCP connector directory) before connecting real ad-account credentials to anything or assuming either shortcut is available.
+- No STATUS/session-log/doc drift found otherwise this session; bucket 8 reel itself (recorded in the prior entry below) is unaffected by this — it's still ready for the manager to launch via whichever mechanism actually checks out.
+
 ## 2026-08-03 — Meta Ads bucket 8 reel built, edited, and live-tested (marketing)
 
 - Long iterative Canva/Paint.NET build session (spanning several sittings, 2026-07-31 through 2026-08-03): bucket 8 ("Calendar of confidence") went from tested-but-unassembled pieces to a finished, edited 23.9s reel. `marketing/plans/META_ADS_PLAN.md`'s bucket 8 section rewritten to describe the as-built recipe rather than the original spec — most of the original plan's mechanics changed through hands-on testing (icon animation, transition style, caption count/placement, the Evyatar growth mechanic, the loop-seam splice math).
