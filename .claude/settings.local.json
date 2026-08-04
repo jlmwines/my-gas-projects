@@ -122,7 +122,9 @@
       "WebFetch(domain:developer.woocommerce.com)",
       "Bash(git merge *)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(rm *)"
+      "Bash(rm *)",
+      "WebFetch(domain:www.facebook.com)",
+      "WebFetch(domain:adsuploader.com)"
     ],
     "deny": [
       "Bash(git -C:*)",

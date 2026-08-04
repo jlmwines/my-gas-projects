@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-03 — Meta Ads bucket 8 reel built, edited, and live-tested (marketing)
+
+- Long iterative Canva/Paint.NET build session (spanning several sittings, 2026-07-31 through 2026-08-03): bucket 8 ("Calendar of confidence") went from tested-but-unassembled pieces to a finished, edited 23.9s reel. `marketing/plans/META_ADS_PLAN.md`'s bucket 8 section rewritten to describe the as-built recipe rather than the original spec — most of the original plan's mechanics changed through hands-on testing (icon animation, transition style, caption count/placement, the Evyatar growth mechanic, the loop-seam splice math).
+- Real production techniques worked out along the way, not just decisions: a 4-second source clip split into three reused segments (open/mid/loop-end) sharing an exact frame boundary for a seamless autoplay loop; the JLM logo perspective-warped in Paint.NET (a Perspective plugin, not native) and Gaussian-blurred for an "unresolved" tease state; icons pop-and-stay with row-following text labels rather than a fixed caption zone (tested, the fixed zone read as disconnected from icons scattered across calendar rows); Evyatar's cutout grows continuously from the calendar into the real homepage background rather than being a separate reveal asset.
+- Caption count kept ballooning through iterative additions (reached ~7-9 distinct text states at one point) and had to be deliberately trimmed after live testing reported the back half feeling "rushed" even though total runtime was within the 15-25s target — lesson: track cumulative caption load, not just total seconds, when adding messaging incrementally. Some USP copy (vintage-tasting, flexible suggestions, delivery-to-Israel) moved out of the video entirely into Meta's primary ad-text field instead of being cut outright.
+- One correction along the way worth remembering: "swipe left" reads as a dismiss/delete gesture (email, Tinder-style pass), not a neutral transition — swipe right or a non-directional transition is the safer default for anything meant to feel positive.
+- Not yet done: upload to Meta Ads Manager and check the real safe-zone overlay (the box/logo positioning question flagged repeatedly can only be verified there, not from stills). That's the actual next action, not more asset work.
+
+---
+
 ## 2026-07-30 — Meta Ads plan recovered, developed, and reorganized (marketing)
 
 - Recovered `marketing/plans/META_ADS_PLAN.md` from an unmerged branch (`claude/jlmwines-meta-ads-7vpiod`, an earlier archived session's work) via a real `git merge` — first materialized a copy by hand, then redid it properly once asked, so the file carries real commit history/authorship.
