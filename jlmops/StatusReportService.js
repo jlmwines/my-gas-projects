@@ -444,9 +444,10 @@ const StatusReportService = (function() {
     const ga = _readGa4(allConfig['system.sheet.ga4_report']);
     if (ga.ok) {
       const eng = w => w.s ? (w.engW / w.s * 100).toFixed(0) + '%' : '-';
+      const conv = w => w.s ? (w.ke / w.s * 100).toFixed(1) + '%' : '-';
       lines.push('- GA4 (latest data ' + _ilDate(ga.maxDate) + '):');
-      lines.push('  - 7d: ' + ga.w.s + ' sessions · ' + ga.w.u + ' users · ' + ga.w.nu + ' new · eng ' + eng(ga.w) + ' · ' + ga.w.ke + ' key events');
-      lines.push('  - MTD: ' + ga.m.s + ' sessions · ' + ga.m.u + ' users · ' + ga.m.nu + ' new · ' + ga.m.ke + ' key events · ₪' + Math.round(ga.m.rev));
+      lines.push('  - 7d: ' + ga.w.s + ' sessions · ' + ga.w.u + ' users · ' + ga.w.nu + ' new · eng ' + eng(ga.w) + ' · ' + ga.w.ke + ' key events (conv ' + conv(ga.w) + ')');
+      lines.push('  - MTD: ' + ga.m.s + ' sessions · ' + ga.m.u + ' users · ' + ga.m.nu + ' new · ' + ga.m.ke + ' key events (conv ' + conv(ga.m) + ') · ₪' + Math.round(ga.m.rev));
     } else {
       lines.push('- GA4: no data (' + ga.reason + ')');
     }
