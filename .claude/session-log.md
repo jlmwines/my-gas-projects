@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-05 — Meta Ads: Dynamic Creative method switch, reviews reel (bucket 14) built, bucket 7 redesigned (marketing)
+
+- User pushed back on the 2026-07-30 solo-candidate testing method given the actual goal (most new customers/profit, not cleanest attribution); switched to Meta's native Dynamic Creative (multiple image/text variants in one ad, algorithm-optimized) — recorded with reasoning in `META_ADS_PLAN.md`'s Testing approach section, old method kept for context.
+- Built bucket 14, "148 people already trust him" — a goal-first concept (started from the trust/word-of-mouth problem directly, not fit to an existing bucket), grounded in real data: Kos Shel Bracha's actual Google listing, 4.9★/148 reviews, four real review quotes. A fork researched trust-building ad patterns externally and produced several related candidates (kept/dropped in the plan doc). User found and built the real Evyatar photo (Variant B) live in Canva during the session; font settled on Nunito Semibold after a live comparison. Final structure revised twice in conversation (bare-photo open/close loop, offer card over the same photo instead of a site-screenshot cutaway) — reel reported complete and ready for testing by session end.
+- Bucket 7 (proof of curation) redesigned for less text/more visual: split-screen (blurred makolet shelf vs. Evyatar's shelf, green checkmarks), merged with bucket 4's "you already have one" phone hook and bucket 13's "It can. It does." close line. Not yet built.
+- Session behavior note: user corrected pace/scope twice — stop chasing every side-idea ("we don't need to act on every idea"), and stop letting doc-writing crowd out the actual creative discussion when that's what's being asked for. Doc updates belong at natural checkpoints (session end, explicit decisions), not after every exchange.
+- Next: produce bucket 7's revised assets, source music for both finished reels (direction set in the plan), set up the Dynamic Creative ad in Ads Manager.
+
 ## 2026-08-04 — Meta launch-mechanics research: bulk-import-creates-campaign and an official MCP server, both unverified (marketing)
 
 - User asked whether a campaign could be created via file upload rather than the plan's established manual-build-first step. Confirmed the plan doc's existing understanding (Bulk Edit only edits existing campaigns) still holds for that specific tool, then researched further per user request.
