@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-06 — Bucket 7 designed and built, Meta Ads Jerusalem test launched (marketing)
+
+- Long collaborative brainstorm (illustrated female character, B&W-to-color/empty-to-full-glass loop, phone-frame POV, shelf-scan beat, direct cut to a glowing Bundles page, Evyatar word-balloon CTA) landed on bucket 7's final structure; user built it in Canva and it shipped as-is — recorded as an as-built recipe in `marketing/plans/META_ADS_PLAN.md` (superseding the earlier split-screen/Evyatar's-shelf spec, kept for reasoning).
+- Set up and launched round 1 in Ads Manager: 3 ads (bucket 8, bucket 14, bucket 7) in one ad set — a deliberate divergence from the single pooled-Dynamic-Creative-ad structure decided 2026-08-04, done for cleaner per-video comparison. UTM-tagged unique URL per ad, 5 primary-text/headline/description variants each, CTA Shop Now, Advantage+ and auto image-generation off, optimization on web traffic (Pixel decision reconfirmed, not revisited). Budget ₪550 through end of August, Sun–Thu, walked back from a narrower evening-only window after user pushback on an unfounded "evening scroll" assumption.
+- Caught and fixed a stale plan line (`META_ADS_PLAN.md` primary-text-variants note still said "unused for round 1," left over from the pre-2026-08-04 manual-round method).
+- Late-session reversal: user opted to (re-)enable the Meta Pixel via the Facebook for WooCommerce plugin (Ads Manager advised it once round 1 was live), reversing the earlier skip-for-now decision — flagged the original reasoning before proceeding, user chose to move ahead anyway. UTM + WooCommerce attribution stays primary; Pixel adds a second signal. Caveat: leave ad-set optimization on web traffic until purchase volume looks steady, don't switch to Conversions optimization immediately at ₪30/day.
+- Next: confirm background music landed in the uploaded files (never verified); let round 1 run its minimum duration before reading results; watch whether Pixel/Conversions API data is flowing once the plugin's connected.
+
 ## 2026-08-05 — Meta Ads: Dynamic Creative method switch, reviews reel (bucket 14) built, bucket 7 redesigned (marketing)
 
 - User pushed back on the 2026-07-30 solo-candidate testing method given the actual goal (most new customers/profit, not cleanest attribution); switched to Meta's native Dynamic Creative (multiple image/text variants in one ad, algorithm-optimized) — recorded with reasoning in `META_ADS_PLAN.md`'s Testing approach section, old method kept for context.
