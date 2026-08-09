@@ -124,7 +124,9 @@
       "Bash(echo \"EXIT:$?\")",
       "Bash(rm *)",
       "WebFetch(domain:www.facebook.com)",
-      "WebFetch(domain:adsuploader.com)"
+      "WebFetch(domain:adsuploader.com)",
+      "WebFetch(domain:web.archive.org)",
+      "WebFetch(domain:sanfranciscowineschool.com)"
     ],
     "deny": [
       "Bash(git -C:*)",
