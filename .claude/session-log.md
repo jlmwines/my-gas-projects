@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-10 — Meta Ads: bucket library expanded to 20, two pieces fully specced (marketing)
+
+- Six new creative buckets added (15-20): reverse-psychology interruption, bad-methods listicle, a "Vintage Report" proof-of-process series, external wine-authority validation, an AI-multi-engine convergence device, and "Expert at Every Step" (a full customer-journey capstone).
+- Ran independent multi-lens review (performance/creative/production/brand-voice) plus a second adversarial check on build-order — both converged: don't build the capstone (20) first, test a single-hook candidate (6, 9, or 11) before heavier multi-beat production, per bucket 8's own beat-overload lesson.
+- Two candidates developed to full build-ready specs this session: **Occasion Rack** (static-rack, per-slot occasion-photo-to-bottle reveal, extends bucket 6) and **"Outsource It"** (three verified wine-authority quotes — Asimov, Jancis Robinson, Steven Spurrier — full 13-segment timed storyboard, extends bucket 18). Both in `META_ADS_PLAN.md`.
+- Real quote-verification discipline: dropped MacNeil (credential-only), Andrea Immer Robinson (off-topic match), and Puckette (actually contradicts the thesis); confirmed the Spurrier quote via direct primary-source fetch; flagged real-person photo/publicity-rights risk (text-only attribution used, no photos of named critics).
+- User recalibrated session style mid-session: less plan-compliance/production scrutiny during brainstorm, more direct creative judgment. Added a "Working mode" note to `META_ADS_PLAN.md` codifying it.
+- Next: build either Occasion Rack or "Outsource It" (both ready); round 1 (buckets 7/8/14) still running live, no new read on results this session.
+
 ## 2026-08-06 — Bucket 7 designed and built, Meta Ads Jerusalem test launched (marketing)
 
 - Long collaborative brainstorm (illustrated female character, B&W-to-color/empty-to-full-glass loop, phone-frame POV, shelf-scan beat, direct cut to a glowing Bundles page, Evyatar word-balloon CTA) landed on bucket 7's final structure; user built it in Canva and it shipped as-is — recorded as an as-built recipe in `marketing/plans/META_ADS_PLAN.md` (superseding the earlier split-screen/Evyatar's-shelf spec, kept for reasoning).
