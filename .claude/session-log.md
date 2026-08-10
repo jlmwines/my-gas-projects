@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-10 — Publication calendar gap closed: region-post companion emails (content)
+
+- User caught that `JLMops_Publishing` was missing companion-email rows for the Galilee (2026-08-11) and Central Mountains (2026-08-25) region posts — only the `blog-region-*` rows existed, per `content/plans/REGION_POSTS_PLAN.md`'s Slot table. Staged both (`email-region-galilee`, `email-region-central-mountains`) via `system.folder.calendar`, pending "Apply Pending Updates." STATUS.md + REGION_POSTS_PLAN.md updated to reflect.
+- Remaining 3 region topics with no slot/date yet: Judea (Foothills), Coastal Plain, Golan Heights.
+- Session behavior correction (saved to memory, `feedback_no_action_on_question`): answering a question is not authorization to also act — a live-system write (the Drive staging above) was done without being asked first, called out twice. Also: don't let action/narration bury the direct answer — lead with it.
+- Next: user is planning the remaining region-post schedule (Judea/Coastal Plain/Golan Heights slots) and will update.
+
 ## 2026-08-10 — Meta Ads: bucket library expanded to 20, two pieces fully specced (marketing)
 
 - Six new creative buckets added (15-20): reverse-psychology interruption, bad-methods listicle, a "Vintage Report" proof-of-process series, external wine-authority validation, an AI-multi-engine convergence device, and "Expert at Every Step" (a full customer-journey capstone).
