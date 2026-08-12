@@ -1,6 +1,6 @@
 # JLM Wines Calendar
 
-**Updated:** 2026-07-27 (reliability-audit summary refreshed post WebXltM incident).
+**Updated:** 2026-08-12 (verified current, no drift found).
 
 ## Plan-driven queues (not date-bound)
 

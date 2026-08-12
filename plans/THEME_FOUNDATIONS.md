@@ -135,8 +135,7 @@ If you need to *write* in the JLM voice or *change* a strategic position, these 
 | Sensory metaphor system (intensity/complexity/acidity) | `content/SENSORY_FRAMEWORK.md` |
 | Quick voice reference for content writers | `content/CLAUDE.md` |
 | Brand voice quick reference for marketing | `marketing/CLAUDE.md` |
-| About Evyatar page structure | `website/MEET_EVYATAR_PLAN.md` |
-| Exit popup + WhatsApp icon spec | `website/EXIT_POPUP_PLAN.md` |
+| About Evyatar page structure (shipped, live at `jlmwines.com/about/`) | `website/_archive/MEET_EVYATAR_PLAN.md` |
 | Featured image recipe (blog, Canva impressionist) | `content/IMAGE_RECIPE.md` |
 
 If a discrepancy arises between this document and a source, the source wins — and this document gets updated.

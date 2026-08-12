@@ -1,6 +1,6 @@
 # Catalog Filters Plan
 
-**Status:** Locked — ready to build (pending answers to 2 small open questions)
+**Status:** SHIPPED 2026-05-04 (see `CALENDAR.md`) — attribute filters (intensity/complexity/acidity) live on catalog pages. Archived here as the design record.
 **Owner:** website
 **Surfaces:** Shop page, product category archives, search results
 

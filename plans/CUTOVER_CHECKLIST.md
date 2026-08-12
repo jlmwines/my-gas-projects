@@ -4,10 +4,10 @@
 
 **Key lesson learned:** activate-in-place doesn't catch staging-only content drift. For theme + DB-content cutovers, **default to staging→live promote**: refresh staging from live, install everything on staging, promote. Reversible at every step until the final promote. Update this checklist's stage structure if used as a template for future cutovers.
 
-**Pending items from the original checklist** (these were not gated on cutover and remain open in `STATUS.md` post-cutover follow-ups #4 and #6):
+**Pending items from the original checklist** (not gated on cutover; `STATUS.md`'s "post-cutover follow-ups" section that used to track these no longer exists — status of all three below is unverified as of this cleanup, 2026-08-12, over 3 months post-cutover; confirm against the live site before assuming still open):
 - Stage 2.6 cutover-day test order (real EN+HE checkout opt-in test) — may have happened informally; verify or run retroactively.
 - Stage 3 post-cutover stability check (24–48hr error log + order monitoring) — initial window has passed; confirm or run retroactive check.
-- SG Optimizer re-enablement test (currently fully OFF on live — see post-cutover follow-up #6).
+- SG Optimizer re-enablement test (was fully OFF on live at cutover) — confirm current state.
 
 ---
 

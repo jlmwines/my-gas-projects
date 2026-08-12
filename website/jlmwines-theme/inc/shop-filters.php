@@ -1,7 +1,7 @@
 <?php
 /**
  * Catalog attribute filters — sidebar/accordion UI for intensity, complexity,
- * acidity. See website/CATALOG_FILTERS_PLAN.md for the design rationale.
+ * acidity. See website/_archive/CATALOG_FILTERS_PLAN.md for the design rationale.
  *
  * Exact-value model: each attribute filters to a single value N (not a
  * threshold). The visual still fills circles 1..N to rhyme with the PDP

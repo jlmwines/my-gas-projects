@@ -1,5 +1,7 @@
 # Meet Evyatar Page Plan
 
+**Status:** SHIPPED — live at `jlmwines.com/about/` ("Meet Evyatar Cohen"). Archived here as the design record; actual live copy diverged somewhat from this draft (verify live page before reusing any text here).
+
 ## Overview
 
 Formerly "About Us" - renamed to "Meet Evyatar" for personal, trust-building focus.

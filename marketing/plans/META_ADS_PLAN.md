@@ -217,7 +217,7 @@ Pivot after the three cards: *"We have that shop."* → *"I'm glad to offer advi
 12. **14.5-16.5s** — Swirling wine glass — *"Would I like another sip?"*
 13. **16.5-17.5s** — Street exterior, matched-frame loop — *(no caption)*
 
-Total ~17.5s, within the 15s Meta-recommended target range.
+Total ~17.5s. (Note: an earlier version of this line cited "the 15s Meta-recommended target range" — no source for that figure exists anywhere in this doc; removed 2026-08-10. Working target for this bucket is now ~24s, per conversion-oriented pieces running that length.)
 
 **19. "Same Answer, Different AI" — multi-engine convergence device (2026-08-09).** A person types real, specific wine-uncertainty questions into several different AI chat interfaces; despite each one looking different, the useful part of the answer occupies the same territory, closing on jlmwines.com every time. Reuses this doc's own portable-line pattern — pairs with *"Different night. Different reason. Same answer."* (Format & Angle Library) as *"Different AI. Same answer."*
 

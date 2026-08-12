@@ -262,9 +262,9 @@ QR codes bridge physical → digital, but website remains primary subscription p
 - [x] Image recipe saved: `content/IMAGE_RECIPE.md`
 
 ### Pending
-- [ ] Blog posts — 10 editorial posts live (EN+HE) as of 2026-06; 3 in pipeline (per `plans/STATUS.md`)
+- [ ] Blog posts — 11 editorial posts live (EN+HE); 2 in pipeline (per `plans/STATUS.md`)
 - [ ] Homepage copy aligned with content strategy (the redesign above; lands via Phase 2 blocks)
-- [ ] "Meet Evyatar" page content (plan: `MEET_EVYATAR_PLAN.md`)
+- [x] "Meet Evyatar" page content — shipped, live at `jlmwines.com/about/` (plan archived: `_archive/MEET_EVYATAR_PLAN.md`)
 - [ ] Gifts destination page content
 
 ---

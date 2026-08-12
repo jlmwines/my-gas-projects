@@ -313,7 +313,7 @@ Most of the time goes to:
 
 ## Cross-references
 
-- `website/CATALOG_FILTERS_PLAN.md` — pattern for theme-level features that started as PHP includes; same evolution path.
+- `website/_archive/CATALOG_FILTERS_PLAN.md` — pattern for theme-level features that started as PHP includes; same evolution path.
 - `plans/SEO_AUDIT_2026-05-06.md` — issues #1 and #3 resolve as side effect of this work.
 - `plans/CUTOVER_CHECKLIST.md` — needs update if it still references `front-page.php`.
 - `business/CONTENT_STRATEGY.md` — voice/brand reference for default heading copy.
