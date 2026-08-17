@@ -11,7 +11,6 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Open
 
-- [ ] 2026-08-17: Vendor SKU Update's "Find Existing Product" step couldn't locate a product via its stale Web SKU when Comax had already synced to the vendor's new SKU (search/lookup were Comax-only), so Step 2 falsely rejected the real target SKU as a conflict. Fix deployed jlmops @546 same day — not yet smoke-tested live (no real vendor SKU change available to test against at deploy time). `jlmops/plans/VENDOR_SKU_UPDATE_FIX_PLAN.md`.
 - [ ] 2026-08-04: `task.system.failure` tasks store their de-dup key in `st_LinkedEntityId` (`NotificationService.js#_createFailureTask`) — same field the UI treats as a real SysLibrary entity link, so `WebAppLibrary_getEntityDetail` fails ("Entity '<context>' not found") whenever a UI path looks it up (e.g. Publishing-view entity drawer, `PublishingView.html:1316`). Harmless on the dashboard task-open path (failure swallowed there). No plan doc yet.
 - [ ] 2026-07-24: Admin Dashboard's Tasks card (`_getAdminTasksList`) dumps every open task system-wide as a flat table with no summarization — 200+ rows, by design scoped to all tasks (not Admin-assigned only, confirmed intentional), but no grouping/counts make it useless at that size. Needs a real summary (counts by type/priority/overdue, or similar) instead of a raw list. Design decision on summary shape deferred — not yet scheduled into `CODE_AUDIT_FIX_SEQUENCE.md`.
 - [ ] 2026-07-24: `ManagerDashboardView_v2.html`'s Projects card (`renderProjectsCard`) is fed by unfiltered `_getProjectSummaries`/`ProjectService.getAllProjects()` — includes `COMPLETED`/`ARCHIVED` projects alongside `ACTIVE`/`PLANNING`. Owner's view: projects aren't directly manipulated by either role day-to-day, so downgraded to low priority — revisit only if it becomes a real point of confusion.
@@ -33,6 +32,8 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 ### Resolved (recent)
 
 _One line each; full root-cause analysis lives in the git commit._
+
+- [x] 2026-08-17: Vendor SKU Update couldn't find a product via its stale Web SKU once Comax had already synced to the vendor's new SKU, so Step 2 falsely rejected the real target SKU as a conflict — fixed and smoke-tested confirmed working, jlmops @546. `jlmops/plans/VENDOR_SKU_UPDATE_FIX_PLAN.md`.
 
 - [x] 2026-07-26: `WebXltM` found empty, blocking every sync — root cause + fix in commit `27bd2cd`, deployed @544. Related gaps tracked in `jlmops/plans/RELIABILITY_AUDIT.md` §1.5/§1.6.
 - [x] 2026-07-24: Code-audit fix sequence — ~21 findings fixed/deployed (jlmops @530-@543); full list in `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md`. Deferred: server-side authorization (see Open list above), two dashboard-panel redesigns.

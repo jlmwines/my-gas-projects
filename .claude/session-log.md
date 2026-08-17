@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-17 — Vendor SKU Update discovery bug fixed, deployed, smoke-tested (jlmops)
+
+- User reported Vendor SKU Update behaving backwards on its normal case: when Comax already has the vendor's new SKU and Web hasn't caught up, the tool's "find by name" surfaced the new Comax SKU mislabeled as "current," then rejected the real target SKU as a duplicate. Root cause traced to `ProductService.searchAllProducts`/`lookupProductBySku` being Comax-only, unable to represent a product found only via its stale Web SKU.
+- Designed and implemented a fix through several rounds of user correction: discovery now checks `WebDetM` independently (not just `CmxProdM`); Step 1 resolves "current SKU" to the Web-side value when present; Step 2 no longer blocks when the target SKU already exists in Comax (that's the expected case, not a conflict) — confirmed via `_updateSkuInSheet` that re-running the apply step is safe/idempotent either way, so no case-detection logic was needed, just removing the false blocks.
+- Deployed jlmops @546, user smoke-tested live against a real vendor SKU change — confirmed working. Plan doc `jlmops/plans/VENDOR_SKU_UPDATE_FIX_PLAN.md`; bug moved to Resolved in `.claude/bugs.md`.
+
 ## 2026-08-17 — Meta Ads reel swap + budget/timeline decision; Google Search Ads test built and launched (marketing)
 
 - Confirmed Galilee's Canva images already exist (4 real files matching the 4 image prompts already drafted in the post file) — no new prompts needed. Located `JLMops_Publishing` (sheet ID `1l-mrCcmIYpkabTaxy4yTRmJ4nxqIaw7VwU2YRQ_8rbg`) for the user to edit dates directly; user moved `email-region-galilee`'s cal_Date to 2026-08-18 themselves. Blog post itself (Slot B) now likely publishing ~2026-08-16, not the original 2026-08-11 — noted in STATUS, no other action per user ("no worries").
