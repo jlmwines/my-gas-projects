@@ -1047,7 +1047,8 @@
                         div.className = 'p-2 border-bottom cursor-pointer';
                         div.style.cursor = 'pointer';
                         const webBadge = p.isWeb ? '<span class="badge badge-info ml-1" style="font-size:0.7em;">Web</span>' : '';
-                        div.innerHTML = `<strong>${AdminProductsView._escapeHtml(p.sku)}</strong>${webBadge} - ${AdminProductsView._escapeHtml(p.name)}`;
+                        const webOnlyBadge = p.source === 'web' ? '<span class="badge badge-warning ml-1" style="font-size:0.7em;">Web only (not in Comax)</span>' : '';
+                        div.innerHTML = `<strong>${AdminProductsView._escapeHtml(p.sku)}</strong>${webBadge}${webOnlyBadge} - ${AdminProductsView._escapeHtml(p.name)}`;
                         div.onclick = () => AdminProductsView.selectVendorCurrentProduct(p.sku);
                         resultsDiv.appendChild(div);
                     });
@@ -1065,21 +1066,25 @@
         document.getElementById('vendor-search-sku').value = sku;
 
         google.script.run.withSuccessHandler(data => {
-            if (!data || !data.comax) {
+            if (!data || (!data.comax && !data.web)) {
                 document.getElementById('vendor-current-product').style.display = 'none';
                 document.getElementById('vendor-modal-status').textContent = 'Product not found';
                 document.getElementById('vendor-modal-status').className = 'mr-auto small text-danger';
                 return;
             }
+            // "Current SKU" prefers the Web-side value — that's the stale SKU this tool exists to
+            // replace. Falls back to the Comax SKU when the product isn't on web yet.
+            const currentSku = data.web ? data.web.sku : data.comax.sku;
+            data.currentSku = currentSku;
             AdminProductsView.vendorCurrentProduct = data;
-            document.getElementById('vendor-current-sku').textContent = data.comax.sku;
-            document.getElementById('vendor-current-comax-name').textContent = data.comax.nameHe || '-';
+            document.getElementById('vendor-current-sku').textContent = currentSku;
+            document.getElementById('vendor-current-comax-name').textContent = data.comax ? (data.comax.nameHe || '-') : '(not in Comax under this SKU)';
             document.getElementById('vendor-current-web-name-en').textContent = data.web ? data.web.nameEn || '-' : 'Not on web';
             document.getElementById('vendor-current-web-name-he').textContent = data.web ? data.web.nameHe || '-' : '-';
             document.getElementById('vendor-current-webids').textContent = data.web ? `${data.web.webIdEn} / ${data.web.webIdHe}` : 'Not on web';
             document.getElementById('vendor-current-product').style.display = 'block';
             // Update confirmation labels with actual SKU and Web IDs
-            document.getElementById('vendor-label-old-sku').textContent = data.comax.sku;
+            document.getElementById('vendor-label-old-sku').textContent = currentSku;
             document.getElementById('vendor-label-webids').textContent = data.web ? `(products ${data.web.webIdEn} / ${data.web.webIdHe})` : '(not on web)';
             AdminProductsView.validateVendorForm();
         }).withFailureHandler(err => {
@@ -1108,7 +1113,7 @@
             return;
         }
 
-        if (AdminProductsView.vendorCurrentProduct && newSku === AdminProductsView.vendorCurrentProduct.comax.sku) {
+        if (AdminProductsView.vendorCurrentProduct && newSku === AdminProductsView.vendorCurrentProduct.currentSku) {
             errorDiv.textContent = 'New SKU must be different from current SKU';
             errorDiv.style.display = 'block';
             AdminProductsView.validateVendorForm();
@@ -1122,14 +1127,22 @@
             validDiv.className = 'text-muted small mt-1';
 
             google.script.run.withSuccessHandler(data => {
-                if (data && data.comax) {
-                    // SKU already exists - this is an error for vendor update
-                    errorDiv.textContent = `SKU "${newSku}" already exists in JLMops (${data.comax.nameHe})`;
+                if (data && data.web) {
+                    // Already used by a different web product under this SKU - genuine conflict
+                    errorDiv.textContent = `SKU "${newSku}" already exists in JLMops (${data.web.nameHe || data.web.nameEn || 'unknown product'})`;
                     errorDiv.style.display = 'block';
                     validDiv.style.display = 'none';
                     AdminProductsView.vendorNewSkuValid = false;
+                } else if (data && data.comax) {
+                    // Expected case: Comax already has this SKU (vendor's change already synced in) -
+                    // this update will sync Web to match, so allow it.
+                    validDiv.textContent = `SKU "${newSku}" already set in Comax (${data.comax.nameHe}) — will sync Web to match`;
+                    validDiv.className = 'text-success small mt-1';
+                    validDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    AdminProductsView.vendorNewSkuValid = true;
                 } else {
-                    // SKU does not exist - this is valid for vendor update
+                    // SKU does not exist anywhere yet - valid for a fresh vendor rename
                     validDiv.textContent = `SKU "${newSku}" is available (not in JLMops yet)`;
                     validDiv.className = 'text-success small mt-1';
                     validDiv.style.display = 'block';
@@ -1163,7 +1176,7 @@
     AdminProductsView.submitVendorSkuUpdate = function() {
         if (!AdminProductsView.vendorCurrentProduct) return;
 
-        const oldSku = AdminProductsView.vendorCurrentProduct.comax.sku;
+        const oldSku = AdminProductsView.vendorCurrentProduct.currentSku;
         const newSku = document.getElementById('vendor-new-sku').value.trim();
         const statusDiv = document.getElementById('vendor-modal-status');
 

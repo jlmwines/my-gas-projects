@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-17. jlmops @544 live, stable, unchanged since the 2026-07-26 WebXltM incident fix (see `.claude/bugs.md` for that history). Marketing-side: Meta Ads Jerusalem round 1 creative swap decided (drop bucket 8, keep bucket 14, build+add bucket 18 "Outsource It" — not yet built), remaining August budget being increased for the 2 surviving reels, test extended ~2-3 weeks past end of August (vacation-period confound + secondary branding rationale) before pausing for the holiday season — see `marketing/plans/META_ADS_PLAN.md` Round Log. New channel: a Google Search Ads test (Jerusalem geo, phrase-match keyword cluster, homepage landing) built and launched this session, in Google's Learning phase. Flyer Round 1 (Talbiye) redemptions still too soon to read; Round 2 (Emek Refaim) targeted 3rd week of August.
+**Updated:** 2026-08-17. jlmops @546 live — Vendor SKU Update discovery bug fixed and deployed same day (`jlmops/plans/VENDOR_SKU_UPDATE_FIX_PLAN.md`), not yet smoke-tested against a real vendor SKU change; prior to that, stable since the 2026-07-26 WebXltM incident fix (see `.claude/bugs.md` for that history). Marketing-side: Meta Ads Jerusalem round 1 creative swap decided (drop bucket 8, keep bucket 14, build+add bucket 18 "Outsource It" — not yet built), remaining August budget being increased for the 2 surviving reels, test extended ~2-3 weeks past end of August (vacation-period confound + secondary branding rationale) before pausing for the holiday season — see `marketing/plans/META_ADS_PLAN.md` Round Log. New channel: a Google Search Ads test (Jerusalem geo, phrase-match keyword cluster, homepage landing) built and launched this session, in Google's Learning phase. Flyer Round 1 (Talbiye) redemptions still too soon to read; Round 2 (Emek Refaim) targeted 3rd week of August.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-08-17 |
 | Revenue | Steady |
-| Deploy Version | jlmops @544 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-26 · theme 2026-07-09 |
+| Deploy Version | jlmops @546 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-08-17 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -48,6 +48,7 @@ The live "what now" — daily review reads these first.
 
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
+- **Vendor SKU Update discovery fix** (`jlmops/plans/VENDOR_SKU_UPDATE_FIX_PLAN.md`) — live @546. Search/lookup now find a product via its stale Web SKU even when Comax has already synced to the vendor's new SKU, and Step 2 no longer blocks when the target SKU already exists in Comax. Not yet smoke-tested — no real vendor SKU change available to test against at deploy time.
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E, G, and J (product-editor load time + manager submit/verify hang, plus the follow-on product-detail load-performance work) resolved and smoke-tested clean. Still pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
 - **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.

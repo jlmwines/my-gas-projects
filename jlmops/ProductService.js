@@ -2117,12 +2117,10 @@ const ProductService = (function() {
         }
       }
 
-      if (!comaxData) {
-        return null; // Not found in Comax by SKU or CmxId
-      }
-
-      // Lookup in WebProdM + WebDetM using the found SKU (in case we searched by CmxId)
-      const lookupSku = comaxData.sku;
+      // Lookup in WebProdM + WebDetM using the *searched* SKU when Comax has no match for it
+      // (e.g. the vendor's SKU change has already synced into Comax, and Web hasn't caught up) —
+      // otherwise use the SKU actually found in Comax (covers searching by CmxId).
+      const lookupSku = comaxData ? comaxData.sku : String(sku).trim();
       let webData = null;
       const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
@@ -2135,6 +2133,7 @@ const ProductService = (function() {
         for (let i = 1; i < webProdData.length; i++) {
           if (String(webProdData[i][wpmSkuIdx]).trim() === lookupSku) {
             webData = {
+              sku: lookupSku,
               webIdEn: webProdData[i][wpmWebIdEnIdx] || '',
               webIdHe: webProdData[i][wpmWebIdHeIdx] || '',
               nameEn: '',
@@ -2163,6 +2162,10 @@ const ProductService = (function() {
             }
           }
         }
+      }
+
+      if (!comaxData && !webData) {
+        return null; // Not found in Comax or Web under this SKU/CmxId
       }
 
       return { comax: comaxData, web: webData };
@@ -2322,40 +2325,74 @@ const ProductService = (function() {
       const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const term = String(searchTerm).toLowerCase();
 
-      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
-      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
-      const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
-      const cmxNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
-      const cmxIsArchivedIdx = cmxHeaders.indexOf('cpm_IsArchived');
-      const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
-      const cmxStockIdx = cmxHeaders.indexOf('cpm_Stock');
-
-      if (!cmxSheet) return [];
-
       const isTrue = (val) => {
         const s = String(val || '').trim().toLowerCase();
         return s === '1' || s === 'true' || s === 'yes' || s === 'כן';
       };
 
-      const cmxData = cmxSheet.getDataRange().getValues();
       const results = [];
+      const seenSkus = new Set();
 
-      for (let i = 1; i < cmxData.length && results.length < 50; i++) {
-        const sku = String(cmxData[i][cmxSkuIdx] || '').trim();
-        const nameHe = String(cmxData[i][cmxNameHeIdx] || '');
-        const isArchived = isTrue(cmxData[i][cmxIsArchivedIdx]);
+      // 1. Search CmxProdM by SKU or Hebrew name
+      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      if (cmxSheet) {
+        const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+        const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+        const cmxNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
+        const cmxIsArchivedIdx = cmxHeaders.indexOf('cpm_IsArchived');
+        const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
+        const cmxStockIdx = cmxHeaders.indexOf('cpm_Stock');
 
-        // Skip archived products only
-        if (isArchived) continue;
+        const cmxData = cmxSheet.getDataRange().getValues();
+        for (let i = 1; i < cmxData.length && results.length < 50; i++) {
+          const sku = String(cmxData[i][cmxSkuIdx] || '').trim();
+          const nameHe = String(cmxData[i][cmxNameHeIdx] || '');
+          const isArchived = isTrue(cmxData[i][cmxIsArchivedIdx]);
 
-        // Search by SKU or Hebrew name
-        if (sku.toLowerCase().includes(term) || nameHe.includes(searchTerm)) {
-          results.push({
-            sku: sku,
-            name: nameHe,
-            isWeb: isTrue(cmxData[i][cmxIsWebIdx]),
-            stock: Number(cmxData[i][cmxStockIdx] || 0)
-          });
+          // Skip archived products only
+          if (isArchived) continue;
+
+          // Search by SKU or Hebrew name
+          if (sku.toLowerCase().includes(term) || nameHe.includes(searchTerm)) {
+            results.push({
+              sku: sku,
+              name: nameHe,
+              isWeb: isTrue(cmxData[i][cmxIsWebIdx]),
+              stock: Number(cmxData[i][cmxStockIdx] || 0),
+              source: 'comax'
+            });
+            seenSkus.add(sku);
+          }
+        }
+      }
+
+      // 2. Search WebDetM (SKU + EN/HE name) for products not already matched via Comax —
+      //    catches a SKU that's already been changed in Comax but is still stale on the web side.
+      const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+      if (webDetSheet) {
+        const webDetHeaders = allConfig['schema.data.WebDetM'].headers.split(',');
+        const wdmSkuIdx = webDetHeaders.indexOf('wdm_SKU');
+        const wdmNameEnIdx = webDetHeaders.indexOf('wdm_NameEn');
+        const wdmNameHeIdx = webDetHeaders.indexOf('wdm_NameHe');
+
+        const webDetData = webDetSheet.getDataRange().getValues();
+        for (let i = 1; i < webDetData.length && results.length < 50; i++) {
+          const sku = String(webDetData[i][wdmSkuIdx] || '').trim();
+          if (!sku || seenSkus.has(sku)) continue;
+
+          const nameEn = String(webDetData[i][wdmNameEnIdx] || '');
+          const nameHe = String(webDetData[i][wdmNameHeIdx] || '');
+
+          if (sku.toLowerCase().includes(term) || nameEn.toLowerCase().includes(term) || nameHe.includes(searchTerm)) {
+            results.push({
+              sku: sku,
+              name: nameHe || nameEn,
+              isWeb: false,
+              stock: 0,
+              source: 'web'
+            });
+            seenSkus.add(sku);
+          }
         }
       }
 
