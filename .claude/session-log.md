@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-17 — Meta Ads reel swap + budget/timeline decision; Google Search Ads test built and launched (marketing)
+
+- Confirmed Galilee's Canva images already exist (4 real files matching the 4 image prompts already drafted in the post file) — no new prompts needed. Located `JLMops_Publishing` (sheet ID `1l-mrCcmIYpkabTaxy4yTRmJ4nxqIaw7VwU2YRQ_8rbg`) for the user to edit dates directly; user moved `email-region-galilee`'s cal_Date to 2026-08-18 themselves. Blog post itself (Slot B) now likely publishing ~2026-08-16, not the original 2026-08-11 — noted in STATUS, no other action per user ("no worries").
+- Long Meta Ads discussion: round 1's 3 reels performing near-identically, shared-ad-set budget diluted three ways (~200 clicks/~₪100 spend over ~2 weeks vs. ~₪180-210 expected pace, zero confirmed new-customer conversions). Decided: drop bucket 8, keep bucket 14 (reviews), build bucket 18 ("Outsource It") as replacement — net 2 ads. Remaining August budget increasing for the 2 survivors; test extended ~2-3 weeks past end of August (vacation-period confound + secondary branding rationale, to be read via reach/frequency/branded-search, not clicks) before pausing for the holiday season. Bucket 18 not yet built — now top production priority. Recorded in `META_ADS_PLAN.md` Round Log.
+- Built and launched a new channel: Google Search Ads (Responsive Search Ads), Jerusalem geo + loose English targeting, phrase-match keyword cluster, cheap/fast/discount negatives, Maximize Clicks (not Target CPA — same thin-conversion reasoning as Meta), homepage landing (message-matches the live site's actual "You don't need to be an expert" headline, verified via WebFetch), AI Max and audience targeting both declined for control. Live, in Google's Learning phase. Full spec not written up per user's explicit "just note the fact it's happening" — reconstruct from Ads Manager if a fuller writeup is wanted later.
+- Next: build bucket 18 in Canva; watch Google Ads exit Learning phase before reading its numbers; both channels' real reads likely delayed by the vacation-period confound already flagged.
+
 ## 2026-08-10 — Publication calendar gap closed: region-post companion emails (content)
 
 - User caught that `JLMops_Publishing` was missing companion-email rows for the Galilee (2026-08-11) and Central Mountains (2026-08-25) region posts — only the `blog-region-*` rows existed, per `content/plans/REGION_POSTS_PLAN.md`'s Slot table. Staged both (`email-region-galilee`, `email-region-central-mountains`) via `system.folder.calendar`, pending "Apply Pending Updates." STATUS.md + REGION_POSTS_PLAN.md updated to reflect.

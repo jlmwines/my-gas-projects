@@ -27,7 +27,7 @@ Slug column corrected 2026-07-09 — verified live in `JLMops_Library`/`JLMops_P
 
 Email date = post publish + companion email send (separate from the monthly AYIW email, which runs on its own date). Newsletter date = print insert distribution.
 
-**Companion email calendar rows** for Slot B (`email-region-galilee`, 2026-08-11) and Slot C (`email-region-central-mountains`, 2026-08-25) were missing from `JLMops_Publishing` (only the `blog-region-*` rows existed) — staged 2026-08-10, pending the admin's "Apply Pending Updates."
+**Companion email calendar rows** for Slot B (`email-region-galilee`) and Slot C (`email-region-central-mountains`, 2026-08-25) were missing from `JLMops_Publishing` (only the `blog-region-*` rows existed) — staged 2026-08-10. Slot B's `email-region-galilee` row was subsequently moved by the admin directly in the sheet to cal_Date 2026-08-18.
 
 ## Source files
 
