@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-18 — Galilee HE post: content gap + layout fix, pushed live (content)
+
+- User reported the manager had added missing text to the Galilee HE Drive doc. Pulled it, confirmed via WebFetch it was the previously-flagged gap (Carmel 1979 Special Reserve / Dalton 1995 planting paragraph, missing from the live HE History section since publish). Added to `galilee-he.post.md` BODY + HTML in the same image-column slot EN uses, pushed via `push-posts.js galilee --he`, confirmed live (a same-URL WebFetch recheck initially looked unchanged — was the tool's 15-min cache, not a failed push; a cache-busted URL confirmed it).
+- User then flagged the "למה הגובה חשוב" (Altitude) section's image column had a paragraph below the image, unlike the clean image-only column elsewhere on the page; moved it to the top of the adjacent 60% column per direct instruction, pushed, confirmed.
+- Note: mid-diagnosis, WebFetch's summarizing model fabricated/garbled Hebrew text when asked to quote raw HTML from the WP REST API — switched to `curl` + a small `node` script to read `content.rendered` directly instead of trusting WebFetch for exact non-English text extraction. Worth remembering for any future raw-HTML-verification need on Hebrew content.
+- Both fixes documented in `galilee-he.post.md`'s own NOTES section. No plan-doc or STATUS.md change needed — this was a post-publish correction to already-shipped work, not a new gap.
+
+
 ## 2026-08-18 — Galilee region post shipped end-to-end; two more drafted; process/trust incident (content)
 
 - Galilee region post (Slot B) taken from stalled draft to fully live: EN+HE published (`galilee-wine`, WPML-linked), formatting iterated live per user feedback (column layouts, mobile ordering, em-dash cleanup, no end-of-post CTA), companion emails built and scheduled in Mailchimp for 2026-08-18. Found/fixed along the way: `push-posts.js` manifest paths were stale for 9 other posts (logged in `.claude/bugs.md`), WPML translation stubs can't be created via the API (documented in `content/_resources/PUBLISHING.md`), RankMath meta description was over the 160-char limit and stale against the final body (fixed).

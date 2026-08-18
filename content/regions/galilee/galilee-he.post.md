@@ -20,6 +20,8 @@
 
 על פי רוב, חם ויבש יחסית אצלנו בארץ. הייחוד של הגליל הוא שזה לא המצב. כורמים ששתלו כרמים בגליל מאמצע שנות ה 90 גילו פה שילוב מיוחד, גובה משמעותי עם גשמים אמיתיים ולילות קרירים גם בקיץ. זה האזור בישראל שהכי דומה לאזור גידול מאירופה הקלאסית. זה שינה לנו מאוד את התפיסה של איך יכול להראות גידול ענבי יין בארץ. אם עד עכשיו התפיסה הייתה שאפשר להצליח למרות מזג האוויר, בגליל יכולנו לעבוד ביחד. מאז למדנו לעבוד עם הרבה אזורים בכל הארץ, אבל אז אלו היו צעדים ראשונים של תעשייה צעירה.
 
+ציון האזור הופיע לראשונה על תווית של כרמל ספישל רזרב 1979 בתווית האחורית. התפתחות האזור ממש כפי שאנו מכירים אותו היום בתחיל ב1995 כאשר יקב דלתון שתל כרמים נרחבים ונהיה פורץ דרך. היקב הראשון שקשר את גורלו עם הגליל כאזור גידול יין.
+
 סוגי האדמה מוסיפים רובד נוסף לאיכויותיו של היין הגלילי. אפשר ללכת כמה מאות מטרים על צלע הר בגליל ולעבור מאדמת טרה רוסה לבזלת וולקנית ולקרקע גירנית אוורירית. כשמוסיפים לזה את המיקרו-אקלים ההררי של הגליל העליון המערבי ואת הגליל התחתון המתון יותר, מקבלים אזור שמתנהג פחות כמו מקום אחד ויותר כמו פסיפס של שכונות קטנות ומובחנות, שכל אחת מהן משפיעה בצורה קצת אחרת על הענבים שגדלים בה.
 
 הכרמים נמצאים בכל מקום בגליל; זהו באמת אזור יין יפהפה - צלעות הרים, ערפילי בוקר קרירים וכרמים שצומחים ממש לתוך יערות האורנים. יקבים כמו דלתון, אור הגנוז, להט, לוריא ורמת הגליל בנו כאן את שמם, וביחד הם מכסים קשת רחבה של מה שהגליל מסוגל להציע.
@@ -107,8 +109,9 @@
 - Source: Drive doc `blog-region-galilee-he` (ID: `17Ns540Mi7U3iCEkTVLU4qzpOPsnYJyHlfI7HtF6OLLI`), owner `info@jlmwines.com`, created 2026-07-19. Body/Excerpt/Email fields/Newsletter Excerpt/Print Newsletter Body copied verbatim from that doc — no paraphrasing.
 - **Title confirmed by manager 2026-08-17:** "ממרום: יין מהגליל" (replaces the session's draft suggestion). Still pending: the CTA phrase used in the email fields (Email CTA / Newsletter Excerpt bracket — EN uses the site default "Read the full guide →" in both; session proposed "קראו את המדריך המלא ←", marked `[DRAFT — NEEDS MANAGER REVIEW]` inline above, not yet confirmed). The blog itself carries no CTA now (per user direction on the EN post 2026-08-17), so this only affects the email build later.
 - One structural change from the source doc: inserted a "למה הגובה חשוב" heading partway through the History section, splitting it at the same point the EN post separates "The Story" from "Why the Altitude Matters" — needed so the HE HTML block can mirror the EN block's column structure section-for-section (`content/CLAUDE.md` HTML rule). No wording was changed, only a heading label added.
-- **Content gap found building the HTML, not yet flagged to the manager:** the History section's Hebrew has only 4 paragraphs where EN has 5 — missing entirely is the paragraph about Carmel's 1979 Special Reserve being the first Israeli wine labeled "Galilee," and Dalton Winery's 1995 planting as the modern pioneer. Not a paraphrase difference — that specific historical detail has no Hebrew equivalent anywhere in the source doc. Left out of the HTML below rather than session-translated (it's a factual/historical claim, not boilerplate like the CTA). Needs the manager's own translation if it should be added, or a deliberate call to leave the HE version without it.
-- HE HTML block below mirrors `galilee-en.post.md`'s current structure — same section order, same column shapes (History 3-col, Altitude 40/60 image-left, Glass 60/40 image-right, Wineries flat list, no end CTA) — built 2026-08-17 after EN's layout was confirmed live. Paragraph-to-column mapping isn't 1:1 with EN since the Hebrew prose combines/omits differently (documented above and in the Wineries note below); columns carry whichever HE paragraphs correspond to that section, in original order, un-trimmed.
+- **Content gap resolved 2026-08-18:** the History section's Hebrew was missing the paragraph about Carmel's 1979 Special Reserve being the first Israeli wine labeled "Galilee," and Dalton Winery's 1995 planting as the modern pioneer (flagged 2026-08-17, live post confirmed still missing it 2026-08-18). Manager added the paragraph to the Drive doc (`blog-region-galilee-he`, modified 2026-08-17T15:17:53Z) — pulled verbatim, no paraphrasing, and placed in the same image-column slot EN uses for its equivalent paragraph (History section now 5 paragraphs in both languages, same 3-col/2+1+2 distribution). Pushed live 2026-08-18, confirmed on the live post.
+- **Altitude section layout fixed 2026-08-18:** the "למה הגובה חשוב" image column (40%) had a paragraph sitting below the image, unlike EN's equivalent pattern elsewhere on the page reading as image-only in that slot on live render — per user direction, moved that paragraph to the top of the adjacent 60% column so the image column now carries only the image. Pushed live, confirmed.
+- HE HTML block below mirrors `galilee-en.post.md`'s section order and column shapes (History 3-col, Altitude 40/60 image-left — image column now image-only per the 2026-08-18 fix above, Glass 60/40 image-right, Wineries flat list, no end CTA) — built 2026-08-17 after EN's layout was confirmed live. Paragraph-to-column mapping isn't 1:1 with EN since the Hebrew prose combines/omits differently (documented above and in the Wineries note below); columns carry whichever HE paragraphs correspond to that section, in original order, un-trimmed.
 - Wineries to Visit: the Hebrew source groups Adir/Dalton/Recanati into one bullet (vs. EN's Dalton getting its own separate bullet plus a walking-distance note) and has no separate entry for Galil Mountain's "range" framing beyond its own line — 4 bullets total vs EN's 5, manager's own grouping preserved as written, each winery name bolded to match the visual convention.
 - No separate HE Image Prompts section — the 4 images (featured + 3 body) are shared across both language versions, same media IDs as `galilee-en.post.md`; prompts live only there. Alt text below is translated fresh from the EN image prompts, not copied from any Hebrew source (none exists).
 - HE SEO meta description not yet drafted — needs writing before the wp-admin RankMath step, same gap Negev had.
@@ -159,12 +162,16 @@ Paste below into WordPress Code Editor:
 <!-- /wp:image -->
 
 <!-- wp:paragraph -->
-<p style="margin-bottom:1.3em">סוגי האדמה מוסיפים רובד נוסף לאיכויותיו של היין הגלילי. אפשר ללכת כמה מאות מטרים על צלע הר בגליל ולעבור מאדמת טרה רוסה לבזלת וולקנית ולקרקע גירנית אוורירית. כשמוסיפים לזה את המיקרו-אקלים ההררי של הגליל העליון המערבי ואת הגליל התחתון המתון יותר, מקבלים אזור שמתנהג פחות כמו מקום אחד ויותר כמו פסיפס של שכונות קטנות ומובחנות, שכל אחת מהן משפיעה בצורה קצת אחרת על הענבים שגדלים בה.</p>
+<p style="margin-bottom:1.3em">ציון האזור הופיע לראשונה על תווית של כרמל ספישל רזרב 1979 בתווית האחורית. התפתחות האזור ממש כפי שאנו מכירים אותו היום בתחיל ב1995 כאשר יקב דלתון שתל כרמים נרחבים ונהיה פורץ דרך. היקב הראשון שקשר את גורלו עם הגליל כאזור גידול יין.</p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:column -->
 
 <!-- wp:column {"width":"33.33%"} -->
 <div class="wp-block-column" style="flex-basis:33.33%"><!-- wp:paragraph -->
+<p style="margin-bottom:1.3em">סוגי האדמה מוסיפים רובד נוסף לאיכויותיו של היין הגלילי. אפשר ללכת כמה מאות מטרים על צלע הר בגליל ולעבור מאדמת טרה רוסה לבזלת וולקנית ולקרקע גירנית אוורירית. כשמוסיפים לזה את המיקרו-אקלים ההררי של הגליל העליון המערבי ואת הגליל התחתון המתון יותר, מקבלים אזור שמתנהג פחות כמו מקום אחד ויותר כמו פסיפס של שכונות קטנות ומובחנות, שכל אחת מהן משפיעה בצורה קצת אחרת על הענבים שגדלים בה.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
 <p style="margin-bottom:1.3em">הכרמים נמצאים בכל מקום בגליל; זהו באמת אזור יין יפהפה - צלעות הרים, ערפילי בוקר קרירים וכרמים שצומחים ממש לתוך יערות האורנים. יקבים כמו דלתון, אור הגנוז, להט, לוריא ורמת הגליל בנו כאן את שמם, וביחד הם מכסים קשת רחבה של מה שהגליל מסוגל להציע.</p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:column --></div>
@@ -178,15 +185,15 @@ Paste below into WordPress Code Editor:
 <div class="wp-block-columns"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
 <div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67734,"sizeSlug":"large","linkDestination":"none"} -->
 <figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/08/galilee-altitude.jpg" alt="ציור שמן אימפרסיוניסטי של כרם גלילי בגובה רב בשעת דמדומים, אור ערב כחול קריר על הגפנים, גבעות רחוקות נעלמות בערפל" class="wp-image-67734"/></figure>
-<!-- /wp:image -->
-
-<!-- wp:paragraph -->
-<p style="margin-bottom:1.3em">הגובה אולי נשמע כמו נתון טכני, אבל בגליל הוא משמעותי מאוד. ככל שעולים, האוויר נעשה קריר יותר – זה נשמע פשוט, אבל ההשפעה על היין היא דרמטית. ענבים שגדלים בגובה מבשילים לאט יותר, וזה נותן להם זמן לפתח טעמים עמוקים בלי "לרוץ" ישר לסוכר. הגפן לא לחוצה, והפרי לא ממהר.</p>
-<!-- /wp:paragraph --></div>
+<!-- /wp:image --></div>
 <!-- /wp:column -->
 
 <!-- wp:column {"width":"60%"} -->
 <div class="wp-block-column" style="flex-basis:60%"><!-- wp:paragraph -->
+<p style="margin-bottom:1.3em">הגובה אולי נשמע כמו נתון טכני, אבל בגליל הוא משמעותי מאוד. ככל שעולים, האוויר נעשה קריר יותר – זה נשמע פשוט, אבל ההשפעה על היין היא דרמטית. ענבים שגדלים בגובה מבשילים לאט יותר, וזה נותן להם זמן לפתח טעמים עמוקים בלי "לרוץ" ישר לסוכר. הגפן לא לחוצה, והפרי לא ממהר.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
 <p style="margin-bottom:1.3em">גם הגשמים הם גורם מכריע; הגליל נהנה מכמות משקעים גדולה משמעותית משאר חלקי הארץ. המשמעות היא פחות תלות בהשקיה מלאכותית וגפנים שמתפתחות בקצב טבעי ומאוזן לאורך העונה. תוסיפו לזה את הלילות הקרירים שמאפיינים את האזור, וקיבלתם ענבים ששומרים על חמיצות גם בשלבים מאוחרים בהבשלה – המפתח לחיוניות של היין וליכולת היישון שלו.</p>
 <!-- /wp:paragraph -->
 
