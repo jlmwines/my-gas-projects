@@ -17,7 +17,7 @@ Enforced in code as of jlmops @458: `_ensureEntity` (`LibraryService.js`) now lo
 
 ## Drafting language
 
-Default to English only. Hebrew only when explicitly asked for, and even then it's a draft for review, never framed as ready to apply directly (see `feedback_hebrew_review_before_update` — AYIW/newsletter content is a documented exception where the manager does his own translation, see `feedback_ayiw_english_only_manager_translates`).
+English only, always. Hebrew is never session-originated — not a draft, not "for review," not even when explicitly missing from the manager's translation. The full EN set (body + every derivative field) is drafted, locked, and verified correct first; translation of that complete package happens only in the manager's own hands, in one pass, after. This was AYIW's documented convention (`feedback_ayiw_english_only_manager_translates`) and now applies to all content types per `feedback_blog_post_pipeline_manager_translates_full_set` (2026-08-17) — a session finding a gap in the manager's Hebrew means translation isn't done yet, never a cue to fill it in. See `content/CLAUDE.md`'s Work order (step 11) for the full pipeline this feeds into.
 
 ## AYIW source
 

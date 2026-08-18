@@ -97,8 +97,16 @@ const MANIFEST = [
     name: 'negev',
     enSlug: 'negev-wine', enId: 67600,
     heSlug: 'blog-negev', heId: 67602,
-    enFile: 'regions/negev-en.post.md',
-    heFile: 'regions/negev-he.post.md',
+    enFile: 'regions/negev/negev-en.post.md',
+    heFile: 'regions/negev/negev-he.post.md',
+    enCategoryId: 1272, heCategoryId: 1273   // Regions / אזורים (WPML-translated terms)
+  },
+  {
+    name: 'galilee',
+    enSlug: 'galilee-wine', enId: 67733,
+    heSlug: 'galilee-wine', heId: 67739,   // WPML translation stub, created by user in wp-admin (translations can't be created via REST API)
+    enFile: 'regions/galilee/galilee-en.post.md',
+    heFile: 'regions/galilee/galilee-he.post.md',
     enCategoryId: 1272, heCategoryId: 1273   // Regions / אזורים (WPML-translated terms)
   }
 ];

@@ -128,4 +128,10 @@ _One line each; full root-cause analysis lives in the git commit._
 
 ## content
 
-(none)
+### Open
+
+- [ ] 2026-08-17: `content/scripts/push-posts.js` MANIFEST paths are stale for the 9 flat/basics posts (acidity, complexity, intensity, pairing, good-wine, selection, price, evyatar, context, handling) — they still point at `content/<Name>.post.md` but those files now live under `content/basics/<topic>/`, so every one of those entries reports MISSING. Discovered and fixed for `negev`/`galilee` only (their region-subfolder paths) while producing the Galilee post; the 9 basics entries are untouched.
+
+### Resolved
+
+- [x] 2026-08-17: `negev` MANIFEST entry pointed at `regions/negev-en.post.md` instead of the actual `regions/negev/negev-en.post.md` — fixed alongside adding the `galilee` entry.

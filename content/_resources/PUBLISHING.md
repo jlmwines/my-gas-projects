@@ -18,7 +18,9 @@ It does **NOT** set: **post status** (so an existing draft stays a draft — the
 
 ## The manifest
 
-Each post is one entry in the `MANIFEST` array in `push-posts.js`. To register a new post, add an entry with: `name` (the CLI handle), `enSlug`/`heSlug`, `enId`/`heId` (the pinned WP post IDs — direct update by ID, no slug guessing), and `enFile`/`heFile` (the `.post.md` filenames). Optionally add `enCategoryId`/`heCategoryId` to set the post's category per language (WPML translates a category into two term IDs — e.g. Basics is `947` EN / `948` HE; query `categories?slug=<slug>&lang=he` to resolve the HE term). EN and HE share the same WP media IDs (images uploaded once). If `enId`/`heId` is absent, the script falls back to slug-based upsert (create-or-update), used for brand-new posts.
+Each post is one entry in the `MANIFEST` array in `push-posts.js`. To register a new post, add an entry with: `name` (the CLI handle), `enSlug`/`heSlug`, `enId`/`heId` (the pinned WP post IDs — direct update by ID, no slug guessing), and `enFile`/`heFile` (the `.post.md` filenames). Optionally add `enCategoryId`/`heCategoryId` to set the post's category per language (WPML translates a category into two term IDs — e.g. Basics is `947` EN / `948` HE; query `categories?slug=<slug>&lang=he` to resolve the HE term). EN and HE share the same WP media IDs (images uploaded once). If `enId`/`heId` is absent, the script falls back to slug-based upsert (create-or-update).
+
+**WPML translation stubs cannot be created through this pipeline (confirmed 2026-08-17).** A brand-new EN post can be created by slug-based upsert with no `enId`, but a HE post created the same way is just a new, WPML-*unlinked* post — not a translation of the EN one. The user has to create the HE stub in wp-admin first (WPML's translation-editor "+" on the EN post), which links it and hands back a real post ID; only then does `heId` go in the manifest. Don't attempt slug-based upsert for a HE post that's meant to be a WPML translation of an existing EN post.
 
 ## Credentials & target
 
