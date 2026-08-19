@@ -1721,6 +1721,131 @@ body.age-gate-locked { overflow: hidden; }
   }
 }
 
+/* ─── New-visitor offer popup ────────────────────────────────────── */
+/* Dismissible, not blocking — unlike .age-gate this doesn't lock full
+   interaction; it just centers over the page with a scrim behind it.
+   z-index sits above every other floating element (whatsapp-float 95,
+   bottom-nav 90, cart drawer, consent banner all well under 200) but
+   below .age-gate (10000), so if both were ever visible at once the
+   compliance gate always wins. */
+.offer-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.offer-popup[hidden] { display: none; }
+.offer-popup-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+.offer-popup-modal {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  max-width: 420px;
+  width: 100%;
+  padding: 32px 28px 24px;
+  border-radius: 4px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
+}
+.offer-popup-close {
+  position: absolute;
+  top: 12px;
+  inset-inline-end: 12px;
+  background: transparent;
+  border: 0;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--c-muted);
+  line-height: 0;
+}
+.offer-popup-close:hover { color: var(--c-ink); }
+
+.offer-popup-offer { text-align: center; }
+.offer-popup-headline {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 26px;
+  line-height: 1.2;
+  margin: 0 0 10px;
+  color: var(--c-ink);
+}
+.offer-popup-detail {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--c-muted);
+  margin: 0 0 18px;
+}
+.offer-popup-shop-btn {
+  display: inline-block;
+  background: var(--c-accent);
+  color: #ffffff;
+  font-family: var(--f-ui);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 13px 28px;
+  text-decoration: none;
+  border: 0;
+  cursor: pointer;
+}
+.offer-popup-shop-btn:hover { background: var(--c-accent-hover); }
+
+.offer-popup-secondary {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--c-ink-12);
+  display: grid;
+  gap: 16px;
+}
+.offer-popup-whatsapp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--c-ink);
+}
+.offer-popup-evyatar-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.offer-popup-whatsapp-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.offer-popup-whatsapp-label svg { color: #25d366; }
+
+.offer-popup-email h3 {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 16px;
+  margin: 0 0 10px;
+  color: var(--c-ink);
+}
+/* .footer-form / .footer-form-msg supply the input+button row and inline
+   status message styling — shared with the footer newsletter band rather
+   than duplicated here. */
+.offer-popup-form input { padding: 11px 14px; }
+.offer-popup-form button { padding: 11px 18px; }
+
+body.offer-popup-open { overflow: hidden; }
+
+@media (max-width: 480px) {
+  .offer-popup-modal { padding: 28px 20px 20px; }
+  .offer-popup-headline { font-size: 22px; }
+}
+
 /* Pojo Accessibility (ea11y) widget positioning is handled in main.js
    because the widget renders inside a Shadow DOM — outer-page CSS can't
    reach in. The JS handler reaches through the open shadow root and

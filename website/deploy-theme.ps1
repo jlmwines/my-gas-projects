@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════
-# deploy-theme.ps1 — FTP deploy of website/jlmwines-theme/ to staging
+# deploy-theme.ps1 — FTP deploy of website/jlmwines-theme/ to LIVE
 #
 # Reads .sftp-credentials (project root, gitignored) and uploads only
 # changed files (incremental) based on a SHA-1 manifest stored at
@@ -11,6 +11,19 @@
 #
 # Pass -Force to ignore the manifest and re-upload every file —
 # typically once after a SiteGround staging refresh wipes the server.
+#
+# Upload-then-verify-then-replace (added 2026-08-20, incident response):
+# a live file is NEVER written to directly. Each file uploads to a
+# ".new" sibling, its remote byte count is checked against the local
+# file, and only a byte-exact match gets renamed onto the live
+# filename (FTP rename = atomic OS-level rename on SiteGround's Linux
+# FTP server). A failed or truncated upload only ever corrupts the
+# ".new" temp file — the live file is untouched until a verified-good
+# upload exists. This exists because a prior run (root cause unclear —
+# script and credentials unchanged for weeks, so likely a server-side
+# change at SiteGround) truncated functions.php/style.css/main.css/
+# main.js to 0 bytes live, breaking the site; see .claude/session-log.md
+# 2026-08-20 and .claude/bugs.md.
 # ═══════════════════════════════════════════════════════════════════
 
 param(
@@ -40,48 +53,77 @@ foreach ($k in 'host','port','username','password') {
     if (-not $cred[$k]) { Write-Host "Error: $k missing in .sftp-credentials"; exit 1 }
 }
 
-# SiteGround FTPS uses cert with mismatched CN (cert is for the underlying
-# server hostname, not the customer domain alias). Connection is still
-# TLS-encrypted; we only relax hostname validation.
-[System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+# Transport: curl's FTPS client, not .NET's FtpWebRequest (switched
+# 2026-08-20). FtpWebRequest started failing every upload with FTP 451
+# against SiteGround — script/credentials unchanged for weeks, so most
+# likely a server-side change at SiteGround; curl's FTPS implementation
+# connects and transfers cleanly against the same account. See
+# .claude/session-log.md 2026-08-20 and .claude/bugs.md.
+if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
+    Write-Host "Error: curl.exe not found on PATH"; exit 1
+}
+$userpass = "$($cred.username):$($cred.password)"
+$baseUri  = "ftp://$($cred.host):$($cred.port)"
 
-$networkCred = New-Object System.Net.NetworkCredential($cred.username, $cred.password)
-$baseUri     = "ftp://$($cred.host):$($cred.port)"
-
-function Invoke-Ftp {
-    param([string]$RemotePath, [string]$Method, [byte[]]$Body)
-    $req = [System.Net.FtpWebRequest]::Create("$baseUri$RemotePath")
-    $req.Method      = $Method
-    $req.Credentials = $networkCred
-    $req.EnableSsl   = $true
-    $req.UsePassive  = $true
-    $req.UseBinary   = $true
-    $req.KeepAlive   = $false
-    if ($Body) {
-        $req.ContentLength = $Body.Length
-        $stream = $req.GetRequestStream()
-        $stream.Write($Body, 0, $Body.Length)
-        $stream.Close()
-    }
-    $req.GetResponse()
+# -k: SiteGround's FTPS cert has a mismatched CN (cert is for the underlying
+# server hostname, not the customer domain alias) — connection is still
+# TLS-encrypted, this only relaxes hostname validation (same relaxation the
+# old FtpWebRequest-based script made via ServerCertificateValidationCallback).
+function Invoke-CurlFtp {
+    param([string[]]$CurlArgs, [int]$TimeoutSec = 30)
+    $allArgs = @('--ssl-reqd', '-k', '--user', $userpass, '--connect-timeout', '15', '-m', $TimeoutSec, '-s', '-S') + $CurlArgs
+    $out = & curl.exe @allArgs 2>&1
+    [PSCustomObject]@{ Output = ($out -join ' '); ExitCode = $LASTEXITCODE }
 }
 
 function Ensure-Dir {
     param([string]$RemotePath)
-    try { (Invoke-Ftp -RemotePath $RemotePath -Method ([System.Net.WebRequestMethods+Ftp]::MakeDirectory)).Close() }
-    catch { }   # already exists is fine
+    Invoke-CurlFtp -CurlArgs @('--quote', "MKD $RemotePath", "$baseUri/") | Out-Null   # already exists is fine
 }
 
+function Get-RemoteSize {
+    param([string]$RemotePath)
+    $result = Invoke-CurlFtp -CurlArgs @('-I', "$baseUri$RemotePath")
+    if ($result.ExitCode -ne 0) { throw "curl size-check failed (exit $($result.ExitCode)): $($result.Output)" }
+    $match = [regex]::Match($result.Output, 'Content-Length:\s*(\d+)')
+    if (-not $match.Success) { throw "Could not parse Content-Length from: $($result.Output)" }
+    return [int64]$match.Groups[1].Value
+}
+
+function Rename-Remote {
+    param([string]$FromPath, [string]$ToPath)
+    $result = Invoke-CurlFtp -CurlArgs @('--quote', "RNFR $FromPath", '--quote', "RNTO $ToPath", "$baseUri/")
+    if ($result.ExitCode -ne 0) { throw "curl rename failed (exit $($result.ExitCode)): $($result.Output)" }
+}
+
+function Delete-Quiet {
+    param([string]$RemotePath)
+    Invoke-CurlFtp -CurlArgs @('--quote', "DELE $RemotePath", "$baseUri/") | Out-Null  # best-effort temp-file cleanup
+}
+
+# Upload-then-verify-then-replace: never writes the live filename
+# directly. See header comment for why (2026-08-20 incident).
 function Upload-File {
     param([string]$LocalPath, [string]$RemotePath, [int]$MaxRetries = 3)
-    $bytes = [System.IO.File]::ReadAllBytes($LocalPath)
-    $lastErr = $null
+    $localSize = (Get-Item $LocalPath).Length
+    $tempPath  = "$RemotePath.new"
+    $lastErr   = $null
+
     for ($i = 1; $i -le $MaxRetries; $i++) {
         try {
-            (Invoke-Ftp -RemotePath $RemotePath -Method ([System.Net.WebRequestMethods+Ftp]::UploadFile) -Body $bytes).Close()
+            $up = Invoke-CurlFtp -CurlArgs @('-T', $LocalPath, "$baseUri$tempPath")
+            if ($up.ExitCode -ne 0) { throw "curl upload failed (exit $($up.ExitCode)): $($up.Output)" }
+
+            $remoteSize = Get-RemoteSize -RemotePath $tempPath
+            if ($remoteSize -ne $localSize) {
+                throw "Size mismatch after upload: local $localSize bytes, remote $remoteSize bytes (temp file, live file untouched)"
+            }
+
+            Rename-Remote -FromPath $tempPath -ToPath $RemotePath
             return $i  # attempt count it succeeded on
         } catch {
             $lastErr = $_
+            Delete-Quiet -RemotePath $tempPath
             if ($i -lt $MaxRetries) { Start-Sleep -Milliseconds 800 }
         }
     }
@@ -92,15 +134,12 @@ function Delete-File {
     param([string]$RemotePath, [int]$MaxRetries = 3)
     $lastErr = $null
     for ($i = 1; $i -le $MaxRetries; $i++) {
-        try {
-            (Invoke-Ftp -RemotePath $RemotePath -Method ([System.Net.WebRequestMethods+Ftp]::DeleteFile)).Close()
-            return $i
-        } catch {
-            $lastErr = $_
-            # FTP 550 = file not found; treat as already-gone success.
-            if ($_.Exception.Message -match '550') { return 0 }
-            if ($i -lt $MaxRetries) { Start-Sleep -Milliseconds 800 }
-        }
+        $result = Invoke-CurlFtp -CurlArgs @('--quote', "DELE $RemotePath", "$baseUri/")
+        if ($result.ExitCode -eq 0) { return $i }
+        # FTP 550 = file not found; treat as already-gone success.
+        if ($result.Output -match '550') { return 0 }
+        $lastErr = $result.Output
+        if ($i -lt $MaxRetries) { Start-Sleep -Milliseconds 800 }
     }
     throw $lastErr
 }

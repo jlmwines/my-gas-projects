@@ -377,15 +377,15 @@
     setTimeout(function () { observer.disconnect(); }, 30000);
 })();
 
-// Footer newsletter signup — JSONP submit to Mailchimp's post-json endpoint
-// so the subscriber stays on jlmwines.com. Replaces the form with an inline
+// Mailchimp signup forms — JSONP submit to Mailchimp's post-json endpoint so
+// the subscriber stays on jlmwines.com. Replaces each form with an inline
 // success/error message in the current language. JS-disabled fallback: form
 // submits to Mailchimp's hosted page in a new tab (target="_blank" attribute).
+// Binds every [data-mc-form] on the page independently (footer band, offer
+// popup) — not just the first — so each has its own working submit handler.
 (function () {
-    var form = document.querySelector('form[data-mc-form]');
-    if (!form) return;
-    var msgEl = form.parentElement.querySelector('[data-mc-msg]');
-    if (!msgEl) return;
+    var forms = document.querySelectorAll('form[data-mc-form]');
+    if (!forms.length) return;
     if (typeof FormData === 'undefined') return; // very old browser → fallback
 
     var isHe = document.documentElement.dir === 'rtl' ||
@@ -401,48 +401,53 @@
         error:   'Something went wrong. Please try again or check the address.'
     };
 
-    function showMsg(text) {
-        msgEl.textContent = text;
-        msgEl.hidden = false;
-        form.hidden = true;
-    }
+    forms.forEach(function (form) {
+        var msgEl = form.parentElement.querySelector('[data-mc-msg]');
+        if (!msgEl) return;
 
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-
-        var params = [];
-        new FormData(form).forEach(function (value, key) {
-            params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
-        });
-
-        var jsonUrl = form.action.replace('/subscribe/post', '/subscribe/post-json');
-        var cbName  = 'jlmwinesMcCb_' + Date.now();
-        params.push('c=' + cbName);
-
-        var script = document.createElement('script');
-
-        function cleanup() {
-            try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
-            if (script.parentNode) script.parentNode.removeChild(script);
+        function showMsg(text) {
+            msgEl.textContent = text;
+            msgEl.hidden = false;
+            form.hidden = true;
         }
 
-        window[cbName] = function (resp) {
-            if (resp && resp.result === 'success') {
-                showMsg(copy.success);
-            } else if (resp && /already subscribed/i.test(resp.msg || '')) {
-                showMsg(copy.already);
-            } else {
-                showMsg(copy.error);
-            }
-            cleanup();
-        };
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
 
-        script.src = jsonUrl + (jsonUrl.indexOf('?') === -1 ? '?' : '&') + params.join('&');
-        script.onerror = function () {
-            showMsg(copy.error);
-            cleanup();
-        };
-        document.body.appendChild(script);
+            var params = [];
+            new FormData(form).forEach(function (value, key) {
+                params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+            });
+
+            var jsonUrl = form.action.replace('/subscribe/post', '/subscribe/post-json');
+            var cbName  = 'jlmwinesMcCb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+            params.push('c=' + cbName);
+
+            var script = document.createElement('script');
+
+            function cleanup() {
+                try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
+                if (script.parentNode) script.parentNode.removeChild(script);
+            }
+
+            window[cbName] = function (resp) {
+                if (resp && resp.result === 'success') {
+                    showMsg(copy.success);
+                } else if (resp && /already subscribed/i.test(resp.msg || '')) {
+                    showMsg(copy.already);
+                } else {
+                    showMsg(copy.error);
+                }
+                cleanup();
+            };
+
+            script.src = jsonUrl + (jsonUrl.indexOf('?') === -1 ? '?' : '&') + params.join('&');
+            script.onerror = function () {
+                showMsg(copy.error);
+                cleanup();
+            };
+            document.body.appendChild(script);
+        });
     });
 })();
 
@@ -463,4 +468,115 @@
             try { localStorage.setItem(KEY, '1'); } catch (e2) {}
         }
     });
+})();
+
+// New-visitor offer popup — two triggers, one modal (rendered server-side
+// by inc/exit-intent-popup.php, hidden until shown here). Desktop: exit
+// intent (cursor toward the browser chrome). Mobile: delayed on-load.
+// Both share the same 7-day, language-agnostic dismiss cookie — matches
+// jlmwines_age_verified's cookie approach (path=/, no localStorage) so
+// page caching still serves one HTML payload to everyone.
+// Plan: website/EXIT_INTENT_POPUP_PLAN.md
+(function () {
+    var COOKIE = 'jlmwines_exit_popup_dismissed';
+    var DAYS = 7;
+    var MOBILE_BREAK = 720; // matches the ea11y/bottom-nav breakpoint elsewhere in this file
+    var MOBILE_DELAY_MS = 4000;
+
+    var popup = document.getElementById('offer-popup');
+    if (!popup) return; // logged-in / cart / checkout / thank-you — PHP didn't render it
+
+    function getCookie(name) {
+        var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? match[2] : null;
+    }
+    function setCookie(name, value, days) {
+        var d = new Date();
+        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+        document.cookie = name + '=' + value + ';expires=' + d.toUTCString() + ';path=/;samesite=lax';
+    }
+
+    if (getCookie(COOKIE) === '1') return;
+
+    function show() {
+        if (getCookie(COOKIE) === '1') return; // dismissed by the time the trigger fired
+        popup.removeAttribute('hidden');
+        document.body.classList.add('offer-popup-open');
+    }
+    function dismiss() {
+        setCookie(COOKIE, '1', DAYS);
+        popup.setAttribute('hidden', '');
+        document.body.classList.remove('offer-popup-open');
+    }
+
+    popup.querySelector('[data-offer-popup-close]').addEventListener('click', dismiss);
+    popup.querySelector('[data-offer-popup-overlay]').addEventListener('click', dismiss);
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !popup.hasAttribute('hidden')) dismiss();
+    });
+
+    // Copy-code button — copies the coupon code instead of navigating.
+    // Labels (already language-correct from PHP) come off the button's
+    // own data attributes rather than duplicating is_rtl() logic here.
+    var copyBtn = popup.querySelector('[data-offer-popup-copy-code]');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+            var code = copyBtn.getAttribute('data-offer-popup-copy-code');
+
+            function onCopied() {
+                copyBtn.textContent = copyBtn.getAttribute('data-copied-label');
+                setTimeout(function () {
+                    copyBtn.textContent = copyBtn.getAttribute('data-copy-label');
+                }, 2000);
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).then(onCopied, function () { fallbackCopy(code, onCopied); });
+            } else {
+                fallbackCopy(code, onCopied);
+            }
+        });
+    }
+
+    function fallbackCopy(text, done) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        done();
+    }
+
+    // Don't compete with the age gate — wait until it's resolved (cookie
+    // set, or it was never shown for a logged-in visitor) before arming
+    // either trigger. Short poll rather than an event, since age-gate.php
+    // doesn't fire a custom event on resolve.
+    function armTriggers() {
+        if (window.innerWidth < MOBILE_BREAK) {
+            setTimeout(show, MOBILE_DELAY_MS);
+        } else {
+            // mouseleave bound to document.documentElement, not document —
+            // document itself doesn't reliably fire Element-boundary mouse
+            // events, which was silently preventing this trigger from ever
+            // firing (found 2026-08-20 via live testing).
+            document.documentElement.addEventListener('mouseleave', function onLeave(e) {
+                if (e.clientY > 0) return;
+                document.documentElement.removeEventListener('mouseleave', onLeave);
+                show();
+            });
+        }
+    }
+
+    function waitForAgeGate(attemptsLeft) {
+        if (getCookie('jlmwines_age_verified') === '1' || !document.body.classList.contains('age-gate-locked')) {
+            armTriggers();
+            return;
+        }
+        if (attemptsLeft <= 0) return; // age gate never resolved this visit — don't arm
+        setTimeout(function () { waitForAgeGate(attemptsLeft - 1); }, 300);
+    }
+    waitForAgeGate(100); // ~30s cap, matches the ea11y widget's own safety timeout elsewhere in this file
 })();

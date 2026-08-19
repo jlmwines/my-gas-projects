@@ -110,6 +110,7 @@ _One line each; full root-cause analysis lives in the git commit._
 
 ### Resolved
 
+- [x] 2026-08-20: `deploy-theme.ps1` truncated live theme files to 0 bytes (`functions.php`, `style.css`, `assets/css/main.css`, `assets/js/main.js`) mid-deploy, breaking the live site — root cause unclear (script/credentials unchanged for weeks; likely a server-side change at SiteGround's FTP). Site restored via SiteGround backup, confirmed live. Script hardened (upload → byte-verify → atomic rename, never writes the live filename directly) and transport switched from .NET's `FtpWebRequest` (kept failing/hanging against SiteGround) to `curl` (worked immediately, clean). Redeployed successfully, live site confirmed healthy. See `.claude/session-log.md` 2026-08-20.
 - [x] 2026-07-01: Homepage tracked as two separate URLs in GSC — investigated, redirect confirmed correct; residual index history, not a live bug.
 - [x] 2026-05-11: Mixed-content HTTP images on EN+HE homepages — fixed 2026-07-01 (9 images across both pages).
 - [x] 2026-05-08: Removed "Magnums" product category — shipped 2026-05-18.

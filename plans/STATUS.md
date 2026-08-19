@@ -1,13 +1,13 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-18. Galilee region post published live both languages 2026-08-17 (`jlmwines.com/galilee-wine/`), companion emails scheduled in Mailchimp for 2026-08-18; Coastal Plain and Golan Heights bodies drafted from manager seed content (Slots D/E), awaiting manager lock. jlmops @546 live — Vendor SKU Update discovery bug fixed, deployed, and smoke-tested confirmed working same day (`jlmops/plans/VENDOR_SKU_UPDATE_FIX_PLAN.md`); prior to that, stable since the 2026-07-26 WebXltM incident fix (see `.claude/bugs.md` for that history). Marketing-side: Meta Ads Jerusalem round 1 creative swap decided (drop bucket 8, keep bucket 14, build+add bucket 18 "Outsource It" — not yet built), remaining August budget being increased for the 2 surviving reels, test extended ~2-3 weeks past end of August (vacation-period confound + secondary branding rationale) before pausing for the holiday season — see `marketing/plans/META_ADS_PLAN.md` Round Log. New channel: a Google Search Ads test (Jerusalem geo, phrase-match keyword cluster, homepage landing) built 2026-08-17, in Google's Learning phase. Flyer Round 1 (Talbiye) redemptions still too soon to read; Round 2 (Emek Refaim) targeted 3rd week of August.
+**Updated:** 2026-08-20. New-visitor offer popup (₪50-off first-order coupon + WhatsApp + email signup, desktop exit-intent + mobile delayed-load triggers) live and smoke-tested confirmed working on both languages and both device types (`website/EXIT_INTENT_POPUP_PLAN.md`); shipped alongside a live-site incident same day — `deploy-theme.ps1` truncated 6 theme files to 0 bytes mid-deploy, restored from SiteGround backup, script hardened (verify-before-replace, transport switched from .NET's `FtpWebRequest` to `curl`) — see `.claude/bugs.md`.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
 - **jlmops** (GAS backend) — live, stable (current version in Metrics below); recent fixes smoke-tested clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`).
-- **jlmwines.com** (storefront/theme) — live (current version in Metrics below); Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
+- **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup and expanded Wine Talk categories both live, tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer active; Meta Ads round 1 being re-tooled (2 reels, budget increase, extended timeline); Google Search Ads test newly live (Learning phase); newsletter cadence current.
 - **business** — strategy/brand docs current.
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-08-17 |
+| Last Active | 2026-08-20 |
 | Revenue | Steady |
-| Deploy Version | jlmops @546 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-08-17 · theme 2026-07-09 |
+| Deploy Version | jlmops @546 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-08-17 · theme 2026-08-20 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -71,7 +71,8 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Loyalty rewards Phase 1** — live @487. Manager's Orders screen shows tier/last-order/spend/avg per row (fetched separately from the order list so it doesn't delay load) plus a CRM link and a "Log Reward" note action; no automated eligibility rule, manager judges. Not yet smoke-tested live. Plan → `marketing/plans/REWARDS_PLAN.md`.
 - **KPI Summary Tab** — live @440. All 6 `business/KPI.md` KPIs compute automatically: 4 jlmops-source ones (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement) via `SysKPISummary`, plus GA4 organic-traffic EN/HE split and organic-source engagement (bounce rate + pages/session) via a dedicated GA4 audience report. All surface in `jlmops-status.md`, no jlmops UI. Month-over-month trend surfacing also live (new customers, return rate, subscriber MoM vs. last closed month) — but the return-rate/subscriber deltas aren't trustworthy until a month closes naturally (next: 2026-08-01), since all 6 backfilled months share one retroactive snapshot; new-customers deltas are trustworthy now. Schema/system doc → `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`); engineering history archived at `jlmops/plans/_archive/KPI_SUMMARY_TAB.md`; known bugs → `.claude/bugs.md`.
 - **View-loading indicator** — shell-level spinner next to the view title (`AppView.html`), extended into every admin/manager view's own mount-time data load(s), closing the 2026-06-10 wishlist ask. One deliberate exception: `AdminSyncView`'s widget (repeating status poller, not a one-time load; already has richer inline step-card feedback). `LibraryView.html` (superseded by `PublishingView`) was deleted 2026-07-24 as confirmed dead code.
-- **Theme** — live v1.2.31; Homepage Phase 2 (Gutenberg blocks) queued → `website/HOMEPAGE_BLOCKS_PLAN.md`.
+- **Theme** — live v1.2.32; new-visitor offer popup (₪50-off coupon + WhatsApp + email signup, exit-intent/mobile-delay triggers) live, confirmed working EN/HE and desktop/mobile (`website/EXIT_INTENT_POPUP_PLAN.md`); Homepage Phase 2 (Gutenberg blocks) queued → `website/HOMEPAGE_BLOCKS_PLAN.md`.
+- **Deploy tooling** — `deploy-theme.ps1` uses `curl` for FTPS transport (switched 2026-08-20 after .NET's `FtpWebRequest` started failing against SiteGround) and never writes a live filename directly (upload → byte-verify → atomic rename). See `.claude/bugs.md`.
 - **Checkout Israel-shipping confirmation** — live (`inc/woocommerce.php` `shipping_israel_confirm` field). Country/postcode fields are hidden and hardcoded to IL, so there's no country signal to validate against; an always-shown required checkbox next to the shipping-phone field ("Shipping address and phone are both Israeli") gates submission on acknowledgment rather than validating phone format, since legitimate gift orders often start without a valid recipient number and get one via manual follow-up. Addresses foreign visitors entering a US address (country field can't be changed) whose orders then have to be manually cancelled. Shipping FAQ (`content/FAQ EN.md`, "Where do you deliver?") now spells out Israel-only shipping.
 
 - **Content-library versioning** — attach-to-replace + supersede→`_archive` confirmed live (Decision 7 / Plan B). Not yet smoke-tested: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; `runLibraryDuplicateReconcile` from the editor.
