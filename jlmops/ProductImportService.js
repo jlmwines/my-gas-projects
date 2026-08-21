@@ -1034,8 +1034,13 @@ const ProductImportService = (function() {
     logger.info(serviceName, functionName, `Starting job: ${jobType} (Row: ${jobQueueSheetRowNumber})`, { sessionId: sessionId, jobType: jobType });
 
 
+    // Dispatch only — sub-functions (_runComaxImport etc.) handle and record
+    // their own failures internally (specific error message written to
+    // SysJobQueue.error_message) and never throw; this try/catch exists only
+    // for genuinely unexpected dispatch-level failures (e.g. unknown job type).
+    let finalJobStatus;
     try {
-      let finalJobStatus = 'COMPLETED'; // Default to COMPLETED
+      finalJobStatus = 'COMPLETED'; // Default to COMPLETED
       switch (jobType) {
         case 'import.drive.comax_products':
           finalJobStatus = _runComaxImport(executionContext);
@@ -1051,22 +1056,28 @@ const ProductImportService = (function() {
         default:
           throw new Error(`Unknown job type: ${jobType}`);
       }
-      // Update job status in the queue
-      _updateJobStatus(executionContext, finalJobStatus);
-
-      if (finalJobStatus === 'COMPLETED') {
-        OrchestratorService.finalizeJobCompletion(jobQueueSheetRowNumber);
-        LoggerService.info('ProductImportService', 'processJob', `Job ${jobType} completed successfully.`);
-      } else {
-        // Job returned FAILED or QUARANTINED - throw to stop processing
-        LoggerService.error('ProductImportService', 'processJob', `Job ${jobType} returned status: ${finalJobStatus}`);
-        throw new Error(`Job ${jobType} failed with status: ${finalJobStatus}`);
-      }
     } catch (e) {
       logger.error(serviceName, functionName, `Job ${jobType} failed: ${e.message}`, e, { sessionId: sessionId, jobType: jobType });
       _updateJobStatus(executionContext, 'FAILED', e.message);
 
       throw e; // Re-throw the error after logging and updating status
+    }
+
+    // finalJobStatus (and any specific error message) was already recorded by
+    // the sub-function above — this call is a no-op on the message (empty
+    // string default) and just relays success/failure to the caller. Moved
+    // outside the try/catch (2026-08-21) so this relay throw can no longer be
+    // caught by this function's own catch block and overwrite the specific
+    // message with this generic one — see .claude/bugs.md.
+    _updateJobStatus(executionContext, finalJobStatus);
+
+    if (finalJobStatus === 'COMPLETED') {
+      OrchestratorService.finalizeJobCompletion(jobQueueSheetRowNumber);
+      LoggerService.info('ProductImportService', 'processJob', `Job ${jobType} completed successfully.`);
+    } else {
+      // Job returned FAILED or QUARANTINED - throw to stop processing
+      LoggerService.error('ProductImportService', 'processJob', `Job ${jobType} returned status: ${finalJobStatus}`);
+      throw new Error(`Job ${jobType} failed with status: ${finalJobStatus}`);
     }
   }
 

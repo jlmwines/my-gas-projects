@@ -297,7 +297,7 @@ function HousekeepingService() {
   const OLD_EXPORTS_RETENTION_DAYS = 90;
   const ARCHIVE_FOLDER_RETENTION_DAYS = 365;
   const PRINTME_RETENTION_DAYS = 7; // Days to keep packing slips before trashing
-  const MIN_LOG_ROWS = 1000; // Keep this many recent log rows regardless of age
+  const LOG_RETENTION_DAYS = 7; // SysLog rows older than this are deleted outright (2026-08-21)
   const IMPORT_FILE_RETENTION_DAYS = 2; // Days to keep timestamped import files
 
   /**
@@ -488,61 +488,86 @@ function HousekeepingService() {
 
   /**
    * Cleans up old log entries from the system log sheet.
-   * Archives logs older than retention period, keeping MIN_LOG_ROWS most recent.
+   *
+   * Deletes rows older than LOG_RETENTION_DAYS outright (2026-08-21 — replaces
+   * the previous archive-to-SysLog_Archive approach). Archiving within the
+   * same JLMops_Logs workbook didn't reduce total cell count and the archive
+   * write itself started throwing "above the limit of 10000000 cells" once
+   * the combined sheets in that workbook grew large enough, with SysLog's own
+   * ~1,570 entries/day as the active driver — silently failing every night
+   * (caught internally, so no failure surfaced) and leaving SysLog to grow
+   * unbounded. See `.claude/bugs.md` / `.claude/session-log.md` 2026-08-21.
+   *
+   * Assumes SysLog rows are in chronological append order (true as long as
+   * LoggerService._log's `appendRow` is the only writer) — deletes the
+   * contiguous block of oldest rows in one bulk call rather than filtering
+   * and rewriting the whole sheet.
+   *
    * @returns {boolean} True if cleanup was attempted, false otherwise.
    */
   this.cleanOldLogs = function() {
-    logger.info('HousekeepingService', 'cleanOldLogs', "Starting cleanup of old log entries.");
-    let movedCount = 0;
+    const functionName = 'cleanOldLogs';
+    logger.info('HousekeepingService', functionName, "Starting cleanup of old log entries.");
     try {
       const allConfig = ConfigService.getAllConfig();
       if (!allConfig) {
-        logger.warn('HousekeepingService', 'cleanOldLogs', "Configuration not available. Run rebuildSysConfigFromSource.");
+        logger.warn('HousekeepingService', functionName, "Configuration not available. Run rebuildSysConfigFromSource.");
         return false;
       }
 
       const logsSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const logSheetName = allConfig['system.sheet_names'].SysLog;
-      const logArchiveSheetName = allConfig['system.sheet_names'].SysLog_Archive;
       const logSheet = logsSpreadsheet.getSheetByName(logSheetName);
-      const logArchiveSheet = logsSpreadsheet.getSheetByName(logArchiveSheetName);
 
-      if (!logSheet || !logArchiveSheet) {
-        logger.warn('HousekeepingService', 'cleanOldLogs', "SysLog or SysLog_Archive sheet not found. Skipping log cleanup.");
+      if (!logSheet) {
+        logger.warn('HousekeepingService', functionName, "SysLog sheet not found. Skipping log cleanup.");
         return false;
       }
 
-      // Get schema-defined headers for timestamp column
       const logSchema = allConfig['schema.log.SysLog'];
       if (!logSchema || !logSchema.headers) {
-        logger.error('HousekeepingService', 'cleanOldLogs', "SysLog schema not found in configuration.");
+        logger.error('HousekeepingService', functionName, "SysLog schema not found in configuration.");
         return false;
       }
       const headers = logSchema.headers.split(',');
       const timestampCol = headers.indexOf('sl_Timestamp');
 
       if (timestampCol === -1) {
-        logger.error('HousekeepingService', 'cleanOldLogs', "sl_Timestamp column not found in schema.");
+        logger.error('HousekeepingService', functionName, "sl_Timestamp column not found in schema.");
         return false;
       }
 
-      const totalDataRows = logSheet.getLastRow() - 1; // Exclude header
+      const lastRow = logSheet.getLastRow();
+      const numDataRows = lastRow - 1; // exclude header
+      if (numDataRows <= 0) {
+        logger.info('HousekeepingService', functionName, "No log entries to clean.");
+        return true;
+      }
 
-      // Calculate the index from which to keep rows
-      // dataRows are in chronological order (oldest first from sheet)
-      // We want to keep the LAST MIN_LOG_ROWS rows, archive everything before that
-      const keepStartIndex = Math.max(0, totalDataRows - MIN_LOG_ROWS);
+      // Read only the timestamp column — cheap even at tens of thousands of rows.
+      const timestamps = logSheet.getRange(2, timestampCol + 1, numDataRows, 1).getValues();
+      const threshold = _getThresholdDate(LOG_RETENTION_DAYS);
 
-      // Filter function: archive all rows before keepStartIndex (regardless of age)
-      const filterLogs = (row, index) => {
-        return index < keepStartIndex;
-      };
+      // Find the first row within retention; everything before it is stale.
+      let firstKeepIndex = numDataRows; // not found => every row is stale
+      for (let i = 0; i < numDataRows; i++) {
+        const ts = timestamps[i][0];
+        if (ts instanceof Date && ts >= threshold) {
+          firstKeepIndex = i;
+          break;
+        }
+      }
 
-      movedCount = _moveRowsToArchive(logSheet, logArchiveSheet, filterLogs);
-      logger.info('HousekeepingService', 'cleanOldLogs', `Cleaned up ${movedCount} old log entries from SysLog (keeping ${MIN_LOG_ROWS} recent).`);
+      if (firstKeepIndex === 0) {
+        logger.info('HousekeepingService', functionName, `All ${numDataRows} log entries are within the ${LOG_RETENTION_DAYS}-day retention window. Nothing to delete.`);
+        return true;
+      }
+
+      logSheet.deleteRows(2, firstKeepIndex); // sheet row 2 = first data row (after header)
+      logger.info('HousekeepingService', functionName, `Deleted ${firstKeepIndex} log entries older than ${LOG_RETENTION_DAYS} days from SysLog.`);
       return true;
     } catch (e) {
-      logger.error('HousekeepingService', 'cleanOldLogs', `Error during old log cleanup: ${e.message}`, e);
+      logger.error('HousekeepingService', functionName, `Error during old log cleanup: ${e.message}`, e);
       return false;
     }
   };

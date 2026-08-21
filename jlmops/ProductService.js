@@ -283,7 +283,7 @@ const ProductService = (function() {
         productsChecked++;
 
         // Skip bundle products - they don't exist in Comax
-        const productType = String(webProdMRow.wpm_Type || '').toLowerCase();
+        const productType = String(webProdMRow.wpm_TaxProductType || '').toLowerCase();
         if (productType === 'woosb' || productType === 'bundle') {
           continue;
         }

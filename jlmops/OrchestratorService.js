@@ -1718,9 +1718,13 @@ const OrchestratorService = (function() {
       };
 
       try {
-        // Set status to PROCESSING
+        // Set status to PROCESSING. Clear any stale error_message from a prior
+        // attempt of this same row so that, if this attempt fails, the catch
+        // block below can trust "error_message is non-empty" to mean "the
+        // sub-processor wrote a specific reason during THIS run" (2026-08-21).
         jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('PROCESSING');
         jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue('');
 
         switch (processingServiceName) {
           case 'ProductService':
@@ -1744,11 +1748,22 @@ const OrchestratorService = (function() {
         jobQueueData = jobQueueSheet.getDataRange().getValues();
 
       } catch (e) {
-        logger.error(serviceName, functionName, `Job ${jobId} failed: ${e.message}`, e);
+        // The sub-processor (e.g. ProductImportService.processJob) may have
+        // already recorded the real, specific reason in error_message before
+        // throwing a generic relay error to signal failure up here — prefer
+        // that over e.message (which is just the generic relay text) if
+        // present. Falls back to e.message for failures that never reach a
+        // sub-processor (e.g. "Unknown processing service" above) — the
+        // PROCESSING-transition clear above guarantees a non-empty cell here
+        // was written during this run, not stale from a prior attempt.
+        const recordedReason = String(jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).getValue() || '').trim();
+        const errorMessage = recordedReason || e.message;
+
+        logger.error(serviceName, functionName, `Job ${jobId} failed: ${errorMessage}`, e);
         jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(e.message);
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
         SpreadsheetApp.flush();
-        return { success: false, jobsProcessed, error: e.message };
+        return { success: false, jobsProcessed, error: errorMessage };
       }
     }
 

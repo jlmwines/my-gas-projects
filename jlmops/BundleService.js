@@ -1814,23 +1814,7 @@ const BundleService = (function () {
       // Only remove backslashes followed by chars that aren't valid JSON escapes
       cleanJson = cleanJson.replace(/\\(?!["\\/bfnrtu])/g, '');
 
-      if (cleanJson.length > 10) {
-        LoggerService.info(SERVICE_NAME, functionName, `Parsing woosb_ids (${lang}) for ${bundleId}: ${cleanJson.length} chars`);
-      }
-
       const parsed = JSON.parse(cleanJson);
-
-      // Log first text slot content for debugging Hebrew
-      if (lang === 'he') {
-        const entries = Object.entries(parsed);
-        for (const [key, val] of entries) {
-          if (val && val.type && val.text) {
-            LoggerService.info(SERVICE_NAME, functionName, `Hebrew text slot [${key}]: "${val.text.substring(0, 30)}..."`);
-            break;
-          }
-        }
-      }
-
       return parsed;
     } catch (e) {
       const preview = String(jsonStr).substring(0, 100);

@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-20. New-visitor offer popup (₪50-off first-order coupon + WhatsApp + email signup, desktop exit-intent + mobile delayed-load triggers) live and smoke-tested confirmed working on both languages and both device types (`website/EXIT_INTENT_POPUP_PLAN.md`); shipped alongside a live-site incident same day — `deploy-theme.ps1` truncated 6 theme files to 0 bytes mid-deploy, restored from SiteGround backup, script hardened (verify-before-replace, transport switched from .NET's `FtpWebRequest` to `curl`) — see `.claude/bugs.md`.
+**Updated:** 2026-08-21. jlmops @548 live — fixed a `JLMops_Logs` workbook cell-limit crisis that was blocking Comax imports (SysLog retention rewritten to delete-based, two sources of excessive log volume fixed) and a three-layer bug that was overwriting real error messages with a generic one before they reached the sync UI; two related issues found but not yet fixed (housekeeping failure-detection gap, welcome-outreach task recreation) are logged in `.claude/bugs.md`. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live, stable (current version in Metrics below); recent fixes smoke-tested clean (`jlmops/plans/BUG_FIX_SEQUENCE.md`, `.claude/bugs.md`).
+- **jlmops** (GAS backend) — live (current version in Metrics below); SysLog cell-limit + error-clobbering fixes shipped 2026-08-21, not yet naturally re-triggered (`.claude/bugs.md`).
 - **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup and expanded Wine Talk categories both live, tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer active; Meta Ads round 1 being re-tooled (2 reels, budget increase, extended timeline); Google Search Ads test newly live (Learning phase); newsletter cadence current.
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-08-20 |
+| Last Active | 2026-08-21 |
 | Revenue | Steady |
-| Deploy Version | jlmops @546 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-08-17 · theme 2026-08-20 |
+| Deploy Version | jlmops @548 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-08-21 · theme 2026-08-20 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
