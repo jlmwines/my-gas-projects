@@ -77,8 +77,8 @@ The first deploy attempt (old `FtpWebRequest`-based `deploy-theme.ps1`) truncate
 
 - [x] Visual check EN + HE, desktop and mobile — correct trigger per device, correct copy/layout. Confirmed by user 2026-08-20.
 - [x] Exit-intent trigger fires on desktop; delayed trigger fires on mobile. Confirmed after the `document.documentElement` fix.
-- [ ] Cookie suppression: dismiss, reload, confirm no reshow; confirm shared across EN/HE — not explicitly re-tested since the fixes, worth a check.
-- [ ] Exclusions: logged-in test account doesn't see it; cart/checkout/thank-you don't trigger it — not explicitly re-tested.
+- [x] Cookie suppression: dismiss, reload, confirm no reshow. Confirmed by user 2026-08-20.
+- [x] Exclusions: logged-in test account doesn't see it. Confirmed by user 2026-08-20. Cart/checkout/thank-you not explicitly re-tested.
 - [ ] WhatsApp link opens with pre-filled greeting — worth a check with the new photo/link in place.
 - [ ] Email form actually posts to Mailchimp (test signup lands in the audience) — not yet tested against the popup's own form specifically (footer's form already confirmed working previously).
 - [x] Copy-code button copies `50NEW` to clipboard and shows "Copied!"/"הועתק!" — confirmed working.
