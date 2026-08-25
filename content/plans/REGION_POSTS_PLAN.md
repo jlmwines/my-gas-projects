@@ -12,18 +12,16 @@ Six region posts complete the Regions spoke of the Israeli Wine Guide. Each maps
 
 Negev published out of sequence 2026-07-06 (ahead of its original Slot F date), reshuffling the queue: Negev takes Slot A, Galilee moves to Slot B. **Slots D–F are date placeholders only**, per the older planning sheet's `blog D`/`blog E`/`blog F` rows — no region attached. An earlier version of this table named Central Mountains/Judea/Coastal Plain/Golan Heights against C/D/E/F as if decided (only F was flagged "inferred") — that was wrong for all four, corrected 2026-07-09. Assign a region to a slot at the point of actually drafting it, not before. Slot C is now assigned (Central Mountains, 2026-07-09) — its `blog-region-central-mountains` row is staged in `JLMops_Publishing` (2026-08-25), pending the admin's "Apply Pending Updates."
 
-| Slot | Email date | Newsletter date | Region | Slug | Status |
-|------|-----------|----------------|--------|------|--------|
-| A | 2026-07-07 | 2026-07-27 | Negev | `blog-region-negev` | **Published live (EN+HE) 2026-07-06** |
-| B | 2026-08-11 (slipped, published 2026-08-17) | 2026-08-25 | Galilee | `blog-region-galilee` | **Published live (EN+HE) 2026-08-17** — `jlmwines.com/galilee-wine/` + `/he/galilee-wine/`; companion emails built and scheduled in Mailchimp for 2026-08-18 |
-| C | 2026-08-25 | 2026-09-23 | Central Mountains | `blog-region-central-mountains` | Body drafted through Image Prompts; calendar row staged |
-| D | 2026-10-20 | 2026-10-27 | Coastal Plain | `blog-region-coastal-plain` | Body drafted 2026-08-17 from manager seed content, awaiting lock (session stopped at the 3a gate) |
-| E | 2026-11-17 | 2026-11-24 | Golan Heights | `blog-region-golan-heights` | Body drafted 2026-08-17 from manager seed content, awaiting lock (session stopped at the 3a gate) |
-| F | 2026-12-15 | 2026-12-29 | TBD | TBD | — |
+| Slot | Blog date | Email date | Newsletter date | Region | Slug | Status |
+|------|-----------|-----------|----------------|--------|------|--------|
+| A | 2026-07-06 | 2026-07-07 | 2026-07-27 | Negev | `blog-region-negev` | **Published live (EN+HE) 2026-07-06** |
+| B | 2026-08-17 | 2026-08-11 (slipped, published 2026-08-17) | 2026-08-25 | Galilee | `blog-region-galilee` | **Published live (EN+HE) 2026-08-17** — `jlmwines.com/galilee-wine/` + `/he/galilee-wine/`; companion emails built and scheduled in Mailchimp for 2026-08-18 |
+| C | 2026-09-22 | — (no dedicated email, deliberate) | 2026-09-23 and 2026-10-05 (two) | Central Mountains | `blog-region-central-mountains` | Body drafted through Image Prompts. **Dates corrected 2026-08-25 per the user's own working editorial calendar** — the live `JLMops_Publishing` row still shows the old placeholder date (2026-08-25); left un-touched per the user's explicit "existing rows cannot be altered" instruction that session, so the sheet and this table currently disagree until an admin corrects it directly. |
+| D | 2026-10-19 | 2026-10-20 | 2026-10-27 | Coastal Plain | `blog-region-coastal-plain` | Body drafted 2026-08-17 from manager seed content, awaiting lock (session stopped at the 3a gate). Calendar rows staged 2026-08-25, pending "Apply Pending Updates." |
+| E | 2026-11-16 | 2026-11-17 | 2026-11-24 | Golan Heights | `blog-region-golan-heights` | Body drafted 2026-08-17 from manager seed content, awaiting lock (session stopped at the 3a gate). Calendar rows staged 2026-08-25, pending "Apply Pending Updates." |
+| F | 2026-12-14 | 2026-12-15 | 2026-12-29 | Judea (Foothills) | `blog-region-judea` | **Slot assignment confirmed 2026-08-25** — dates match this slot's placeholder exactly, per the user's working editorial calendar. No body drafted yet. Calendar rows staged 2026-08-25, pending "Apply Pending Updates." |
 
 Slug column corrected 2026-07-09 — verified live in `JLMops_Library`/`JLMops_Publishing`: the real convention is `blog-region-<name>` (library entities append `-en`/`-he`), not the shorter `blog-<name>` this table previously showed.
-
-**Remaining regions, no slot assigned yet:** Judea (Foothills).
 
 Email date = post publish + companion email send (separate from the monthly AYIW email, which runs on its own date). Newsletter date = print insert distribution.
 

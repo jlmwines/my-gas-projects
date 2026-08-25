@@ -1,6 +1,8 @@
 # Calendar Tab UX Plan
 
-Implementation plan for the four Calendar-tab items logged 2026-07-09 (`.claude/bugs.md` + `.claude/wishlist.md`), all in `PublishingView.html`'s Calendar tab. Traced against the actual current code before writing this — two of the four turned out smaller or different than they looked from the bug/wish description alone. Not yet implemented; plan only.
+**Status (2026-08-25 cleanup pass):** Phases 2-4 shipped live 2026-07-09 (jlmops @461) and their facts already live in `jlmops/docs/WORKFLOWS.md` §13.1 (entity-drawer-first click-through, status filter, search placement). This plan now tracks **Phase 1 only** — the Calendar tab refresh bug, still open, root cause not found. Not archived because Phase 1 remains genuinely unresolved.
+
+Implementation plan for the four Calendar-tab items logged 2026-07-09 (`.claude/bugs.md` + `.claude/wishlist.md`), all in `PublishingView.html`'s Calendar tab. Traced against the actual current code before writing this — two of the four turned out smaller or different than they looked from the bug/wish description alone.
 
 ## Scope
 
