@@ -307,3 +307,9 @@ The read-only verification modal (`ManagerProductsView.loadVerifyDetail`, backed
 ### 16.4 `WebAppTasks.getOpenTasks` cache fix
 
 Its "60-second cache" was a module-level variable — always cold on a fresh `google.script.run` call (each call runs in a new execution context), so it silently did a full uncached `SysTasks` read every time despite the comment claiming caching. Replaced with `CacheService` (60s TTL), which actually persists across calls; if the open-tasks payload is too large to fit `CacheService`'s 100KB cap, it's simply not cached (same as the prior always-uncached behavior) rather than failing.
+
+## 17. SKU Management (Admin Products)
+
+### 17.1 Vendor SKU Update — discovery searches both sides
+
+"Old SKU" always means the stale `WebProdM`/`WebDetM` SKU; "new SKU" is the target value, which may already exist in `CmxProdM` (vendor's Comax change already synced in) or may not exist anywhere yet (admin originating the change before Comax has it). `ProductService.searchAllProducts`/`lookupProductBySku` search both `CmxProdM` and `WebProdM`/`WebDetM` — not Comax-only — so a product is still findable by its stale Web-side SKU/name even after Comax has already moved past it. Step 1 (`AdminProductsView.html`) shows whichever side actually matched and resolves "current SKU" to the Web value when present, not Comax's already-current one; search results flag a "Web only (not in Comax)" match. Step 2 no longer blocks when the target SKU already exists in `CmxProdM` — that's the expected normal case, not a conflict — only a genuine different-product Web-side collision blocks. The apply step (`ProductService.vendorSkuUpdate`/`_updateSkuInSheet`) is a plain find-and-set per sheet, safe to call unconditionally and idempotent on re-run regardless of which side already has the new value. Fixed and confirmed live 2026-08-17 (jlmops @546); plan archived (`_archive/VENDOR_SKU_UPDATE_FIX_PLAN.md`).

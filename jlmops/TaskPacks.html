@@ -145,6 +145,7 @@
       if (kind === 'deeplink_contacts') {
         return '<div class="detail-row"' + stopProp + '>' +
                '<button type="button" class="btn btn-sm" onclick="TaskPacks.openContactView(\'' + TaskWidgets.escape(t.id) + '\')">Open Contact</button>' +
+               '<span class="detail-meta" style="margin-left:12px">Task closes via the contact outreach panel\'s "Mark related task done" checkbox.</span>' +
                '</div>';
       }
 

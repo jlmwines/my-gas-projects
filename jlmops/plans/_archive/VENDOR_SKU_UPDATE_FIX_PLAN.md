@@ -1,6 +1,8 @@
 # Vendor SKU Update — Discovery Bug Fix Plan
 
-**Purpose.** Fix a root-cause bug in the Vendor SKU Update tool (Admin Products → SKU Management) found during first real use, reported 2026-08-17. "Old SKU" always means the stale `WebProdM`/`WebDetM` SKU; "new SKU" is the target value, which may already exist in `CmxProdM` (vendor's Comax change already synced in) or may not exist anywhere yet (admin originating the change before Comax has it). The tool currently can only discover a product via `CmxProdM` and blocks whenever the new SKU is found to already exist — both wrong for the tool's normal case. Design finalized through discussion 2026-08-17; not yet implemented.
+**Status:** Shipped and confirmed live 2026-08-17 (jlmops @546). Facts graduated to `jlmops/docs/WORKFLOWS.md` §17.1. Archived.
+
+**Purpose.** Fix a root-cause bug in the Vendor SKU Update tool (Admin Products → SKU Management) found during first real use, reported 2026-08-17. "Old SKU" always means the stale `WebProdM`/`WebDetM` SKU; "new SKU" is the target value, which may already exist in `CmxProdM` (vendor's Comax change already synced in) or may not exist anywhere yet (admin originating the change before Comax has it). The tool could only discover a product via `CmxProdM` and blocked whenever the new SKU was found to already exist — both wrong for the tool's normal case.
 
 ## Root cause (confirmed against current code)
 
