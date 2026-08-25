@@ -37,7 +37,7 @@ Evyatar photo alongside the WhatsApp line only (not the offer or email lines) �
 | Device | Trigger |
 |---|---|
 | Desktop | Exit intent (`mouseleave` on `document.documentElement`, `e.clientY <= 0`, cursor toward browser chrome) |
-| Mobile | Delayed on-load (~4s after page load), no ad-source gating |
+| Mobile | Delayed on-load (~4s default, admin-configurable — see `POPUP_ADMIN_CONTROLS_PLAN.md`), no ad-source gating |
 
 One popup, two trigger conditions — not two separate popups.
 
@@ -47,7 +47,7 @@ One popup, two trigger conditions — not two separate popups.
 
 | Rule | Value |
 |---|---|
-| Audience | Non-purchasers — exclude logged-in customers (mirrors `age-gate.php`'s `body.logged-in` skip) |
+| Audience | Non-purchasers — exclude logged-in customers (mirrors `age-gate.php`'s `body.logged-in` skip), admin-togglable — see `POPUP_ADMIN_CONTROLS_PLAN.md` |
 | Reshow suppression | 7 days, cookie-based |
 | Exclude pages | Cart, checkout, thank-you (checkout already carries its own WhatsApp/email asks) |
 
@@ -56,7 +56,7 @@ Known limitation (carried from the killed plan): guest-checkout customers aren't
 ## Technical approach
 
 Reuse existing theme patterns rather than building from scratch:
-- `inc/exit-intent-popup.php` — `wp_footer`-hooked render function, bilingual via `is_rtl()` (one render function, not two popups), same shape as `age-gate.php` but dismissible (✕ + click-outside), not a forced choice.
+- `inc/exit-intent-popup.php` — `wp_footer`-hooked render function, bilingual via `is_rtl()` (one render function, not two popups), same shape as `age-gate.php` but dismissible (✕ + click-outside), not a forced choice. Content (offer/WhatsApp/email), mobile delay, and the logged-in exclusion are Customizer-controlled theme mods, added 2026-08-25 — see `POPUP_ADMIN_CONTROLS_PLAN.md`.
 - Persistence: cookie (not `localStorage`, matching the age-gate precedent), `jlmwines_exit_popup_dismissed`, 7-day expiry, `path=/` and language-agnostic — dismissing on one language suppresses both (mirrors `jlmwines_age_verified`).
 - Trigger + cookie + copy-to-clipboard logic in `assets/js/main.js` (never inline in hook-rendered markup — the site's JS optimizer strips inline `<script>`, per `BUNDLE_MESSAGE_PLAN.md`'s recorded gotcha). Two trigger listeners: `mouseleave` on `document.documentElement` for desktop, `setTimeout` ~4s for mobile (branch on the same width breakpoint the theme already uses for `bottom-nav`). Copy button uses `navigator.clipboard.writeText` with a `document.execCommand('copy')` fallback for older browsers.
 - CSS in `assets/css/main.css` — real mobile responsiveness (the popup renders on both device classes, not desktop-only as originally scoped).

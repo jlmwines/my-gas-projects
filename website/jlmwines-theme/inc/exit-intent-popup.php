@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 function jlmwines_render_offer_popup() {
-    if (is_user_logged_in()) {
+    if (get_theme_mod('jlmwines_popup_exclude_logged_in', true) && is_user_logged_in()) {
         return;
     }
     if (function_exists('is_cart') && is_cart()) {
@@ -33,6 +33,15 @@ function jlmwines_render_offer_popup() {
     }
     if (function_exists('is_order_received_page') && is_order_received_page()) {
         return;
+    }
+
+    $offer_enabled    = get_theme_mod('jlmwines_popup_offer_enabled', true);
+    $whatsapp_enabled = get_theme_mod('jlmwines_popup_whatsapp_enabled', true);
+    $email_enabled    = get_theme_mod('jlmwines_popup_email_enabled', true);
+    $mobile_delay     = get_theme_mod('jlmwines_popup_mobile_delay', 4);
+
+    if (!$offer_enabled && !$whatsapp_enabled && !$email_enabled) {
+        return; // nothing left to show
     }
 
     $is_he = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
@@ -63,21 +72,23 @@ function jlmwines_render_offer_popup() {
     $learn_line    = $is_he ? 'לומדים על יין' : 'Learn About Wine';
     $close_label   = $is_he ? 'סגירה' : 'Close';
     ?>
-    <div class="offer-popup" id="offer-popup" hidden>
+    <div class="offer-popup" id="offer-popup" data-mobile-delay-ms="<?php echo esc_attr($mobile_delay * 1000); ?>" hidden>
         <div class="offer-popup-overlay" data-offer-popup-overlay></div>
         <div class="offer-popup-modal" role="dialog" aria-modal="true" aria-labelledby="offer-popup-title">
             <button type="button" class="offer-popup-close" data-offer-popup-close aria-label="<?php echo esc_attr($close_label); ?>">
                 <svg width="20" height="20" aria-hidden="true"><use href="#i-close"/></svg>
             </button>
 
+            <?php if ($offer_enabled) : ?>
             <div class="offer-popup-offer">
                 <h2 class="offer-popup-headline" id="offer-popup-title"><?php echo esc_html($headline); ?></h2>
                 <p class="offer-popup-detail"><?php echo esc_html($detail); ?></p>
                 <button type="button" class="offer-popup-shop-btn" data-offer-popup-copy-code="<?php echo esc_attr($coupon_code); ?>" data-copy-label="<?php echo esc_attr($copy_label); ?>" data-copied-label="<?php echo esc_attr($copied_label); ?>"><?php echo esc_html($copy_label); ?></button>
             </div>
+            <?php endif; ?>
 
             <div class="offer-popup-secondary">
-                <?php if ($whatsapp_url) : ?>
+                <?php if ($whatsapp_enabled && $whatsapp_url) : ?>
                 <a class="offer-popup-whatsapp" href="<?php echo esc_url($whatsapp_url); ?>" target="_blank" rel="noopener">
                     <img class="offer-popup-evyatar-photo" src="<?php echo esc_url($evyatar_photo); ?>" alt="" loading="lazy">
                     <span class="offer-popup-whatsapp-label">
@@ -87,6 +98,7 @@ function jlmwines_render_offer_popup() {
                 </a>
                 <?php endif; ?>
 
+                <?php if ($email_enabled) : ?>
                 <div class="offer-popup-email">
                     <h3><?php echo esc_html($learn_line); ?></h3>
                     <form class="footer-form offer-popup-form"
@@ -106,6 +118,7 @@ function jlmwines_render_offer_popup() {
                     </form>
                     <div class="footer-form-msg offer-popup-form-msg" data-mc-msg role="status" aria-live="polite" hidden></div>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

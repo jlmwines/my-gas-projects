@@ -481,10 +481,14 @@
     var COOKIE = 'jlmwines_exit_popup_dismissed';
     var DAYS = 7;
     var MOBILE_BREAK = 720; // matches the ea11y/bottom-nav breakpoint elsewhere in this file
-    var MOBILE_DELAY_MS = 4000;
 
     var popup = document.getElementById('offer-popup');
     if (!popup) return; // logged-in / cart / checkout / thank-you — PHP didn't render it
+
+    // Admin-configurable via Customizer (jlmwines_popup_mobile_delay) —
+    // see inc/exit-intent-popup.php and website/POPUP_ADMIN_CONTROLS_PLAN.md.
+    var MOBILE_DELAY_MS = parseInt(popup.getAttribute('data-mobile-delay-ms'), 10);
+    if (!MOBILE_DELAY_MS && MOBILE_DELAY_MS !== 0) MOBILE_DELAY_MS = 4000;
 
     function getCookie(name) {
         var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
