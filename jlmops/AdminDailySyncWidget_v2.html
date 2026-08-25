@@ -372,7 +372,6 @@
     //  ACTION FUNCTIONS
     // =====================================================================
 
-    var lastError = null;
     var actionTimeout = null;
 
     function runAction(backendFn, stepNum, actionLabel) {
@@ -386,7 +385,6 @@
             return;
         }
         actionInProgress = true;
-        lastError = null;
         console.log('SyncWidget: Running ' + backendFn);
 
         // Immediate UI feedback
@@ -419,6 +417,12 @@
                 if (actionTimeout) clearTimeout(actionTimeout);
                 actionInProgress = false;
                 console.log('SyncWidget: ' + backendFn + ' succeeded. Stage: ' + (status && status.stage));
+                // A successful RPC call can still carry a business-level failure
+                // (e.g. a push job that ran but failed) -- check the actual
+                // returned state before logging a "done" checkmark.
+                var stepData = stepNum && status.steps ? status.steps['step' + stepNum] : null;
+                var isSuccess = status.stage !== 'FAILED' && (!stepData || stepData.status !== 'failed');
+
                 // Build progress message with context from status
                 var progressMsg = actionLabel + ' - done';
                 if (status.webExportFilename && status.webExportFilename !== 'No Changes Detected') {
@@ -427,7 +431,10 @@
                 if (status.ordersPendingExportCount > 0 && backendFn === 'importWebOrdersBackend') {
                     progressMsg = 'Orders imported. ' + status.ordersPendingExportCount + ' ready for export';
                 }
-                addProgressEntry(progressMsg, true);
+                if (!isSuccess) {
+                    progressMsg = 'ERROR: ' + actionLabel + ' - ' + (status.errorMessage || (stepData && stepData.message) || 'Failed');
+                }
+                addProgressEntry(progressMsg, isSuccess);
                 lastActionTimestamp = status.lastUpdated;
                 updateUI(status);
                 adjustPolling(status);
@@ -436,7 +443,6 @@
                 if (actionTimeout) clearTimeout(actionTimeout);
                 actionInProgress = false;
                 var errorMsg = err.message || String(err);
-                lastError = errorMsg;
                 console.error('SyncWidget: ' + backendFn + ' failed:', errorMsg);
                 if (stepNum) {
                     document.getElementById('step' + stepNum + 'Card').classList.add('border-danger');
@@ -506,15 +512,22 @@
     }
 
     function retryFailed() {
+        if (actionInProgress) return;
+        actionInProgress = true;
+        document.querySelectorAll('#sharedAction button').forEach(function(b) { b.disabled = true; });
         document.getElementById('footerStatus').textContent = 'Retrying...';
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 updateUI(status);
                 adjustPolling(status);
                 document.getElementById('footerStatus').textContent = 'Ready to retry';
             })
             .withFailureHandler(function(err) {
+                actionInProgress = false;
+                document.getElementById('sharedAction').innerHTML =
+                    '<button class="btn btn-sm" onclick="window.SyncWidget.refreshNow(); return false;">Refresh</button>';
                 document.getElementById('footerStatus').textContent = 'Retry failed: ' + (err.message || err);
             })
             .retryFailedStepBackend();
@@ -522,6 +535,9 @@
 
     function resetSync() {
       TaskWidgets.confirm('Reset the sync workflow? Clears the current session and progress.', function() {
+        if (actionInProgress) return;
+        actionInProgress = true;
+        document.querySelectorAll('#sharedAction button').forEach(function(b) { b.disabled = true; });
         document.getElementById('footerStatus').textContent = 'Resetting...';
 
         progressEntries = [];
@@ -531,12 +547,16 @@
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 updateUI(status);
                 adjustPolling(status);
                 updateInvoiceFolder();
                 document.getElementById('footerStatus').textContent = 'Reset complete';
             })
             .withFailureHandler(function(err) {
+                actionInProgress = false;
+                document.getElementById('sharedAction').innerHTML =
+                    '<button class="btn btn-sm" onclick="window.SyncWidget.refreshNow(); return false;">Refresh</button>';
                 document.getElementById('footerStatus').textContent = 'Reset failed: ' + (err.message || err);
             })
             .resetSyncStateBackend();
@@ -548,9 +568,6 @@
     // =====================================================================
 
     function refreshStatus() {
-        // Don't poll while error is showing
-        if (lastError) return;
-
         google.script.run
             .withSuccessHandler(function(status) {
                 if (actionInProgress) {
@@ -624,7 +641,6 @@
     // =====================================================================
 
     function refreshNow() {
-        lastError = null;
         refreshStatus();
     }
 

@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-21. jlmops @548 live — fixed a `JLMops_Logs` workbook cell-limit crisis that was blocking Comax imports (SysLog retention rewritten to delete-based, two sources of excessive log volume fixed) and a three-layer bug that was overwriting real error messages with a generic one before they reached the sync UI; two related issues found but not yet fixed (housekeeping failure-detection gap, welcome-outreach task recreation) are logged in `.claude/bugs.md`. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
+**Updated:** 2026-08-25. jlmops @549 live — sync widget hardening: the inventory-push job now auto-retries transient server-side failures on just the still-failing rows, Retry/Reset buttons are guarded against double-submission, the sync screen no longer shows stale/contradictory status after a background state change, and push failures surface their real per-SKU reason instead of a generic "Status: FAILED" (`jlmops/plans/SYNC_HARDENING_PLAN.md`). Two related issues from the 2026-08-21 log-crisis fix are still open (housekeeping failure-detection gap, welcome-outreach task recreation) — `.claude/bugs.md`. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live (current version in Metrics below); SysLog cell-limit + error-clobbering fixes shipped 2026-08-21, not yet naturally re-triggered (`.claude/bugs.md`).
+- **jlmops** (GAS backend) — live (current version in Metrics below); sync widget hardened against stale status and transient push failures (`jlmops/plans/SYNC_HARDENING_PLAN.md`).
 - **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup and expanded Wine Talk categories both live, tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer active; Meta Ads round 1 being re-tooled (2 reels, budget increase, extended timeline); Google Search Ads test newly live (Learning phase); newsletter cadence current.
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-08-21 |
+| Last Active | 2026-08-25 |
 | Revenue | Steady |
-| Deploy Version | jlmops @548 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-08-21 · theme 2026-08-20 |
+| Deploy Version | jlmops @549 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-08-25 · theme 2026-08-20 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -60,7 +60,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 
 ## Current State
 
-- **Sync workflow** — stable. 12-state machine (Comax ↔ Sheets ↔ WooCommerce); imports, exports, validation all working.
+- **Sync workflow** — stable. 12-state machine (Comax ↔ Sheets ↔ WooCommerce); imports, exports, validation all working. Inventory-push job auto-retries transient server failures on just the still-failing rows, surfaces the real per-SKU failure reason instead of a generic status string, and Retry/Reset are guarded against double-submission; see `jlmops/plans/SYNC_HARDENING_PLAN.md`.
 - **Import system** — full Woo REST API pull (products + translations + orders); 30-day rolling window.
 - **CRM enrichment** — 548 contacts with dual-language preferences; `campaign.received` backfill manual only (daily auto-wiring deferred). Plans → `jlmops/plans/CONTACT_MANAGER_PLAN.md`, `CRM_PLAN.md`.
 - **Content Library** — entity/task model live (no auto-paired EN/HE entities, lazy entity creation on first Doc attach with title sourced from the spawning task's `cal_Name`, task-derived status everywhere, calendar-row-picker-only content creation). `PublishingView.html` (promoted from `LibraryView.html`) is the current UI: admin sees Calendar/Library/Campaigns/Projects tabs, manager sees Calendar/Tasks/Library, both with a "Create Content Tasks" entry point. Both Library and Calendar tabs show a Slug column for connection diagnosis. Library tab's paired EN/HE rows: each language's status pill now carries its own doc-open link, and mobile viewports stack columns into labeled rows instead of clipping the HE side (fixed 2026-07-24 @540 — `pv-library-table.responsive-stack` had never gotten the same mobile CSS as `pv-cal-table`). System doc → `jlmops/docs/DATA_MODEL.md`, `jlmops/docs/WORKFLOWS.md` §13; drafting/placement procedure → `jlmops/plans/CONTENT_CREATION_CHECKLIST.md`.

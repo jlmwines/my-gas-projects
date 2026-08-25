@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-25 — Sync widget hardening: auto-retry, double-submit guard, stale-status fix, real error surfacing (jlmops)
+
+- User reported the sync screen showing box 5 red/"Push failed" and a generic "Status: FAILED" message while the progress log showed a later success — investigated via `exchange/JLMops_Logs - SysJobQueue.csv`/`SysLog.csv` (no live calls, plan mode). Root cause: the first `export.web.inventory.api` push failed 2/4 on transient server-side errors (nginx 400 / non-JSON responses, not payload issues — same-payload retry succeeded 4/4 minutes later), but the widget's display didn't refresh to reflect the successful retry.
+- User flagged the sync widget as fragile across 5-10 past sessions and asked for concrete hardening rather than just an explanation. Shipped jlmops @549, all in `AdminDailySyncWidget_v2.html` / `WooInventoryPushService.js` / `OrchestratorService.js` / `SyncStateService.js`:
+  1. Retry/Reset buttons now guard against double-submission (were missing the `actionInProgress` lock every other button already had).
+  2. `WooInventoryPushService._runPush` auto-retries just the still-failing rows (up to 2 extra passes, 3s apart) before marking the job FAILED.
+  3. Fixed two bugs causing stale/contradictory display: a misleading "done" checkmark logged from an unrelated field instead of actual status, and a polling gate that permanently froze the display after any error.
+  4. `_checkAndAdvanceSyncState`'s FAILED branch now surfaces the job's real per-SKU error instead of a generic "Status: FAILED" (same class as the 2026-08-21 import fix) — new `getJobErrorMessageInSession` helper in `OrchestratorService.js`.
+  5. `SyncStateService.setSyncState` only logs a row when the stage actually changes (found while investigating SysLog volume — not dangerous post-2026-08-21 fix, but confirmed higher than pre-crisis rate).
+- Full detail and diagnosis in `jlmops/plans/SYNC_HARDENING_PLAN.md` (2026-08-25 log entry) — it's the pre-existing plan doc for this class of widget bug. Not staging-repro'd; next real transient push failure is the natural verification.
+
 ## 2026-08-21 — SysLog cell-limit crisis fixed; error messages no longer clobbered on the way up (jlmops)
 
 - User reported a Comax import failure and a generic "Import failed: FAILED" message; traced together to `JLMops_Logs` workbook hitting Google Sheets' 10M-cell limit. Root cause: SysLog grew to 33,000+ rows since Aug 1 (~1,570/day) because `cleanOldLogs`'s nightly archive-to-`SysLog_Archive` write was itself silently failing on the same cell limit every night (caught internally, never surfaced as a failure). Fixed `cleanOldLogs` to delete rows older than 7 days outright instead of archiving in-workbook.

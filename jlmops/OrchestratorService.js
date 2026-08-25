@@ -1296,22 +1296,28 @@ const OrchestratorService = (function() {
               _registerSessionFilesFromOrchestrator(updatedState);
 
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
-              logger.error(serviceName, functionName, `Inventory API push failed for session ${state.sessionId}.`);
+              // Prefer the job's own recorded reason (e.g. WooInventoryPushService's
+              // per-SKU detail) over a generic status string -- same fix as the
+              // 2026-08-21 Comax-import error-clobbering fix.
+              const jobErrorMessage = getJobErrorMessageInSession(jobType, state.sessionId);
+              const reason = jobErrorMessage || `Status: ${jobStatus}`;
+
+              logger.error(serviceName, functionName, `Inventory API push failed for session ${state.sessionId}: ${reason}`);
 
               NotificationService.reportFailure(
                 'sync.web_inventory_push',
                 `Inventory API push failed: ${jobStatus}`,
                 jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
-                { sessionId: state.sessionId, jobStatus: jobStatus },
+                { sessionId: state.sessionId, jobStatus: jobStatus, reason: reason },
                 state.sessionId
               );
 
               state.stage = 'FAILED';
               state.failedAtStage = 'PUSHING_WEB_INVENTORY';
-              state.errorMessage = `Inventory API push job failed. Status: ${jobStatus}`;
+              state.errorMessage = `Inventory API push job failed. ${reason}`;
               state.lastUpdated = new Date().toISOString();
               if (!state.steps) state.steps = {};
-              state.steps.step5 = { status: 'failed', message: `Push failed: ${jobStatus}` };
+              state.steps.step5 = { status: 'failed', message: `Push failed: ${reason}` };
               SyncStateService.setSyncState(state);
           }
       }
@@ -1359,32 +1365,25 @@ const OrchestratorService = (function() {
   // Note: getPendingOrProcessingJob is defined above (lines ~969-1004). Duplicate removed.
 
   /**
-   * Retrieves the most recent status of a specific job type within a given session.
-   * @param {string} jobType The type of job to check.
-   * @param {string} sessionId The session ID to filter by.
-   * @returns {string} The status ('PENDING', 'PROCESSING', 'COMPLETED', 'QUARANTINED', 'FAILED', 'NOT_FOUND').
+   * Shared scan: latest (status, error_message) per job type for a session,
+   * by processed/created timestamp. getJobStatusesBatch and
+   * getJobErrorMessageInSession both read off this single pass so the two
+   * never disagree on which row is "latest".
    */
-  /**
-   * Gets statuses for multiple job types in a session with a single sheet read.
-   * @param {Array<string>} jobTypes - Array of job type strings to check
-   * @param {string} sessionId - The session ID to filter by
-   * @returns {Object} Map of jobType -> status
-   */
-  function getJobStatusesBatch(jobTypes, sessionId) {
+  function _getJobInfoBatch(jobTypes, sessionId) {
     const serviceName = 'OrchestratorService';
-    const functionName = 'getJobStatusesBatch';
-    const results = {};
-    jobTypes.forEach(jt => results[jt] = 'NOT_FOUND');
+    const functionName = '_getJobInfoBatch';
+    const latestInfo = {};
+    jobTypes.forEach(jt => latestInfo[jt] = { status: 'NOT_FOUND', errorMessage: '', timestamp: new Date(0), foundFinal: false });
 
     try {
       const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
       const sheetNames = allConfig['system.sheet_names'];
       const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
       if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
-        return results;
+        return latestInfo;
       }
 
       const data = jobQueueSheet.getDataRange().getValues();
@@ -1394,10 +1393,7 @@ const OrchestratorService = (function() {
       const sessionIdCol = headers.indexOf('session_id');
       const processedTsCol = headers.indexOf('processed_timestamp');
       const createdTsCol = headers.indexOf('created_timestamp');
-
-      // Track latest status and timestamp per job type
-      const latestInfo = {};
-      jobTypes.forEach(jt => latestInfo[jt] = { status: 'NOT_FOUND', timestamp: new Date(0), foundFinal: false });
+      const errorMsgCol = headers.indexOf('error_message');
 
       for (const row of data) {
         const rowJobType = row[jobTypeCol];
@@ -1411,31 +1407,52 @@ const OrchestratorService = (function() {
           if (isNaN(effectiveTimestamp.getTime())) continue;
 
           const currentStatus = row[statusCol];
+          const currentErrorMessage = errorMsgCol >= 0 ? row[errorMsgCol] : '';
           const info = latestInfo[rowJobType];
 
           const isFinal = currentStatus === 'COMPLETED' || currentStatus === 'FAILED' || currentStatus === 'QUARANTINED';
           if (isFinal) {
             if (!info.foundFinal || effectiveTimestamp >= info.timestamp) {
               info.status = currentStatus;
+              info.errorMessage = currentErrorMessage;
               info.timestamp = effectiveTimestamp;
               info.foundFinal = true;
             }
           } else if (!info.foundFinal && effectiveTimestamp >= info.timestamp) {
             info.status = currentStatus;
+            info.errorMessage = currentErrorMessage;
             info.timestamp = effectiveTimestamp;
           }
         }
       }
 
-      jobTypes.forEach(jt => results[jt] = latestInfo[jt].status);
-      return results;
+      return latestInfo;
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error getting batch job statuses: ${e.message}`, e, { sessionId });
-      return results;
+      logger.error(serviceName, functionName, `Error scanning job info: ${e.message}`, e, { sessionId });
+      return latestInfo;
     }
   }
 
+  /**
+   * Gets statuses for multiple job types in a session with a single sheet read.
+   * @param {Array<string>} jobTypes - Array of job type strings to check
+   * @param {string} sessionId - The session ID to filter by
+   * @returns {Object} Map of jobType -> status
+   */
+  function getJobStatusesBatch(jobTypes, sessionId) {
+    const info = _getJobInfoBatch(jobTypes, sessionId);
+    const results = {};
+    jobTypes.forEach(jt => results[jt] = info[jt].status);
+    return results;
+  }
+
+  /**
+   * Retrieves the most recent status of a specific job type within a given session.
+   * @param {string} jobType The type of job to check.
+   * @param {string} sessionId The session ID to filter by.
+   * @returns {string} The status ('PENDING', 'PROCESSING', 'COMPLETED', 'QUARANTINED', 'FAILED', 'NOT_FOUND').
+   */
   function getJobStatusInSession(jobType, sessionId) {
     const serviceName = 'OrchestratorService';
     const functionName = 'getJobStatusInSession';
@@ -1447,6 +1464,25 @@ const OrchestratorService = (function() {
     } catch (e) {
       logger.error(serviceName, functionName, `Error getting job status for ${jobType} in session ${sessionId}: ${e.message}`, e, { jobType: jobType, sessionId: sessionId });
       return 'ERROR'; // Indicate an error occurred
+    }
+  }
+
+  /**
+   * The latest job's own error_message for a (jobType, sessionId) pair --
+   * e.g. WooInventoryPushService's "Pushed 2/4 products; 2 failed... SKU X:
+   * reason" -- so callers can surface the real reason instead of a generic
+   * "Status: FAILED" string (2026-08-25, same class of fix as the
+   * Comax-import error-clobbering fix on 2026-08-21).
+   */
+  function getJobErrorMessageInSession(jobType, sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'getJobErrorMessageInSession';
+    try {
+      const info = _getJobInfoBatch([jobType], sessionId);
+      return info[jobType].errorMessage || '';
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error getting job error message for ${jobType} in session ${sessionId}: ${e.message}`, e, { jobType: jobType, sessionId: sessionId });
+      return '';
     }
   }
 

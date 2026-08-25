@@ -10,10 +10,16 @@
  *
  * Design rationale: see jlmops/plans/INVENTORY_API_PUSH_PLAN.md.
  *
- * Per-job semantics: atomic. Any per-product PUT failure marks the whole job
- * FAILED with an error_message listing failed SKUs + reasons. Retry from the
- * widget returns the user to WAITING_WEB_CONFIRM where they can either run
- * the push again or fall back to manual upload of the same CSV.
+ * Per-job semantics: a per-product PUT failure is retried automatically --
+ * up to 2 extra passes over just the still-failing rows, a few seconds apart
+ * (2026-08-25, in response to frequent transient hosting-side errors that a
+ * same-payload retry reliably clears). Only after those extra passes are
+ * exhausted does the job go FAILED, with an error_message listing the SKUs
+ * that never went through + reasons. A missing WC product ID is not
+ * retryable and fails immediately without consuming a retry pass. A manual
+ * Retry from the widget still exists as a further fallback (returns the
+ * user to WAITING_WEB_CONFIRM to either run the push again or fall back to
+ * manual upload of the same CSV).
  */
 
 const WooInventoryPushService = (function() {
@@ -94,35 +100,54 @@ const WooInventoryPushService = (function() {
 
     const dataRows = rows.slice(1);
     const total = dataRows.length;
-    let succeeded = 0;
-    const failures = [];
+    const MAX_JOB_RETRIES = 2;   // extra passes over rows that fail with a retryable API error
+    const RETRY_DELAY_MS = 3000;
 
+    // Missing WC ID is a deterministic, non-retryable failure -- separate it
+    // out up front so it never consumes a retry pass.
+    const permanentFailures = [];
+    let pending = [];
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
-      const wcId  = String(row[idIdx]).trim();
-      const sku   = String(row[skuIdx]).trim();
-      const stock = row[stockIdx];
-      const price = row[priceIdx];
-
+      const wcId = String(row[idIdx]).trim();
+      const sku  = String(row[skuIdx]).trim();
       if (!wcId) {
-        failures.push(`Row ${i + 2} (SKU ${sku}): missing WC product ID`);
+        permanentFailures.push(`Row ${i + 2} (SKU ${sku}): missing WC product ID`);
         continue;
       }
-
-      const payload = {
-        regular_price:  String(price),
-        stock_quantity: parseInt(stock, 10) || 0
-      };
-
-      try {
-        WooApiService._fetch('PUT', '/wc/v3/products/' + wcId, {}, payload);
-        succeeded++;
-      } catch (e) {
-        const msg = (e && e.message) ? e.message : String(e);
-        failures.push(`SKU ${sku} (id ${wcId}): ${msg}`);
-      }
+      pending.push({ wcId: wcId, sku: sku, stock: row[stockIdx], price: row[priceIdx] });
     }
 
+    let succeeded = 0;
+    let lastRoundFailures = [];
+
+    for (let attempt = 0; attempt <= MAX_JOB_RETRIES && pending.length > 0; attempt++) {
+      if (attempt > 0) {
+        logger.warn(SERVICE_NAME, '_runPush', `Retrying ${pending.length} product(s) that failed the inventory push (attempt ${attempt + 1}/${MAX_JOB_RETRIES + 1})`, { sessionId: sessionId });
+        Utilities.sleep(RETRY_DELAY_MS);
+      }
+
+      const stillPending = [];
+      lastRoundFailures = [];
+      for (let j = 0; j < pending.length; j++) {
+        const item = pending[j];
+        const payload = {
+          regular_price:  String(item.price),
+          stock_quantity: parseInt(item.stock, 10) || 0
+        };
+        try {
+          WooApiService._fetch('PUT', '/wc/v3/products/' + item.wcId, {}, payload);
+          succeeded++;
+        } catch (e) {
+          const msg = (e && e.message) ? e.message : String(e);
+          stillPending.push(item);
+          lastRoundFailures.push(`SKU ${item.sku} (id ${item.wcId}): ${msg}`);
+        }
+      }
+      pending = stillPending;
+    }
+
+    const failures = permanentFailures.concat(lastRoundFailures);
     const summary = `Pushed ${succeeded}/${total} products`;
     if (failures.length === 0) {
       return { status: 'COMPLETED', message: `${summary} successfully. Source CSV: ${filename}` };

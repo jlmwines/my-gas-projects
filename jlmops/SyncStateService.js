@@ -80,9 +80,26 @@ const SyncStateService = (function() {
   function setSyncState(newState) {
     const functionName = 'setSyncState';
     try {
+      // Many callers save state without changing the stage (progress fields,
+      // timestamps, etc. within the same stage) -- only log when the stage
+      // itself actually moved, instead of once per save (2026-08-25, log
+      // volume reduction alongside the 2026-08-21 cell-limit fix).
+      let previousStage = null;
+      try {
+        const existing = ConfigService.getConfig(SYNC_STATE_CONFIG_KEY);
+        if (existing && existing.json) {
+          previousStage = JSON.parse(existing.json).stage;
+        }
+      } catch (readErr) {
+        // Non-fatal -- if we can't tell, just log this save like before.
+      }
+
       ConfigService.setConfig(SYNC_STATE_CONFIG_KEY, 'json', JSON.stringify(newState));
       ConfigService.forceReload();
-      logger.info(SERVICE_NAME, functionName, `State saved. Stage: ${newState.stage}`, { stage: newState.stage, sessionId: newState.sessionId });
+
+      if (newState.stage !== previousStage) {
+        logger.info(SERVICE_NAME, functionName, `State saved. Stage: ${newState.stage}`, { stage: newState.stage, sessionId: newState.sessionId });
+      }
     } catch (e) {
       logger.error(SERVICE_NAME, functionName, `Error saving sync state: ${e.message}`, e, { newState });
       throw e;
