@@ -747,6 +747,10 @@ function HousekeepingService() {
       { name: 'pullMailchimpSubscribers', fn: () => ContactImportService.importFromMailchimpApi() },
       { name: 'pullMailchimpCampaigns', fn: () => CampaignService.pullRecentCampaigns() },
       { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
+      { name: 'pullCoupons', fn: () => CouponService.pullFromApi() },
+      // Safety net: with pullCoupons succeeding, coupons_last_update stays fresh and this
+      // stays quiet. Left in place in case the pull ever fails silently rather than throwing
+      // (the exact housekeeping-failure-detection gap flagged in .claude/bugs.md 2026-08-21).
       { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
       { name: 'recomputeKpiSummary', fn: () => { KPISummaryService.recomputeCurrent(); KPISummaryService.maybeCloseMonth(); } },

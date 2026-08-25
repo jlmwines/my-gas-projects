@@ -10,6 +10,7 @@
           <button class="btn mr-2 mb-2" onclick="runUnitTests()">Run Unit Tests</button>
           <button class="btn mr-2 mb-2" onclick="runRefreshStatusExport()">Push Status Export</button>
           <button class="btn mr-2 mb-2" onclick="runLibraryIntegrity()">Library Integrity</button>
+          <button class="btn mr-2 mb-2" onclick="runPullCoupons()">Pull Coupons Now</button>
         </div>
         <div class="d-flex align-items-center flex-wrap mt-1">
           <select id="sync-headers-sheet" class="mr-2 mb-2" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:14px; min-width:180px;">
@@ -185,6 +186,24 @@
         resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
       })
       .runLibraryIntegrityReport();
+  }
+
+  function runPullCoupons() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Pulling coupons from WooCommerce...</p>';
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response && response.success) {
+          resultDiv.innerHTML = `<p class="alert alert-success">Pulled ${response.imported} coupon(s).</p>`;
+        } else {
+          const errCount = (response && response.errors) ? response.errors.length : 0;
+          resultDiv.innerHTML = `<p class="alert alert-danger">Pulled ${response ? response.imported : 0} coupon(s), ${errCount} error(s). See SysLog.</p>`;
+        }
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
+      })
+      .pullCouponsFromApi();
   }
 
   // Populate sheet picker on load

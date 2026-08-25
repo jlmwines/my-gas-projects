@@ -1399,6 +1399,12 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       if (task) {
         title.textContent = 'Task Details';
         TaskDetail.render(task.id, panelHost);
+      } else {
+        // The selected task just closed (e.g. Mark Published) and dropped out of
+        // the open-task list on reload -- confirm that explicitly instead of
+        // leaving the panel silently blank (2026-08-25).
+        title.textContent = 'Task Details';
+        if (panelHost) panelHost.innerHTML = '<div class="text-center text-success py-4"><strong>&#10003; Task closed</strong></div>';
       }
     } else if (state.selectedProjectId && state.mode === 'tasks') {
       var project = getSelectedProject();

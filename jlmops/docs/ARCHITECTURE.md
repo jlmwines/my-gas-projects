@@ -109,7 +109,7 @@ The system runs validation suites at strategic points to ensure data integrity.
 Daily maintenance runs in three phases:
 
 **Phase 1: Cleanup**
-- `cleanOldLogs()` - Archive old SysLog entries (keep 1000 recent)
+- `cleanOldLogs()` - Deletes `SysLog` rows older than 7 days outright (`JLMops_Logs`'s 10M-cell limit; the prior "archive to `SysLog_Archive`" approach could itself silently fail against the same cell limit and let the sheet grow unbounded — fixed 2026-08-21).
 - `archiveCompletedTasks()` - Move done tasks to archive
 - `archiveCompletedOrders()` - Move old orders to archive
 - `manageFileLifecycle()` - Trash old export files
@@ -123,7 +123,11 @@ Daily maintenance runs in three phases:
 
 **Phase 3: Service Updates**
 - `checkBundleHealth()` - Bundle inventory alerts
+- `pullMailchimpSubscribers()` - `ContactImportService.importFromMailchimpApi()`
+- `pullMailchimpCampaigns()` - `CampaignService.pullRecentCampaigns()`
 - `checkBruryaReminder()` - Brurya warehouse reminder
+- `pullCoupons()` - `CouponService.pullFromApi()`, pulls coupons from the WooCommerce REST API (`/wc/v3/coupons`) and upserts `SysCoupons`, stamping `system.woocommerce.coupons_last_update`. Replaces the manual CSV-export step for routine refreshes (`importFromCsv`/`importCouponsFromFolder` remain as a fallback); an on-demand "Pull Coupons Now" control also exists in Admin Dev (2026-08-25).
+- `checkCouponsReminder()` - Creates `task.data.coupons_update` only if `coupons_last_update` is 14+ days stale — a safety net that stays quiet as long as `pullCoupons()` keeps succeeding daily, since it runs first in this same list.
 - `refreshCrmContacts()` - Update contact metrics
 - `createWelcomeOutreachTasks()` - Welcome new contacts
 - `runLibraryIntegrityReport()` - Library health check
@@ -131,7 +135,7 @@ Daily maintenance runs in three phases:
 - `backfillActivities()` - CRM activity backfill
 - `runCrmIntelligence()` - Generate campaign suggestions
 - `refreshKpiBlock()` - Regenerate KPI section of `jlmops-status.md`
-- `applyPendingCalendarUpdates()` - Scans the `system.folder.calendar` staging folder for session-authored calendar-row files, upserts them into `JLMops_Publishing` keyed on `cal_Slug`, archives processed files (`StatusReportService.js`). `JLMops_Publishing` is otherwise directly admin-edited, never regenerated — CALENDAR_LIBRARY_LOOP_PLAN Phase 1, replaces the old `refreshCalendarExport` wipe-and-rebuild.
+- `applyPendingCalendarUpdates()` - Scans the `system.folder.calendar` staging folder for session-authored calendar-row files, upserts them into `JLMops_Publishing` keyed on `cal_Slug` (a row with no `cal_Slug` is skipped, not added), archives processed files (`StatusReportService.js`). `JLMops_Publishing` is otherwise directly admin-edited, never regenerated — CALENDAR_LIBRARY_LOOP_PLAN Phase 1, replaces the old `refreshCalendarExport` wipe-and-rebuild.
 
 ### 2.3. Data Adapters & Formatters
 

@@ -254,6 +254,15 @@
             <option value="done">Done</option>
             <option value="none">No tasks yet</option>
           </select>
+          <span class="pv-cal-filter-toggle" style="margin-left:8px;">
+            <button class="tw-chip active" data-cal-filter="open" onclick="PublishingView.switchCalFilter('open')" title="Undone rows + all future rows">Open</button>
+            <button class="tw-chip" data-cal-filter="all" onclick="PublishingView.switchCalFilter('all')">All</button>
+          </span>
+          <span class="small text-muted" style="margin-left:10px;">Holidays:</span>
+          <span class="pv-cal-holiday-toggle" style="margin-left:4px;">
+            <button class="tw-chip active" data-cal-holidays="show" onclick="PublishingView.switchCalHolidays('show')">Show</button>
+            <button class="tw-chip" data-cal-holidays="hide" onclick="PublishingView.switchCalHolidays('hide')">Hide</button>
+          </span>
         </div>
       </div>
       <div class="pv-cal-table-wrap" id="pv-cal-table-wrap">
@@ -436,6 +445,9 @@
       deficiencyWindowDays: 56,
       expandedCampaignId: null,
       holidays: [],
+      calFilterMode: 'open',
+      calShowHolidays: true,
+      selectedCalRow: null,
       entityStack: [],
       currentEntitySlug: null,
       currentEntity: null
@@ -510,9 +522,16 @@
         var el = document.getElementById(id);
         if (el) el.addEventListener('input', renderLibrary);
       });
-      ['pv-btn-open-content-stream', 'pv-btn-open-content-stream-cal', 'pv-btn-open-content-stream-tasks'].forEach(function(id) {
+      ['pv-btn-open-content-stream', 'pv-btn-open-content-stream-tasks'].forEach(function(id) {
         var btn = document.getElementById(id);
         if (btn) btn.addEventListener('click', function() { ContentStreamModal.open(); });
+      });
+      var calStreamBtn = document.getElementById('pv-btn-open-content-stream-cal');
+      if (calStreamBtn) calStreamBtn.addEventListener('click', function() {
+        var sel = state.selectedCalRow;
+        state.selectedCalRow = null;   // one-shot: consumed on use
+        if (sel) { renderCalendar(); ContentStreamModal.open({ baseSlug: sel.slug, entityType: sel.type }); }
+        else { ContentStreamModal.open(); }
       });
       var applyCalBtn = document.getElementById('pv-btn-apply-calendar-updates');
       if (applyCalBtn) applyCalBtn.addEventListener('click', applyPendingCalendarUpdates);
@@ -687,12 +706,26 @@
       }
 
       // JLMops_Publishing is the one calendar — library entities render in the Library tab, not here.
+      var showAll = state.calFilterMode === 'all';
+      // Same startOfToday pattern the Library deficiency table uses (below).
+      var calNow = new Date();
+      var startOfCalToday = new Date(calNow.getFullYear(), calNow.getMonth(), calNow.getDate());
       var rows = (state.holidays || []).filter(function(h) {
+        if (!state.calShowHolidays && h.type === 'holiday') return false;
         if (search) {
           var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
           if (hay.indexOf(search) === -1) return false;
         }
         if (statusFilter !== 'all' && _calRowStatus(h) !== statusFilter) return false;
+        // Default view: future rows and incomplete older rows only -- a past row
+        // that's already done is clutter. "Show all" disables this (2026-08-25).
+        if (!showAll && h.date && new Date(h.date) < startOfCalToday) {
+          // Holidays have no task-derived status (_calRowStatus is always 'none' —
+          // no slug/tasks), so the 'done' check above never catches a past one on
+          // its own; a past holiday is unconditionally stale, not just "possibly done".
+          if (h.type === 'holiday') return false;
+          if (_calRowStatus(h) === 'done') return false;
+        }
         return true;
       });
       rows.sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
@@ -707,13 +740,25 @@
       html += '<th>Date</th><th>Type</th><th>Slug</th><th>Title</th><th>Status</th><th>Notes</th>';
       html += '</tr></thead><tbody>';
 
+      // Types ContentStreamModal's own picker excludes (not real content rows) --
+      // never selectable as a spawn target.
+      var SPAWNABLE = function(h) { return h.slug && ['holiday', 'blackout', 'note'].indexOf(h.type) === -1; };
+
       rows.forEach(function(h) {
         var target = h.slug ? _routeTarget(h.slug) : null;
         var rowAttrs = '';
+        var isSelected = false;
         if (target && target.kind === 'task') {
           rowAttrs = ' style="cursor:pointer;" onclick="PublishingView.openAttachedTask(\'' + TaskWidgets.escape(target.id) + '\')"';
         } else if (target && target.kind === 'entity') {
           rowAttrs = ' style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(target.slug) + '\')"';
+        } else if (SPAWNABLE(h)) {
+          // No entity/task exists yet for this row -- clicking it selects it as the
+          // target for the "Create Content Tasks" button above, instead of doing
+          // nothing (2026-08-25). Click again to deselect.
+          isSelected = state.selectedCalRow && state.selectedCalRow.slug === h.slug;
+          rowAttrs = ' style="cursor:pointer;' + (isSelected ? 'background:#e7f1ff;' : '') +
+            '" onclick="PublishingView.toggleCalendarRowSelection(\'' + TaskWidgets.escape(h.slug) + '\', \'' + TaskWidgets.escape(h.type) + '\')" title="Select as target for Create Content Tasks"';
         }
         var statusCell = '—';
         var rowStatus = _calRowStatus(h);
@@ -721,7 +766,7 @@
           statusCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(rowStatus) + '">' + TaskWidgets.escape(rowStatus) + '</span>';
         }
         html += '<tr' + rowAttrs + '>';
-        html += '<td data-label="Date">' + TaskWidgets.escape(h.date) + '</td>';
+        html += '<td data-label="Date">' + TaskWidgets.escape(h.date) + (isSelected ? ' &#10003;' : '') + '</td>';
         html += '<td data-label="Type"><span style="font-size:11px;color:#6c757d;">' + TaskWidgets.escape(h.type) + '</span></td>';
         html += '<td data-label="Slug"><span style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;color:#6c757d;">' + (h.slug ? TaskWidgets.escape(h.slug) : '—') + '</span></td>';
         html += '<td data-label="Title"><strong>' + TaskWidgets.escape(h.name) + '</strong></td>';
@@ -731,6 +776,18 @@
       });
       html += '</tbody></table>';
       container.innerHTML = html;
+    }
+
+    // Selecting a routeless calendar row (no entity/task exists yet) makes the
+    // "Create Content Tasks" button above use it as the modal's preselected row,
+    // instead of always opening blank. Click the same row again to clear it.
+    function toggleCalendarRowSelection(slug, type) {
+      if (state.selectedCalRow && state.selectedCalRow.slug === slug) {
+        state.selectedCalRow = null;
+      } else {
+        state.selectedCalRow = { slug: slug, type: type };
+      }
+      renderCalendar();
     }
 
     // ===== CAMPAIGNS TAB =====
@@ -1119,6 +1176,26 @@
         b.classList.toggle('active', b.getAttribute('data-preset') === preset);
       });
       renderLibrary();
+    }
+
+    // Calendar Open/All toggle -- 'open' = undone rows (any date) + all future
+    // rows (even if already done); 'all' disables the past+done hiding entirely.
+    function switchCalFilter(mode) {
+      state.calFilterMode = mode;
+      document.querySelectorAll('.pv-cal-filter-toggle .tw-chip').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-cal-filter') === mode);
+      });
+      renderCalendar();
+    }
+
+    // Independent of the Open/All filter -- hides/shows holiday-type rows
+    // entirely, regardless of date (2026-08-25).
+    function switchCalHolidays(mode) {
+      state.calShowHolidays = (mode === 'show');
+      document.querySelectorAll('.pv-cal-holiday-toggle .tw-chip').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-cal-holidays') === mode);
+      });
+      renderCalendar();
     }
 
     // Task-derived status for one entity (CALENDAR_LIBRARY_LOOP_PLAN Phase 5) —
@@ -1533,6 +1610,9 @@
       switchTab: switchTab,
       switchPreset: switchPreset,
       spawnForEntity: spawnForEntity,
+      toggleCalendarRowSelection: toggleCalendarRowSelection,
+      switchCalFilter: switchCalFilter,
+      switchCalHolidays: switchCalHolidays,
       openAttachedTask: openAttachedTask,
       openEntityDrawer: openEntityDrawer,
       backEntityDrawer: backEntityDrawer,

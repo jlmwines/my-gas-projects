@@ -422,6 +422,90 @@ const CouponService = (function () {
     return { imported, errors };
   }
 
+  /**
+   * Reads one meta_data entry's value from a WooCommerce REST API object.
+   * Mirrors the identical small helper in WooProductPullService.js -- not
+   * shared cross-file, it's a 6-line lookup with no other state.
+   * @param {Array} metaData - the object's meta_data array
+   * @param {string} key - the meta key to look up
+   * @returns {*} the value, or null if not present
+   */
+  function _getMetaValue(metaData, key) {
+    if (!metaData || !Array.isArray(metaData)) return null;
+    for (var i = 0; i < metaData.length; i++) {
+      if (metaData[i].key === key) return metaData[i].value;
+    }
+    return null;
+  }
+
+  /**
+   * Maps one WooCommerce REST API coupon object to the same sco_*-keyed shape
+   * importFromCsv produces per row, so both paths feed the same upsertCoupon().
+   * @param {Object} apiCoupon - a /wc/v3/coupons response object
+   * @returns {Object} coupon data keyed by sco_* field names
+   */
+  function _transformApiCoupon(apiCoupon) {
+    const firstPurchaseOnly = _getMetaValue(apiCoupon.meta_data, '_wjecf_first_purchase_only');
+    const freeProductIds = _getMetaValue(apiCoupon.meta_data, '_wjecf_free_product_ids');
+
+    return {
+      sco_Code: apiCoupon.code || '',
+      sco_WooId: parseInt(apiCoupon.id, 10) || 0,
+      sco_Description: apiCoupon.description || '',
+      sco_Status: apiCoupon.status || '',
+      sco_CreatedDate: apiCoupon.date_created ? new Date(apiCoupon.date_created) : null,
+      sco_DiscountType: apiCoupon.discount_type || '',
+      sco_Amount: parseFloat(apiCoupon.amount) || 0,
+      sco_FreeShipping: !!apiCoupon.free_shipping,
+      sco_MinSpend: parseFloat(apiCoupon.minimum_amount) || 0,
+      sco_MaxSpend: parseFloat(apiCoupon.maximum_amount) || 0,
+      sco_Categories: (apiCoupon.product_categories || []).join(','),
+      sco_IndividualUse: !!apiCoupon.individual_use,
+      sco_UsageLimit: parseInt(apiCoupon.usage_limit, 10) || 0,
+      sco_UsageLimitPerUser: parseInt(apiCoupon.usage_limit_per_user, 10) || 0,
+      sco_UsageCount: parseInt(apiCoupon.usage_count, 10) || 0,
+      sco_ExpiryDate: apiCoupon.date_expires ? new Date(apiCoupon.date_expires) : null,
+      // API can return several restricted emails; CSV path only ever carried one -- join
+      // rather than dropping data (2026-08-25, COUPON_API_PULL_PLAN.md).
+      sco_CustomerEmail: (apiCoupon.email_restrictions || []).join(','),
+      sco_FirstPurchaseOnly: firstPurchaseOnly === 'yes',
+      sco_FreeProductId: freeProductIds ? String(freeProductIds).split(',')[0].trim() : ''
+    };
+  }
+
+  /**
+   * Pulls coupons from the WooCommerce REST API and upserts them into SysCoupons.
+   * Replaces the manual CSV-export step for routine refreshes; importFromCsv
+   * remains available as a fallback. Stamps the last-update config key on
+   * success (even 0 results) so the coupons_update reminder task stays quiet.
+   * @param {string} [modifiedAfter] - ISO timestamp; omit for a full pull
+   * @returns {{success: boolean, imported: number, errors: Array<string>}}
+   */
+  function pullFromApi(modifiedAfter) {
+    const fnName = 'pullFromApi';
+    LoggerService.info(SERVICE_NAME, fnName, 'Starting coupon API pull');
+
+    const apiCoupons = WooApiService.fetchCoupons(modifiedAfter);
+    let imported = 0;
+    const errors = [];
+
+    for (let i = 0; i < apiCoupons.length; i++) {
+      try {
+        const couponData = _transformApiCoupon(apiCoupons[i]);
+        if (couponData.sco_Code) {
+          upsertCoupon(couponData);
+          imported++;
+        }
+      } catch (e) {
+        errors.push(`Coupon id ${apiCoupons[i] && apiCoupons[i].id}: ${e.message}`);
+      }
+    }
+
+    ConfigService.setConfig('system.woocommerce.coupons_last_update', 'value', new Date().toISOString());
+    LoggerService.info(SERVICE_NAME, fnName, `Pulled ${imported} coupons, ${errors.length} errors`);
+    return { success: errors.length === 0, imported: imported, errors: errors };
+  }
+
   // Public API
   return {
     clearCache: clearCache,
@@ -433,9 +517,11 @@ const CouponService = (function () {
     getUsageByCode: getUsageByCode,
     calculateConversionRate: calculateConversionRate,
     importFromCsv: importFromCsv,
+    pullFromApi: pullFromApi,
     // Expose for testing
     _deriveCouponTags: _deriveCouponTags,
-    _isCouponActive: _isCouponActive
+    _isCouponActive: _isCouponActive,
+    _transformApiCoupon: _transformApiCoupon
   };
 })();
 
@@ -459,4 +545,11 @@ function importCouponsFromFolder() {
   }).join(',')).join('\n');
 
   return CouponService.importFromCsv(csvContent);
+}
+
+/**
+ * Pulls coupons from the WooCommerce REST API on demand (Admin Dev "Pull Coupons Now").
+ */
+function pullCouponsFromApi() {
+  return CouponService.pullFromApi();
 }

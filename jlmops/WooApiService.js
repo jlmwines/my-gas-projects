@@ -318,6 +318,32 @@ const WooApiService = (function() {
   }
 
   /**
+   * Fetch coupons from WooCommerce REST API.
+   *
+   * @param {string} [modifiedAfter] - ISO timestamp to fetch only coupons modified after this date
+   * @returns {Array} Array of WooCommerce coupon objects
+   */
+  function fetchCoupons(modifiedAfter) {
+    var functionName = 'fetchCoupons';
+
+    var params = {
+      orderby: 'date',
+      order: 'desc'
+    };
+
+    if (modifiedAfter) {
+      params.modified_after = modifiedAfter;
+    }
+
+    logger.info(SERVICE_NAME, functionName, 'Fetching coupons' + (modifiedAfter ? ' modified after ' + modifiedAfter : ' (full pull)'));
+
+    var coupons = _fetchAllPages('/wc/v3/coupons', params);
+
+    logger.info(SERVICE_NAME, functionName, 'Fetched ' + coupons.length + ' coupons');
+    return coupons;
+  }
+
+  /**
    * Test the WooCommerce API connection.
    * Verifies credentials work and returns basic store info.
    *
@@ -372,6 +398,7 @@ const WooApiService = (function() {
     fetchProducts: fetchProducts,
     fetchBundleProducts: fetchBundleProducts,
     fetchOrders: fetchOrders,
+    fetchCoupons: fetchCoupons,
     testConnection: testConnection,
     fetchProductById: fetchProductById,
     // Exposed for use by pull services that need single-page fetches

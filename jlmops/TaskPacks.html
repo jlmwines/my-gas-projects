@@ -379,58 +379,60 @@
       if (!task) { TaskWidgets.toast('Task not found', true); return; }
       if (task.status === 'Done') { TaskWidgets.toast('Already published'); return; }
 
-      var notesEl = document.getElementById('lv-notes-' + taskId);
-      var urlEl = document.getElementById('lv-ext-url-' + taskId);
-      var newNotes = notesEl ? notesEl.value : task.notes;
-      var externalUrl = urlEl ? urlEl.value.trim() : '';
+      TaskWidgets.confirm('Mark "' + task.entityId + '" published and close this task?', function() {
+        var notesEl = document.getElementById('lv-notes-' + taskId);
+        var urlEl = document.getElementById('lv-ext-url-' + taskId);
+        var newNotes = notesEl ? notesEl.value : task.notes;
+        var externalUrl = urlEl ? urlEl.value.trim() : '';
 
-      var doActivityLog = function() {
-        // Transition the entity to 'published' (Step 6 auto-transition) and log
-        // it — server-side, with or without an external URL. Skip for URL-entity
-        // / entityless tasks (nothing to transition).
-        if (task.entityId && String(task.entityId).indexOf('http') !== 0) {
+        var doActivityLog = function() {
+          // Transition the entity to 'published' (Step 6 auto-transition) and log
+          // it — server-side, with or without an external URL. Skip for URL-entity
+          // / entityless tasks (nothing to transition).
+          if (task.entityId && String(task.entityId).indexOf('http') !== 0) {
+            google.script.run
+              .withSuccessHandler(function(result) {
+                if (!result || !result.ok) {
+                  TaskWidgets.toast('Task closed; publish update failed: ' + ((result && result.error) || ''), true);
+                } else {
+                  TaskWidgets.toast(externalUrl ? 'Published + URL logged' : 'Published');
+                }
+                ctx.reload();
+              })
+              .withFailureHandler(function(err) {
+                TaskWidgets.toast('Task closed; publish update error: ' + (err && err.message ? err.message : ''), true);
+                ctx.reload();
+              })
+              .WebAppLibrary_markPublished({
+                entityId: task.entityId,
+                externalUrl: externalUrl
+              });
+          } else {
+            TaskWidgets.toast('Published');
+            ctx.reload();
+          }
+        };
+
+        var doClose = function() {
           google.script.run
-            .withSuccessHandler(function(result) {
-              if (!result || !result.ok) {
-                TaskWidgets.toast('Task closed; publish update failed: ' + ((result && result.error) || ''), true);
-              } else {
-                TaskWidgets.toast(externalUrl ? 'Published + URL logged' : 'Published');
-              }
-              ctx.reload();
-            })
+            .withSuccessHandler(doActivityLog)
             .withFailureHandler(function(err) {
-              TaskWidgets.toast('Task closed; publish update error: ' + (err && err.message ? err.message : ''), true);
-              ctx.reload();
+              TaskWidgets.toast(err && err.message ? err.message : 'Close failed', true);
             })
-            .WebAppLibrary_markPublished({
-              entityId: task.entityId,
-              externalUrl: externalUrl
-            });
+            .WebAppTasks_completeTaskById(taskId);
+        };
+
+        if (notesEl && newNotes !== task.notes) {
+          google.script.run
+            .withSuccessHandler(doClose)
+            .withFailureHandler(function(err) {
+              TaskWidgets.toast(err && err.message ? err.message : 'Notes update failed', true);
+            })
+            .WebAppTasks_updateTask(taskId, { notes: newNotes });
         } else {
-          TaskWidgets.toast('Published');
-          ctx.reload();
+          doClose();
         }
-      };
-
-      var doClose = function() {
-        google.script.run
-          .withSuccessHandler(doActivityLog)
-          .withFailureHandler(function(err) {
-            TaskWidgets.toast(err && err.message ? err.message : 'Close failed', true);
-          })
-          .WebAppTasks_completeTaskById(taskId);
-      };
-
-      if (notesEl && newNotes !== task.notes) {
-        google.script.run
-          .withSuccessHandler(doClose)
-          .withFailureHandler(function(err) {
-            TaskWidgets.toast(err && err.message ? err.message : 'Notes update failed', true);
-          })
-          .WebAppTasks_updateTask(taskId, { notes: newNotes });
-      } else {
-        doClose();
-      }
+      });
     }
 
     return {
