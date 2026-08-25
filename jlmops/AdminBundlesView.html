@@ -1237,9 +1237,15 @@
     var el = document.getElementById('editor-export-meta');
     if (!el) return;
     if (innerHtml == null) { el.innerHTML = ''; return; }
+    // Repeat the bundle's own name in this panel's header, not just a generic
+    // WPClever message -- the panel can end up scrolled far below the bundle
+    // title, and copying EN/HE text into the wrong bundle's product would be
+    // a real, easy-to-make mistake (2026-08-25).
+    var bundleName = currentBundle ? (currentBundle.nameEn || currentBundle.nameHe || '') : '';
+    var headerLabel = (bundleName ? esc(bundleName) + ' — ' : '') + 'Export meta (EN / HE) — paste into WPClever';
     el.innerHTML =
       '<div class="card"><div class="card-header d-flex justify-content-between align-items-center py-2" style="background:transparent;">' +
-      '<strong>Export meta (EN / HE) — paste into WPClever</strong>' +
+      '<strong>' + headerLabel + '</strong>' +
       '<button type="button" class="close" id="btn-close-export-meta" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>' +
       '<div class="card-body">' + innerHtml + '</div></div>';
     var x = document.getElementById('btn-close-export-meta');

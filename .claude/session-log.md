@@ -13,7 +13,8 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
   3. Fixed two bugs causing stale/contradictory display: a misleading "done" checkmark logged from an unrelated field instead of actual status, and a polling gate that permanently froze the display after any error.
   4. `_checkAndAdvanceSyncState`'s FAILED branch now surfaces the job's real per-SKU error instead of a generic "Status: FAILED" (same class as the 2026-08-21 import fix) — new `getJobErrorMessageInSession` helper in `OrchestratorService.js`.
   5. `SyncStateService.setSyncState` only logs a row when the stage actually changes (found while investigating SysLog volume — not dangerous post-2026-08-21 fix, but confirmed higher than pre-crisis rate).
-- Full detail and diagnosis in `jlmops/plans/SYNC_HARDENING_PLAN.md` (2026-08-25 log entry) — it's the pre-existing plan doc for this class of widget bug. Not staging-repro'd; next real transient push failure is the natural verification.
+- Full detail and diagnosis in `jlmops/plans/SYNC_HARDENING_PLAN.md` (2026-08-25 log entry) — it's the pre-existing plan doc for this class of widget bug. Smoke-tested same day on a real sync (no changes to push) — clean; the retry/error-surfacing logic itself still needs a real transient failure to exercise it.
+- Also shipped jlmops @550: bundle editor's Export-meta panel (EN/HE woosb_ids, copy into WPClever) now names the bundle in its own header instead of just a generic WPClever message — user flagged the panel can scroll far from the bundle title, risking a copy into the wrong bundle's product.
 
 ## 2026-08-21 — SysLog cell-limit crisis fixed; error messages no longer clobbered on the way up (jlmops)
 

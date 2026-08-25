@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-25. jlmops @549 live — sync widget hardening: the inventory-push job now auto-retries transient server-side failures on just the still-failing rows, Retry/Reset buttons are guarded against double-submission, the sync screen no longer shows stale/contradictory status after a background state change, and push failures surface their real per-SKU reason instead of a generic "Status: FAILED" (`jlmops/plans/SYNC_HARDENING_PLAN.md`). Two related issues from the 2026-08-21 log-crisis fix are still open (housekeeping failure-detection gap, welcome-outreach task recreation) — `.claude/bugs.md`. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
+**Updated:** 2026-08-25. jlmops @550 live — sync widget hardening (auto-retry, double-submit guard, stale-status fix, real error surfacing; `jlmops/plans/SYNC_HARDENING_PLAN.md`), smoke-tested clean on a real sync with no changes to push; plus a small bundle-editor safety fix (Export-meta panel header now names the bundle instead of just a generic WPClever message). Two related issues from the 2026-08-21 log-crisis fix are still open (housekeeping failure-detection gap, welcome-outreach task recreation) — `.claude/bugs.md`. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-08-25 |
 | Revenue | Steady |
-| Deploy Version | jlmops @549 · theme v1.2.32 |
+| Deploy Version | jlmops @550 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-08-25 · theme 2026-08-20 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
