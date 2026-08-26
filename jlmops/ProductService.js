@@ -826,8 +826,8 @@ const ProductService = (function() {
              return { success: false, message: 'No accepted tasks found for export.' }; // Changed to false for no tasks
         }
         
-        const skus = acceptedTasks.map(t => t.st_LinkedEntityId);
-        return _buildProductDetailExport(skus, sessionId);
+        const items = acceptedTasks.map(t => ({ sku: t.st_LinkedEntityId, createdDate: t.st_CreatedDate }));
+        return _buildProductDetailExport(items, sessionId);
     } catch (e) {
         logger.error(serviceName, functionName, `Error generating product details export: ${e.message}`, e, { sessionId: sessionId });
         throw e;
@@ -835,12 +835,16 @@ const ProductService = (function() {
   }
 
   /**
-   * Shared export builder: one SKU list -> the WooCommerce product-detail export
-   * sheet. Used by BOTH the detail-update export (generateDetailExport) and the
-   * new-product onboarding export (generateNewProductExport) so the two can never
-   * drift in columns, data, or formatting. Callers own the task pool/status query.
+   * Shared export builder: one {sku, createdDate} list -> the WooCommerce
+   * product-detail export sheet. Used by BOTH the detail-update export
+   * (generateDetailExport) and the new-product onboarding export
+   * (generateNewProductExport) so the two can never drift in columns, data, or
+   * formatting. Callers own the task pool/status query. `createdDate` is each
+   * item's originating task's st_CreatedDate, carried through to the export so
+   * the push can set WooCommerce's date_created (the "Published" date in wp-admin)
+   * to when the update was actually created, not whenever the push happens to run.
    */
-  function _buildProductDetailExport(skus, sessionId) {
+  function _buildProductDetailExport(items, sessionId) {
     const serviceName = 'ProductService';
     const functionName = '_buildProductDetailExport';
     try {
@@ -903,13 +907,19 @@ const ProductService = (function() {
             'Winery', 'Winery Visible', 'Winery Position',
             'Intensity', 'Intensity Visible', 'Intensity Position',
             'Complexity', 'Complexity Visible', 'Complexity Position',
-            'Acidity', 'Acidity Visible', 'Acidity Position'
+            'Acidity', 'Acidity Visible', 'Acidity Position',
+            // Task Created Date -> pushed as WooCommerce's date_created (the
+            // "Published" date shown in wp-admin's product list), so the product
+            // reflects when the update was created rather than when it happened
+            // to be pushed. Reviewable/editable here before push, same convention
+            // as the attribute Value/Visible/Position triples above.
+            'Task Created Date'
         ];
         exportDataRows.push(headers);
 
         const skippedSkus = [];
-        skus.forEach(rawSku => {
-            const sku = String(rawSku); // Convert SKU to string for consistent lookup
+        items.forEach(item => {
+            const sku = String(item.sku); // Convert SKU to string for consistent lookup
             // --- DEBUGGING LOGS for each SKU lookup ---
             logger.info(serviceName, functionName, `Looking up SKU: '${sku}' (Type: ${typeof sku})`, { sessionId: sessionId });
             logger.info(serviceName, functionName, `webDetMap.has('${sku}'): ${webDetMap.has(sku)}`, { sessionId: sessionId });
@@ -982,10 +992,10 @@ const ProductService = (function() {
                 categoryRow ? (categoryRow.sct_Value || '') : '',
                 wpmRow ? (wpmRow.wpm_ManageStock === 'yes') : false,
                 wpmRow ? (wpmRow.wpm_Stock || '') : ''
-            ].concat(attrColumns));
+            ].concat(attrColumns, [item.createdDate || '']));
         });
 
-        if (exportDataRows.length <= 1 && skippedSkus.length === skus.length) { // Only headers present AND all SKUs were skipped or no SKUs were processed
+        if (exportDataRows.length <= 1 && skippedSkus.length === items.length) { // Only headers present AND all SKUs were skipped or no SKUs were processed
             logger.info(serviceName, functionName, 'No product data was successfully exported.', { sessionId: sessionId });
             return { success: false, message: 'No product data was successfully exported. All selected products were skipped.' };
         }
@@ -1068,10 +1078,10 @@ const ProductService = (function() {
       if (!tasks || tasks.length === 0) {
         return { success: false, message: 'No new products ready for export.' };
       }
-      const skus = tasks.map(t => t.st_LinkedEntityId);
+      const items = tasks.map(t => ({ sku: t.st_LinkedEntityId, createdDate: t.st_CreatedDate }));
       // Delegate to the shared builder so the new-product export is identical to
       // the detail-update export (same columns, data, and formatting).
-      return _buildProductDetailExport(skus, sessionId);
+      return _buildProductDetailExport(items, sessionId);
     }
 
   function confirmNewProducts(sessionId) {

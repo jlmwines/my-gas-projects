@@ -234,7 +234,8 @@ const WooInventoryPushService = (function() {
       shortEn: col('Short Description EN'),
       shortHe: col('Short Description HE'),
       longEn: col('Long Description EN'),
-      longHe: col('Long Description HE')
+      longHe: col('Long Description HE'),
+      taskCreatedDate: col('Task Created Date')
     };
     const required = ['sku', 'wcIdEn', 'categoryWcId', 'manageStock', 'qty'];
     for (let i = 0; i < required.length; i++) {
@@ -272,6 +273,7 @@ const WooInventoryPushService = (function() {
       const attributes = _buildAttributesPayload(row, idx);
       const manageStock = row[idx.manageStock] === true || row[idx.manageStock] === 'true';
       const qty = parseInt(row[idx.qty], 10) || 0;
+      const dateCreated = _buildDateCreated(row, idx);
 
       const basePayload = {
         categories: [{ id: parseInt(categoryWcId, 10) }],
@@ -279,6 +281,9 @@ const WooInventoryPushService = (function() {
         manage_stock: manageStock,
         stock_quantity: qty
       };
+      if (dateCreated) {
+        basePayload.date_created = dateCreated;
+      }
 
       const enPayload = Object.assign({}, basePayload, {
         name: row[idx.titleEn] || '',
@@ -356,6 +361,26 @@ const WooInventoryPushService = (function() {
     addIfPresent('Complexity', idx.complexity, idx.complexityVisible, idx.complexityPosition);
     addIfPresent('Acidity', idx.acidity, idx.acidityVisible, idx.acidityPosition);
     return attrs;
+  }
+
+  /**
+   * Build the `date_created` value for one export row from the Task Created
+   * Date column -- this is what shows as the "Published" date in wp-admin's
+   * product list, so a detail-update push sets it to when the update was
+   * actually created rather than leaving it at the product's original date
+   * (product PUT is field-scoped, not full-replace, same as `attributes` --
+   * omitting this entirely is what left the date untouched before this fix)
+   * or stamping "now" (the push moment, which can lag well behind the real
+   * edit if pushes run in a batch). Blank/unparseable cells are skipped, not
+   * defaulted -- an explicit blank means "don't touch the date."
+   */
+  function _buildDateCreated(row, idx) {
+    if (idx.taskCreatedDate < 0) return null;
+    const cell = row[idx.taskCreatedDate];
+    if (cell === '' || cell === null || cell === undefined) return null;
+    const date = cell instanceof Date ? cell : new Date(cell);
+    if (isNaN(date.getTime())) return null;
+    return Utilities.formatDate(date, Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss");
   }
 
   return {

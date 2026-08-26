@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-25 (2nd session) — Meta Ads ended, Woo push date_created fix shipped (marketing, jlmops)
+
+- **Meta Ads Jerusalem test ending 2026-08-31, user call — channel not productive.** Overrides the 2026-08-17 "extend 2-3 weeks" decision; bucket 18 build dropped (was the top production priority). The 2026-08-17 swap (drop bucket 8, add bucket 18) was never executed, so all 3 original ads ride out to the end date as-is. Google Search Ads continuation stays undecided, reading as promising, plausibly aided by the popup. Updated `marketing/plans/META_ADS_PLAN.md` (Status/Round Log/Open Items) and `plans/STATUS.md`. Caught and fixed one contradiction (top Status line said "2 ads" after Round Log was corrected to "3") when the user asked whether the docs were actually consistent — worth a deliberate re-check pass after any multi-spot edit like this.
+- Noted, no doc changes needed: holiday season (Rosh Hashana → Sukkot/Simchat Torah) means marketing/publishing slows: user said the relevant dates and task coordination already live in the publication calendar — don't duplicate them here.
+- **Woo API product-detail push now sets `date_created`** — bug report confirmed: the push never touched WooCommerce's date field at all (product PUT is field-scoped, not full-replace), so a detail-update push left the product's "Published" date stale. Fixed: the originating task's `st_CreatedDate` now flows through the export (new `Task Created Date` column) and `WooInventoryPushService.js` sends it as `date_created`. Deployed jlmops @557. **Not yet smoke-tested against a real push** — verify next time a detail-update or new-product export gets pushed. `jlmops/plans/WOO_API_PUSH_PLAN.md` updated with the fix's details.
+
 ## 2026-08-25 — Sync widget hardening: auto-retry, double-submit guard, stale-status fix, real error surfacing (jlmops)
 
 - User reported the sync screen showing box 5 red/"Push failed" and a generic "Status: FAILED" message while the progress log showed a later success — investigated via `exchange/JLMops_Logs - SysJobQueue.csv`/`SysLog.csv` (no live calls, plan mode). Root cause: the first `export.web.inventory.api` push failed 2/4 on transient server-side errors (nginx 400 / non-JSON responses, not payload issues — same-payload retry succeeded 4/4 minutes later), but the widget's display didn't refresh to reflect the successful retry.
