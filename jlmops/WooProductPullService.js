@@ -161,9 +161,7 @@ const WooProductPullService = (function() {
     product.wps_AttrWinery = _getAttributeValue(apiProduct.attributes, 'pa_winery');
 
     // Product brand
-    product.wps_TaxProductBrand = _extractNames(
-      apiProduct.attributes ? apiProduct.attributes.filter(function(a) { return a.slug === 'pa_brand'; }) : []
-    );
+    product.wps_TaxProductBrand = _getAttributeValue(apiProduct.attributes, 'pa_brand');
 
     // WPClever Smart Bundle fields — API may return object instead of JSON string
     var woosbRaw = _getMetaValue(apiProduct.meta_data, 'woosb_ids');
@@ -195,7 +193,10 @@ const WooProductPullService = (function() {
 
     for (var i = 0; i < heProducts.length; i++) {
       var heProd = heProducts[i];
-      var enOriginalId = _getMetaValue(heProd.meta_data, '_wpml_original_post_id');
+      // Uses heProd.translations.en for the original ID — the same fix already applied
+      // in _transformApiTranslation (:468) for the broken _wpml_original_post_id lookup,
+      // backported here (was never applied to this second pull path).
+      var enOriginalId = heProd.translations && heProd.translations.en ? heProd.translations.en : null;
 
       var translation = {
         wxs_ID: String(heProd.id),
@@ -405,8 +406,8 @@ const WooProductPullService = (function() {
     // Guard: skip if a sync session is already active (it clears WebXltM).
     try {
       var syncState = SyncStateService.getState();
-      if (syncState && syncState.currentStage && syncState.currentStage !== 'IDLE' && syncState.currentStage !== 'COMPLETE' && syncState.currentStage !== 'FAILED') {
-        var skipMsg = 'Skipping translation refresh — sync session active at stage: ' + syncState.currentStage;
+      if (syncState && syncState.stage && syncState.stage !== 'IDLE' && syncState.stage !== 'COMPLETE' && syncState.stage !== 'FAILED') {
+        var skipMsg = 'Skipping translation refresh — sync session active at stage: ' + syncState.stage;
         logger.warn(SERVICE_NAME, functionName, skipMsg, { sessionId: sessionId });
         return { success: false, heCount: 0, message: skipMsg };
       }
