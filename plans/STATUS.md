@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-25. jlmops @557 live — sync widget hardening (auto-retry, double-submit guard, real error surfacing; `jlmops/docs/WORKFLOWS.md` §11.2), a bundle export-meta panel safety fix, an automatic WooCommerce coupon API pull replacing the manual CSV step (`jlmops/docs/ARCHITECTURE.md` §2.5.6), Calendar tab UX (Open/All + independent Holidays filters, row-select for task creation, Mark Published confirmation), the contact-outreach task pack now explains how it closes (matching the orders/inventory/products packs), and the Woo API product-detail push now sets `date_created` from the originating task's creation date (`jlmops/plans/WOO_API_PUSH_PLAN.md`). Meta Ads Jerusalem test judged not productive, ending 2026-08-31 (no extension, bucket 18 build dropped); Google Search Ads continuation undecided but reading as promising. Two related issues from the 2026-08-21 log-crisis fix are still open (housekeeping failure-detection gap, welcome-outreach task recreation) — `.claude/bugs.md`. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
+**Updated:** 2026-08-26. jlmops @557 live — sync widget hardening (auto-retry, double-submit guard, real error surfacing; `jlmops/docs/WORKFLOWS.md` §11.2), a bundle export-meta panel safety fix, an automatic WooCommerce coupon API pull replacing the manual CSV step (`jlmops/docs/ARCHITECTURE.md` §2.5.6), Calendar tab UX (Open/All + independent Holidays filters, row-select for task creation, Mark Published confirmation), the contact-outreach task pack now explains how it closes (matching the orders/inventory/products packs), and the Woo API product-detail push now sets `date_created` from the originating task's creation date (`jlmops/plans/WOO_API_PUSH_PLAN.md`). Meta Ads Jerusalem test judged not productive, ending 2026-08-31 (no extension, bucket 18 build dropped); Google Search Ads continuation undecided but reading as promising. A confirmed cross-execution race in the sync state machine (duplicate log rows, seen across multiple days, not caused by the 2026-08-25 fix) traces back to an already-designed but never-shipped LockService fix (`jlmops/plans/RELIABILITY_AUDIT.md` §1.3) — plan corrected, not yet built (`jlmops/plans/SYNC_HARDENING_PLAN.md` Bug 5). Two related issues from the 2026-08-21 log-crisis fix are still open (housekeeping failure-detection gap, welcome-outreach task recreation) — `.claude/bugs.md`. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
 
 ## At a glance
 
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-08-25 |
+| Last Active | 2026-08-26 |
 | Revenue | Steady |
 | Deploy Version | jlmops @557 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-08-25 · theme 2026-08-20 |
@@ -49,7 +49,7 @@ The live "what now" — daily review reads these first.
 
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
-- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E, G, and J (product-editor load time + manager submit/verify hang, plus the follow-on product-detail load-performance work) resolved and smoke-tested clean. Still pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
+- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E, G, and J (product-editor load time + manager submit/verify hang, plus the follow-on product-detail load-performance work) resolved and smoke-tested clean. Still pending: F (sync hardening — 3 UI items, needs staging repro; a 5th, higher-priority item — a confirmed cross-execution sync-state race causing duplicate log rows, `jlmops/plans/SYNC_HARDENING_PLAN.md` Bug 5 — was diagnosed 2026-08-26, independently reviewed, and corrected to build `RELIABILITY_AUDIT.md` §1.3's already-staged LockService design; not yet built), H (timestamps + date-format audit), I (count-task creation audit).
 - **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — only Phase 1 still open: refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks", investigated, root cause not found, needs a live repro. Phases 2-4 shipped and documented in `jlmops/docs/WORKFLOWS.md` §13.1.
