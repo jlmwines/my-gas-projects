@@ -600,7 +600,13 @@ const ValidationLogic = (function() {
 
   return {
     runValidationSuite: runValidationSuite,
-    validateDatabaseSchema: validateDatabaseSchema // Expose the new function
+    validateDatabaseSchema: validateDatabaseSchema, // Expose the new function
+    // Exposed for ValidationLogicTest.js -- pure helpers, safe to test directly.
+    evaluateCondition: evaluateCondition,
+    buildMapFromData: buildMapFromData,
+    formatString: formatString,
+    rowPassesFilter: _rowPassesFilter,
+    extractName: _extractName
   };
 
 })();

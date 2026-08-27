@@ -403,6 +403,9 @@ const WooInventoryPushService = (function() {
 
   return {
     processJob: processJob,
-    pushProductDetails: pushProductDetails
+    pushProductDetails: pushProductDetails,
+    // Exposed for WooInventoryPushServiceTest.js -- pure helpers, safe to test directly.
+    buildAttributesPayload: _buildAttributesPayload,
+    buildDateCreated: _buildDateCreated
   };
 })();

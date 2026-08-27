@@ -22,7 +22,10 @@ const TestRunner = (function() {
       OrderServiceTest,
       ProductServiceTest,
       ComaxAdapterTest,
-      WebAdapterTest
+      WebAdapterTest,
+      ValidationLogicTest,
+      WooProductPullServiceTest,
+      WooInventoryPushServiceTest
     ];
 
     // Suites deliberately feed adapters malformed input to verify error handling;

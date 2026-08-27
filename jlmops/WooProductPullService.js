@@ -688,7 +688,13 @@ const WooProductPullService = (function() {
     pullProducts: pullProducts,
     pullAndImportAll: pullAndImportAll,
     pullBundleProducts: pullBundleProducts,
-    refreshTranslationLinks: refreshTranslationLinks
+    refreshTranslationLinks: refreshTranslationLinks,
+    // Exposed for WooProductPullServiceTest.js -- pure helpers, safe to test directly.
+    extractNames: _extractNames,
+    getAttributeValue: _getAttributeValue,
+    getMetaValue: _getMetaValue,
+    woosbIdsString: _woosbIdsString,
+    transformApiTranslation: _transformApiTranslation
   };
 })();
 
