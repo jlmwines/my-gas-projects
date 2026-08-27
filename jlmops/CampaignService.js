@@ -1127,7 +1127,7 @@ const CampaignService = (function () {
       }
     }
 
-    ConfigService.setConfig('system.mailchimp.campaigns_last_update', 'value', new Date().toISOString());
+    ConfigService.setConfigLocked('system.mailchimp.campaigns_last_update', 'value', new Date().toISOString());
 
     LoggerService.info(SERVICE_NAME, fnName,
       'Pull complete: ' + upserted + ' upserted, ' + errors.length + ' errors');

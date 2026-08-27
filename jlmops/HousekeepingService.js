@@ -635,7 +635,7 @@ function HousekeepingService() {
       logger.error('HousekeepingService', functionName, `pullOrders failed: ${e.message}`);
     }
     if (pullSucceeded) {
-      ConfigService.setConfig('crm.frequent_pipeline.last_modified_floor', 'value', runStart);
+      ConfigService.setConfigLocked('crm.frequent_pipeline.last_modified_floor', 'value', runStart);
     }
 
     const tasks = [
@@ -972,7 +972,7 @@ function HousekeepingService() {
       updateContactSpend12Month();
 
       // Update last refresh timestamp
-      ConfigService.setConfig('system.crm.last_refresh', 'value', new Date().toISOString());
+      ConfigService.setConfigLocked('system.crm.last_refresh', 'value', new Date().toISOString());
 
       return true;
     } catch (e) {
@@ -1000,7 +1000,7 @@ function HousekeepingService() {
       let floorDate;
       if (!floorConfig || !floorConfig.value) {
         floorDate = new Date();
-        ConfigService.setConfig('system.crm.welcome_floor_date', 'value', floorDate.toISOString());
+        ConfigService.setConfigLocked('system.crm.welcome_floor_date', 'value', floorDate.toISOString());
         logger.info('HousekeepingService', functionName,
           `Welcome floor initialized to ${floorDate.toISOString()}. No tasks created on first run (backfill skipped).`);
         return true;
@@ -1161,10 +1161,10 @@ function HousekeepingService() {
       let floorDate;
       if (!floorCfg || !floorCfg.value) {
         floorDate = new Date();
-        ConfigService.setConfig('crm.pending_payment_followup.floor_date', 'value', floorDate.toISOString());
+        ConfigService.setConfigLocked('crm.pending_payment_followup.floor_date', 'value', floorDate.toISOString());
         // Also seed last_pending_ids so the next run starts comparing cleanly.
         const seedIds = allOrders.filter(o => o.status === 'pending').map(o => o.orderId);
-        ConfigService.setConfig('crm.pending_payment_followup.last_pending_ids', 'value', JSON.stringify(seedIds));
+        ConfigService.setConfigLocked('crm.pending_payment_followup.last_pending_ids', 'value', JSON.stringify(seedIds));
         logger.info('HousekeepingService', functionName,
           `Pending-followup floor initialized to ${floorDate.toISOString()}. Seeded ${seedIds.length} pending IDs. No emails on first run.`);
         return true;
@@ -1309,9 +1309,9 @@ function HousekeepingService() {
       });
 
       // Persist updated tracking state
-      ConfigService.setConfig('crm.pending_payment_followup.last_pending_ids', 'value',
+      ConfigService.setConfigLocked('crm.pending_payment_followup.last_pending_ids', 'value',
         JSON.stringify(currentPendingIds));
-      ConfigService.setConfig('crm.pending_payment_followup.sent_order_ids', 'value',
+      ConfigService.setConfigLocked('crm.pending_payment_followup.sent_order_ids', 'value',
         JSON.stringify(Array.from(sentSet)));
 
       logger.info('HousekeepingService', functionName,
@@ -1443,7 +1443,7 @@ function HousekeepingService() {
         bundleIds: bundleIds,
         ts: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
       });
-      ConfigService.setConfig('system.bundles.push_status', 'value', payload);
+      ConfigService.setConfigLocked('system.bundles.push_status', 'value', payload);
 
       // Surface the batch task (ADMIN_BUNDLES_UI_PLAN Phase 1a-ii): ONE singleton task
       // when count > 0 (never per-bundle), closed primarily by the Export action; here we
@@ -1489,7 +1489,7 @@ function HousekeepingService() {
       const stockHealthConfig = ConfigService.getConfig('StockHealth');
       const result = { allCategories: [], deficientCategories: [], deficientCategoriesCount: 0 };
       if (!stockHealthConfig) {
-        ConfigService.setConfig('system.category_stock.health', 'value', JSON.stringify(
+        ConfigService.setConfigLocked('system.category_stock.health', 'value', JSON.stringify(
           Object.assign({}, result, { ts: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss') })
         ));
         return result;
@@ -1564,7 +1564,7 @@ function HousekeepingService() {
       }
 
       const payload = Object.assign({}, result, { ts: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss') });
-      ConfigService.setConfig('system.category_stock.health', 'value', JSON.stringify(payload));
+      ConfigService.setConfigLocked('system.category_stock.health', 'value', JSON.stringify(payload));
       logger.info('HousekeepingService', functionName, `Category stock health cached: ${result.deficientCategoriesCount} of ${result.allCategories.length} categories low.`);
       return result;
     } catch (e) {
@@ -1629,7 +1629,7 @@ function HousekeepingService() {
       // to system.bundles.push_status). Recomputed-not-recorded; refreshed here (housekeeping) + on
       // on-demand Review. Empty default.
       try {
-        ConfigService.setConfig('system.bundles.needs_update_status', 'value',
+        ConfigService.setConfigLocked('system.bundles.needs_update_status', 'value',
           JSON.stringify({ count: affectedCount, bundleIds: affectedIds, ts: new Date().toISOString() }));
       } catch (cacheError) {
         logger.warn('HousekeepingService', functionName, `Could not cache needs-update status: ${cacheError.message}`);
@@ -1657,7 +1657,7 @@ function HousekeepingService() {
       }
 
       // Update last check timestamp
-      ConfigService.setConfig('system.bundle_health.last_check', 'value', new Date().toISOString());
+      ConfigService.setConfigLocked('system.bundle_health.last_check', 'value', new Date().toISOString());
 
       logger.info('HousekeepingService', functionName, `Bundle health check complete. Bundles needing update: ${affectedCount}`);
       return { success: true, bundlesNeedingUpdate: affectedCount, bundleIds: affectedIds };
@@ -2426,7 +2426,7 @@ function HousekeepingService() {
       }
 
       // Update last run timestamp
-      ConfigService.setConfig('system.crm_intelligence.last_run', 'value', new Date().toISOString());
+      ConfigService.setConfigLocked('system.crm_intelligence.last_run', 'value', new Date().toISOString());
 
       return true;
     } catch (e) {

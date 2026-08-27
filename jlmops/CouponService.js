@@ -501,7 +501,7 @@ const CouponService = (function () {
       }
     }
 
-    ConfigService.setConfig('system.woocommerce.coupons_last_update', 'value', new Date().toISOString());
+    ConfigService.setConfigLocked('system.woocommerce.coupons_last_update', 'value', new Date().toISOString());
     LoggerService.info(SERVICE_NAME, fnName, `Pulled ${imported} coupons, ${errors.length} errors`);
     return { success: errors.length === 0, imported: imported, errors: errors };
   }

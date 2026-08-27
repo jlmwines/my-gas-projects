@@ -433,7 +433,7 @@ const StatusReportService = (function() {
       }
     } catch (e) { /* no snapshot yet — first run, that's fine */ }
     try {
-      ConfigService.setConfig('system.kpi.gsc_last_snapshot', 'value', JSON.stringify({ date: _il(new Date()), clicks: totClicks, impr: totImpr }));
+      ConfigService.setConfigLocked('system.kpi.gsc_last_snapshot', 'value', JSON.stringify({ date: _il(new Date()), clicks: totClicks, impr: totImpr }));
     } catch (e) { /* non-fatal — trend just won't advance this cycle */ }
 
     return { ok: true, totClicks: totClicks, totImpr: totImpr, avgPos: avgPos, top: top, delta: delta };

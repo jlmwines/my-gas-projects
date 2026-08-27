@@ -62,19 +62,18 @@ function WebAppSystem_runMasterValidationAndReturnResults() {
     LoggerService.error(serviceName, functionName, e.message, e);
     finalErrorMessage = `Failed to run validation: ${e.message}`;
     
-    // Update job status to FAILED on catch, as Orchestrator might have thrown before updating
-    if (newJobRowNumber) {
+    // Update job status to FAILED on catch, as Orchestrator might have thrown before updating.
+    // Dead code today (zero callers, grep-confirmed) -- migrated to the D1
+    // locked, job_id-keyed primitive so it isn't a live trap if ever wired up.
+    if (newJobRow.job_id) {
         try {
              const allConfig = ConfigService.getAllConfig();
              const jobQueueSheet = SheetAccessor.getLogSheet(allConfig['system.sheet_names'].SysJobQueue);
              const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
-             const statusColIdx = jobQueueHeaders.indexOf('status');
-             const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
-             const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
-
-             jobQueueSheet.getRange(newJobRowNumber, statusColIdx + 1).setValue('FAILED');
-             jobQueueSheet.getRange(newJobRowNumber, processedTsColIdx + 1).setValue(new Date());
-             jobQueueSheet.getRange(newJobRowNumber, errorMsgColIdx + 1).setValue(finalErrorMessage);
+             OrchestratorService.setJobRowStatus(jobQueueSheet, jobQueueHeaders, newJobRow.job_id, function(currentRow) {
+               if (currentRow.status !== 'PROCESSING' && currentRow.status !== 'PENDING') return undefined;
+               return { status: 'FAILED', processed_timestamp: new Date(), error_message: finalErrorMessage };
+             });
         } catch (updateError) {
              LoggerService.error(serviceName, functionName, `Failed to update job status on error: ${updateError.message}`);
         }

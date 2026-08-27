@@ -58,6 +58,14 @@ const ValidationOrchestratorService = (function() {
             if (String(rule.on_failure_quarantine).toUpperCase() === 'TRUE') {
                 quarantineTriggered = true;
             }
+        } else if (result.status === 'ERROR') {
+            // A rule that errored never actually ran -- worse than a FAILED
+            // result, which at least tells you what's wrong. Fail closed:
+            // this always quarantines, regardless of the rule's own
+            // on_failure_quarantine flag, since a rule that never ran has no
+            // severity to honor (Bug 6, SYNC_HARDENING_PLAN.md).
+            failureCount++;
+            quarantineTriggered = true;
         }
     });
 
@@ -67,7 +75,7 @@ const ValidationOrchestratorService = (function() {
   function processJob(executionContext) {
     const serviceName = 'ValidationOrchestratorService';
     const functionName = 'processJob';
-    const { jobType, jobQueueSheetRowNumber, sessionId } = executionContext;
+    const { jobType, sessionId } = executionContext;
 
     logger.info(serviceName, functionName, `Starting validation job: ${jobType}`, { sessionId: sessionId });
 
@@ -213,22 +221,26 @@ const ValidationOrchestratorService = (function() {
 
   // Duplicate from ProductService for now, ideally shared utility
   function _updateJobStatus(executionContext, status, errorMessage = '') {
-    const { jobQueueSheetRowNumber, jobQueueHeaders, jobId } = executionContext;
+    const { jobQueueHeaders, jobId } = executionContext;
     try {
       const allConfig = ConfigService.getAllConfig();
       const jobQueueSheet = SheetAccessor.getLogSheet(allConfig['system.sheet_names'].SysJobQueue);
 
-      const statusColIdx = jobQueueHeaders.indexOf('status');
-      const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
-      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
-
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue(status);
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
-      if (errorMessage) {
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
-      }
+      // Locked, job_id-keyed write (D1) -- real work already happened, so
+      // losing this write silently would misreport a job that succeeded.
+      // No caller here needs the return value today (this function has no
+      // unconditional post-write action to gate), but the primitive returns
+      // it for consistency with the other three services.
+      const result = OrchestratorService.setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+        if (currentRow.status !== 'PROCESSING') return undefined;
+        const updates = { status: status, processed_timestamp: new Date() };
+        if (errorMessage) updates.error_message = errorMessage;
+        return updates;
+      });
+      return result.applied;
     } catch (e) {
       console.error(`Failed to update job status: ${e.message}`);
+      return false;
     }
   }
 

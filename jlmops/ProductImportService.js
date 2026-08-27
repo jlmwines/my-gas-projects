@@ -17,30 +17,31 @@ const ProductImportService = (function() {
   function _updateJobStatus(executionContext, status, errorMessage = '') {
     const serviceName = 'ProductImportService';
     const functionName = '_updateJobStatus';
-    const { jobQueueSheetRowNumber, jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
+    const { jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
 
     try {
       const allConfig = ConfigService.getAllConfig();
       const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
 
-      const statusColIdx = jobQueueHeaders.indexOf('status');
-      const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
-      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+      // Locked, job_id-keyed write (D1) -- real work already happened, so
+      // losing this write silently would misreport a job that succeeded.
+      const result = OrchestratorService.setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+        if (currentRow.status !== 'PROCESSING') return undefined;
+        const updates = { status: status, processed_timestamp: new Date() };
+        if (errorMessage) updates.error_message = errorMessage;
+        return updates;
+      });
 
-      if (statusColIdx === -1 || errorMsgColIdx === -1 || processedTsColIdx === -1) {
-        logger.error(serviceName, functionName, `Missing required columns in SysJobQueue headers for updating job status.`, null, { sessionId: sessionId, jobId: jobId, jobType: jobType });
-        return;
+      if (result.applied) {
+        logger.info(serviceName, functionName, `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
+      } else {
+        logger.warn(serviceName, functionName, `Job ${jobId} status write to ${status} did not apply (row no longer PROCESSING).`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
       }
-
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue(status);
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
-      if (errorMessage) {
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
-      }
-      logger.info(serviceName, functionName, `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
+      return result.applied;
     } catch (e) {
       logger.error(serviceName, functionName, `Failed to update job status for ${jobId}: ${e.message}`, e, { sessionId: sessionId, jobId: jobId, jobType: jobType });
+      return false;
     }
   }
 
@@ -50,13 +51,20 @@ const ProductImportService = (function() {
    * @returns {string} Human-readable error message describing what failed.
    */
   function _buildQuarantineErrorMessage(validationResult) {
-    const failures = validationResult.results.filter(r => r.status === 'FAILED');
+    // ERROR is worse than FAILED, not milder -- it means the rule never ran
+    // at all, so include it here too (Bug 6, SYNC_HARDENING_PLAN.md).
+    const failures = validationResult.results.filter(r => r.status === 'FAILED' || r.status === 'ERROR');
     if (failures.length === 0) {
       return 'Validation failed - data quarantined.';
     }
 
     const details = failures.map(f => {
       const ruleName = f.rule.on_failure_title || f.rule.id || 'Unknown rule';
+      if (f.status === 'ERROR') {
+        // The rule threw before producing any discrepancies -- surface the
+        // caught exception text instead of a (meaningless, zero) count.
+        return `${ruleName}: ERROR - ${f.message || 'unknown error'}`;
+      }
       const count = f.discrepancies ? f.discrepancies.length : 0;
       // Include first few discrepancy keys for context
       let sample = '';
@@ -185,9 +193,9 @@ const ProductImportService = (function() {
   function _runWebXltValidationAndUpsert(executionContext) {
     const serviceName = 'ProductImportService';
     const functionName = '_runWebXltValidationAndUpsert';
-    const { jobQueueSheetRowNumber, sessionId } = executionContext;
+    const { jobId, sessionId } = executionContext;
 
-    LoggerService.info(serviceName, functionName, `Starting WebXlt specific validation and upsert process for job row: ${jobQueueSheetRowNumber}.`, { sessionId: sessionId });
+    LoggerService.info(serviceName, functionName, `Starting WebXlt specific validation and upsert process for job: ${jobId}.`, { sessionId: sessionId });
 
     // --- 1. Populate Staging Sheet ---
     try {
@@ -196,11 +204,17 @@ const ProductImportService = (function() {
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
         const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-        const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
-        const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
+        // Fresh lookup by job_id, never a remembered row number (D1) -- a
+        // purgeOldJobs rewrite between claim and here could otherwise make
+        // this fetch and process the wrong Drive file's content.
+        const jobLookup = OrchestratorService.getJobRowByJobIdWithRetry(jobQueueSheet, jobQueueHeaders, jobId);
+        if (!jobLookup.found) {
+            throw new Error(`Could not find job row for job_id: ${jobId} (job may have been purged).`);
+        }
+        const archiveFileId = jobLookup.row.archive_file_id;
 
         if (!archiveFileId) {
-            throw new Error(`Could not find archive_file_id for job row: ${jobQueueSheetRowNumber}`);
+            throw new Error(`Could not find archive_file_id for job: ${jobId}`);
         }
 
         const file = DriveApp.getFileById(archiveFileId);
@@ -229,7 +243,7 @@ const ProductImportService = (function() {
 
     if (quarantineTriggered) {
         const errorMsg = _buildQuarantineErrorMessage(validationResult);
-        logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
+        logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED' || r.status === 'ERROR') });
         _updateJobStatus(executionContext, 'QUARANTINED', errorMsg);
         return 'QUARANTINED';
     }
@@ -317,19 +331,23 @@ const ProductImportService = (function() {
   function _runComaxImport(executionContext) {
     const serviceName = 'ProductImportService';
     const functionName = '_runComaxImport';
-    const { jobQueueSheetRowNumber, sessionId } = executionContext;
-    logger.info(serviceName, functionName, `Starting Comax import process for job row: ${jobQueueSheetRowNumber}.`, { sessionId: sessionId });
+    const { jobId, sessionId } = executionContext;
+    logger.info(serviceName, functionName, `Starting Comax import process for job: ${jobId}.`, { sessionId: sessionId });
     try {
         const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
         const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-        const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
-        const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
+        // Fresh lookup by job_id, never a remembered row number (D1).
+        const jobLookup = OrchestratorService.getJobRowByJobIdWithRetry(jobQueueSheet, jobQueueHeaders, jobId);
+        if (!jobLookup.found) {
+            throw new Error(`Could not find job row for job_id: ${jobId} (job may have been purged).`);
+        }
+        const archiveFileId = jobLookup.row.archive_file_id;
 
         if (!archiveFileId) {
-            throw new Error(`Could not find archive_file_id for job row: ${jobQueueSheetRowNumber}`);
+            throw new Error(`Could not find archive_file_id for job: ${jobId}`);
         }
 
         const file = DriveApp.getFileById(archiveFileId);
@@ -345,7 +363,7 @@ const ProductImportService = (function() {
 
         if (quarantineTriggered) {
             const errorMsg = _buildQuarantineErrorMessage(validationResult);
-            logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
+            logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED' || r.status === 'ERROR') });
             _updateJobStatus(executionContext, 'QUARANTINED', errorMsg);
             return 'QUARANTINED';
         }
@@ -717,19 +735,23 @@ const ProductImportService = (function() {
   function _runWebProductsImport(executionContext) {
     const serviceName = 'ProductImportService';
     const functionName = '_runWebProductsImport';
-    const { jobQueueSheetRowNumber, sessionId } = executionContext;
-    logger.info(serviceName, functionName, `Starting Web Products (EN) import process for job row: ${jobQueueSheetRowNumber}.`, { sessionId: sessionId });
+    const { jobId, sessionId } = executionContext;
+    logger.info(serviceName, functionName, `Starting Web Products (EN) import process for job: ${jobId}.`, { sessionId: sessionId });
     try {
         const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
         const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-        const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
-        const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
+        // Fresh lookup by job_id, never a remembered row number (D1).
+        const jobLookup = OrchestratorService.getJobRowByJobIdWithRetry(jobQueueSheet, jobQueueHeaders, jobId);
+        if (!jobLookup.found) {
+            throw new Error(`Could not find job row for job_id: ${jobId} (job may have been purged).`);
+        }
+        const archiveFileId = jobLookup.row.archive_file_id;
 
         if (!archiveFileId) {
-            throw new Error(`Could not find archive_file_id for job row: ${jobQueueSheetRowNumber}`);
+            throw new Error(`Could not find archive_file_id for job: ${jobId}`);
         }
 
         const file = DriveApp.getFileById(archiveFileId);
@@ -750,7 +772,7 @@ const ProductImportService = (function() {
 
         if (quarantineTriggered) {
             const errorMsg = _buildQuarantineErrorMessage(validationResult);
-            logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
+            logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED' || r.status === 'ERROR') });
             _updateJobStatus(executionContext, 'QUARANTINED', errorMsg);
             return 'QUARANTINED';
         }
@@ -1037,7 +1059,7 @@ const ProductImportService = (function() {
   function processJob(executionContext) {
     const serviceName = 'ProductImportService';
     const functionName = 'processJob';
-    const { jobType, jobQueueSheetRowNumber, sessionId } = executionContext;
+    const { jobType, jobQueueSheetRowNumber, jobId, sessionId } = executionContext;
     logger.info(serviceName, functionName, `Starting job: ${jobType} (Row: ${jobQueueSheetRowNumber})`, { sessionId: sessionId, jobType: jobType });
 
 
@@ -1076,11 +1098,18 @@ const ProductImportService = (function() {
     // outside the try/catch (2026-08-21) so this relay throw can no longer be
     // caught by this function's own catch block and overwrite the specific
     // message with this generic one — see .claude/bugs.md.
-    _updateJobStatus(executionContext, finalJobStatus);
+    const statusApplied = _updateJobStatus(executionContext, finalJobStatus);
 
     if (finalJobStatus === 'COMPLETED') {
-      OrchestratorService.finalizeJobCompletion(jobQueueSheetRowNumber);
-      LoggerService.info('ProductImportService', 'processJob', `Job ${jobType} completed successfully.`);
+      // Only proceed if the status write actually landed -- otherwise the
+      // row may still read PROCESSING (or have been claimed by a reaper in
+      // between), and finalizing now would be acting on a stale premise.
+      if (statusApplied) {
+        OrchestratorService.finalizeJobCompletion(jobId);
+        LoggerService.info('ProductImportService', 'processJob', `Job ${jobType} completed successfully.`);
+      } else {
+        LoggerService.warn('ProductImportService', 'processJob', `Job ${jobType} (${jobId}) completed but its status write did not apply -- skipping finalization this run.`);
+      }
     } else {
       // Job returned FAILED or QUARANTINED - throw to stop processing
       LoggerService.error('ProductImportService', 'processJob', `Job ${jobType} returned status: ${finalJobStatus}`);

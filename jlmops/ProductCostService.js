@@ -56,7 +56,7 @@ const ProductCostService = (function() {
 
     // 4. Stamp last recompute (script timezone = Israel per appsscript.json).
     const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
-    ConfigService.setConfig('system.product_costs.last_recompute', 'value', stamp);
+    ConfigService.setConfigLocked('system.product_costs.last_recompute', 'value', stamp);
 
     const summary = {
       costsInFile: costBySku.size,

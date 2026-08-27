@@ -560,7 +560,7 @@ const ContactImportService = (function () {
       catch (e) { errors.push('Activity for ' + a.sca_Email + ': ' + e.message); }
     });
 
-    ConfigService.setConfig('system.mailchimp.subscribers_last_update', 'value', new Date().toISOString());
+    ConfigService.setConfigLocked('system.mailchimp.subscribers_last_update', 'value', new Date().toISOString());
 
     LoggerService.info(SERVICE_NAME, fnName,
       'Mailchimp API import complete: ' + batchResult.inserted + ' new, '

@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-27. jlmops @560 live: Step 1 of `jlmops/plans/SYNC_HARDENING_PLAN.md`'s build order (9 individual bug fixes) and Step 2 (`LockHelpers.js#withScriptLock`, Bug 5 Stage A) are both deployed and Smoke A is fully confirmed live (mutual exclusion, dashboard unaffected, contention/reject branch all verified). **24h+ observation window now running: started 2026-08-27 07:28 (Israel), closes 2026-08-28 07:28+.** Stage B (the full sync-state write-site migration) does not start before that window closes and the user gives an explicit go-ahead. The 9 individual fixes have no single smoke test and confirm as normal sync operations occur naturally. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
+**Updated:** 2026-08-27. jlmops @562 live: Steps 1-2 of `jlmops/plans/SYNC_HARDENING_PLAN.md`'s build order (9 individual bug fixes, LockHelpers Stage A, Smoke A fully confirmed) plus Step 3 (Bug 5 Stage B — exhaustive sync-state write-site migration, ~20 sites, all completeness-gate checks passed) are all deployed. Decision 2026-08-27: the Stage A 24h+ wait was judged to be protecting against nothing concrete (nothing called `withScriptLock` in production between Stage A and Stage B), so Stage B proceeded same-day on deliberate live verification instead of passive observation — recorded in the plan doc. Live verification of Stage B itself is in progress: a real sync completed cleanly before Stage B deployed; a forced inventory-qty edit is being used now to exercise the full WAITING_WEB_EXPORT→PUSHING_WEB_INVENTORY→COMPLETE path post-deploy. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-08-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @561 · theme v1.2.32 |
+| Deploy Version | jlmops @562 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-08-27 · theme 2026-08-20 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |

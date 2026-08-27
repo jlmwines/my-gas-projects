@@ -46,8 +46,12 @@ const WooInventoryPushService = (function() {
 
     try {
       const result = _runPush(sessionId);
-      _updateJobStatus(executionContext, result.status, result.message);
-      logger.info(SERVICE_NAME, 'processJob', `Job ${jobType} ${result.status}: ${result.message}`, { sessionId: sessionId });
+      const statusApplied = _updateJobStatus(executionContext, result.status, result.message);
+      if (statusApplied) {
+        logger.info(SERVICE_NAME, 'processJob', `Job ${jobType} ${result.status}: ${result.message}`, { sessionId: sessionId });
+      } else {
+        logger.warn(SERVICE_NAME, 'processJob', `Job ${jobType} finished (${result.status}: ${result.message}) but its status write did not apply.`, { sessionId: sessionId });
+      }
     } catch (e) {
       logger.error(SERVICE_NAME, 'processJob', `Job ${jobType} failed: ${e.message}`, e, { sessionId: sessionId, jobType: jobType });
       _updateJobStatus(executionContext, 'FAILED', e.message);
@@ -176,28 +180,29 @@ const WooInventoryPushService = (function() {
    * timestamp, and (optionally) error message into the SysJobQueue row.
    */
   function _updateJobStatus(executionContext, status, errorMessage) {
-    const { jobQueueSheetRowNumber, jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
+    const { jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
     try {
       const allConfig = ConfigService.getAllConfig();
       const jobQueueSheet = SheetAccessor.getLogSheet(allConfig['system.sheet_names'].SysJobQueue);
 
-      const statusColIdx = jobQueueHeaders.indexOf('status');
-      const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
-      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+      // Locked, job_id-keyed write (D1) -- real work already happened, so
+      // losing this write silently would misreport a job that succeeded.
+      const result = OrchestratorService.setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+        if (currentRow.status !== 'PROCESSING') return undefined;
+        const updates = { status: status, processed_timestamp: new Date() };
+        if (errorMessage) updates.error_message = errorMessage;
+        return updates;
+      });
 
-      if (statusColIdx === -1 || errorMsgColIdx === -1 || processedTsColIdx === -1) {
-        logger.error(SERVICE_NAME, '_updateJobStatus', 'Missing required columns in SysJobQueue headers.', null, { sessionId: sessionId, jobId: jobId, jobType: jobType });
-        return;
+      if (result.applied) {
+        logger.info(SERVICE_NAME, '_updateJobStatus', `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
+      } else {
+        logger.warn(SERVICE_NAME, '_updateJobStatus', `Job ${jobId} status write to ${status} did not apply (row no longer PROCESSING).`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
       }
-
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue(status);
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
-      if (errorMessage) {
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
-      }
-      logger.info(SERVICE_NAME, '_updateJobStatus', `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
+      return result.applied;
     } catch (e) {
       logger.error(SERVICE_NAME, '_updateJobStatus', `Failed to update job status for ${jobId}: ${e.message}`, e, { sessionId: sessionId, jobId: jobId, jobType: jobType });
+      return false;
     }
   }
 

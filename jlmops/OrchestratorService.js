@@ -519,6 +519,147 @@ const OrchestratorService = (function() {
 
   // --- PHASE 2: JOB EXECUTION ---
 
+  /**
+   * Locked claim of the next PENDING job matching filterFn. Job-queue analog
+   * of Bug 5's mutateSyncState -- re-reads fresh inside a short (5s) lock
+   * hold, marks PROCESSING, releases. Reports contention rather than looping
+   * internally (D1 point 1) -- callers own the bounded retry policy via
+   * _claimNextPendingJobWithRetry below.
+   * @param {Sheet} jobQueueSheet
+   * @param {string[]} jobQueueHeaders
+   * @param {function(object): boolean} filterFn - header-keyed row object -> claim it?
+   * @returns {{claimed:true, jobId, jobType, jobQueueSheetRowNumber}|{claimed:false, contended:boolean}}
+   */
+  function _claimNextPendingJob(jobQueueSheet, jobQueueHeaders, filterFn) {
+    const NOT_FOUND = { claimed: false, contended: false };
+    const outcome = LockHelpers.withScriptLock('job-queue-claim', 5000, function() {
+      if (jobQueueSheet.getLastRow() < 2) return NOT_FOUND;
+      const statusColIdx = jobQueueHeaders.indexOf('status');
+      const jobIdColIdx = jobQueueHeaders.indexOf('job_id');
+      const jobTypeColIdx = jobQueueHeaders.indexOf('job_type');
+      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+      const data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        if (row[statusColIdx] !== 'PENDING') continue;
+        const rowObj = {};
+        jobQueueHeaders.forEach(function(h, idx) { rowObj[h] = row[idx]; });
+        if (!filterFn(rowObj)) continue;
+        const sheetRow = i + 2;
+        const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
+        jobQueueSheet.getRange(sheetRow, statusColIdx + 1).setValue('PROCESSING');
+        jobQueueSheet.getRange(sheetRow, processedTsColIdx + 1).setValue(new Date());
+        // Clear any stale error_message from a prior attempt of this same row,
+        // so a later failure handler can trust "non-empty" to mean "written
+        // during this run" (2026-08-21 precedent, generalized to every claim).
+        if (errorMsgColIdx !== -1) jobQueueSheet.getRange(sheetRow, errorMsgColIdx + 1).setValue('');
+        SpreadsheetApp.flush();
+        return { claimed: true, jobId: row[jobIdColIdx], jobType: row[jobTypeColIdx], jobQueueSheetRowNumber: sheetRow };
+      }
+      return NOT_FOUND;
+    });
+    return outcome === null ? { claimed: false, contended: true } : outcome;
+  }
+
+  /**
+   * Bounded retry wrapper around _claimNextPendingJob -- up to 2 additional
+   * attempts, ~3s apart, matching WooInventoryPushService's existing
+   * auto-retry precedent. Persistent contention after that is treated as
+   * "nothing claimable this run," not looped indefinitely.
+   */
+  function _claimNextPendingJobWithRetry(jobQueueSheet, jobQueueHeaders, filterFn) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const result = _claimNextPendingJob(jobQueueSheet, jobQueueHeaders, filterFn);
+      if (result.claimed || !result.contended) return result;
+      if (attempt < 3) Utilities.sleep(3000);
+    }
+    return { claimed: false, contended: true };
+  }
+
+  /**
+   * Fresh scan for the job queue row currently matching jobId -- never a
+   * remembered row number, per D1's governing rule (a job's row number is
+   * only valid for the single write that claimed it; purgeOldJobs' unlocked
+   * rewrite can shift every row after that).
+   * @returns {{found:true, row:object, sheetRow:number}|{found:false}}
+   */
+  function _getJobRowByJobId(jobQueueSheet, jobQueueHeaders, jobId) {
+    if (jobQueueSheet.getLastRow() < 2) return { found: false };
+    const jobIdColIdx = jobQueueHeaders.indexOf('job_id');
+    const data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][jobIdColIdx] === jobId) {
+        const rowObj = {};
+        jobQueueHeaders.forEach(function(h, idx) { rowObj[h] = data[i][idx]; });
+        return { found: true, row: rowObj, sheetRow: i + 2 };
+      }
+    }
+    return { found: false };
+  }
+
+  /**
+   * Same not-found retry as D1's read-side completeness check: purgeOldJobs'
+   * clearContents()+setValues() rewrite is two separate calls, not atomic, so
+   * an unlocked scan can land in the momentary gap and see the whole sheet
+   * empty even though the row wasn't actually lost. One short retry resolves
+   * this without pulling Stage C's locking forward.
+   * @returns {{found:true, row:object, sheetRow:number}|{found:false}}
+   */
+  function _getJobRowByJobIdWithRetry(jobQueueSheet, jobQueueHeaders, jobId) {
+    const first = _getJobRowByJobId(jobQueueSheet, jobQueueHeaders, jobId);
+    if (first.found) return first;
+    Utilities.sleep(1000);
+    return _getJobRowByJobId(jobQueueSheet, jobQueueHeaders, jobId);
+  }
+
+  /**
+   * Locked, job_id-keyed job-row mutation -- job-queue analog of Bug 5's
+   * mutateSyncState. Re-reads the row fresh by job_id, calls fn(currentRow)
+   * which returns the fields to write, or undefined/nothing to signal "my
+   * precondition no longer holds, don't apply." Must-apply: retries up to 2x
+   * (~3s apart) on lock contention, throws if still contended after that --
+   * for a job processor's own terminal write, where losing it silently would
+   * misreport a job that actually succeeded.
+   * @param {function(object): (object|undefined)} fn - header-keyed row -> {header: value, ...} to write, or undefined to abort
+   * @returns {{applied:boolean}}
+   */
+  function setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, fn) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const outcome = LockHelpers.withScriptLock('job-queue-status:' + jobId, 5000, function() {
+        const lookup = _getJobRowByJobId(jobQueueSheet, jobQueueHeaders, jobId);
+        if (!lookup.found) return { applied: false };
+        const updates = fn(lookup.row);
+        if (!updates) return { applied: false };
+        Object.keys(updates).forEach(function(header) {
+          const colIdx = jobQueueHeaders.indexOf(header);
+          if (colIdx === -1) return;
+          jobQueueSheet.getRange(lookup.sheetRow, colIdx + 1).setValue(updates[header]);
+        });
+        SpreadsheetApp.flush();
+        return { applied: true };
+      });
+      if (outcome !== null) return outcome;
+      if (attempt < 3) Utilities.sleep(3000);
+    }
+    throw new Error(`Could not acquire job-queue lock for job ${jobId} after 3 attempts.`);
+  }
+
+  /**
+   * Same fn contract as setJobRowStatus, but never throws: for opportunistic
+   * sweeps (the zombie killer, _reapStuckJobInSession, Phase 2's unblock
+   * step) where "someone else already handled this row" is a normal,
+   * expected outcome, not a failure.
+   * @returns {{applied:boolean}}
+   */
+  function setJobRowStatusBestEffort(jobQueueSheet, jobQueueHeaders, jobId, fn) {
+    try {
+      return setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, fn);
+    } catch (e) {
+      logger.warn('OrchestratorService', 'setJobRowStatusBestEffort', `No-applying for job ${jobId}: ${e.message}`);
+      return { applied: false };
+    }
+  }
+
   function processPendingJobs() {
     const serviceName = 'OrchestratorService';
     const functionName = 'processPendingJobs';
@@ -564,6 +705,10 @@ const OrchestratorService = (function() {
     const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
 
     // --- Zombie Killer: Check for stuck PROCESSING jobs ---
+    // Unlocked scan is fine for SELECTING candidates (a stale read just means
+    // a stuck job is caught next run instead); the WRITE for each candidate
+    // goes through the locked, job_id-keyed setJobRowStatusBestEffort so it
+    // can never clobber a real completion recorded in the meantime.
     const fifteenMinutesAgo = new Date(new Date().getTime() - 15 * 60 * 1000);
     for (let i = 0; i < data.length; i++) {
         const row = data[i];
@@ -581,105 +726,99 @@ const OrchestratorService = (function() {
                     stuckSince: processedTimestamp.toISOString()
                 });
 
-                // Report stuck job through notification system
-                NotificationService.reportFailure(
-                  `job.${jobType}`,
-                  `Job stuck in PROCESSING for >15min (zombie killed)`,
-                  'High',
-                  { jobId: jobId, jobType: jobType, stuckSince: processedTimestamp.toISOString() },
-                  sessionId
-                );
+                const zombieResult = setJobRowStatusBestEffort(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+                  if (currentRow.status !== 'PROCESSING') return undefined; // someone already handled it
+                  return {
+                    status: 'FAILED',
+                    error_message: 'Job stuck in PROCESSING state for too long (>15min).',
+                    processed_timestamp: new Date()
+                  };
+                });
 
-                jobQueueSheet.getRange(i + 2, statusColIdx + 1).setValue('FAILED');
-                jobQueueSheet.getRange(i + 2, errorMsgColIdx + 1).setValue('Job stuck in PROCESSING state for too long (>15min).');
-                jobQueueSheet.getRange(i + 2, processedTsColIdx + 1).setValue(new Date()); // Update processed timestamp to now
+                // Only the execution that actually won the race notifies -- avoids
+                // duplicate failure notifications for one underlying stuck job.
+                if (zombieResult.applied) {
+                  NotificationService.reportFailure(
+                    `job.${jobType}`,
+                    `Job stuck in PROCESSING for >15min (zombie killed)`,
+                    'High',
+                    { jobId: jobId, jobType: jobType, stuckSince: processedTimestamp.toISOString() },
+                    sessionId
+                  );
+                }
             }
         }
     }
-    SpreadsheetApp.flush(); // Ensure updates are written immediately
     // --- End Zombie Killer ---
 
-    let jobFoundAndProcessed = true; // Initialize to true to enter loop
     let jobsProcessedCount = 0;
     const MAX_JOBS_PER_RUN = 5; // Safety limit
 
-    while (jobFoundAndProcessed && jobsProcessedCount < MAX_JOBS_PER_RUN) {
-      jobFoundAndProcessed = false; // Reset flag for this iteration
-      
-      // Re-read data to ensure we have the latest status after the previous job's processing
-      // This is critical because processing one job might unblock or create others
-      if (jobsProcessedCount > 0) {
-         data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
+    while (jobsProcessedCount < MAX_JOBS_PER_RUN) {
+      const claim = _claimNextPendingJobWithRetry(jobQueueSheet, jobQueueHeaders, function() { return true; });
+      if (!claim.claimed) break; // nothing left to claim, or persistent contention this run
+
+      const jobId = claim.jobId;
+      const jobType = claim.jobType;
+      const jobQueueSheetRowNumber = claim.jobQueueSheetRowNumber;
+      const jobConfig = allConfig[jobType];
+
+      if (!jobConfig || !jobConfig.processing_service) {
+        logger.error(serviceName, functionName, `No processing service configured for job type: ${jobType}. Setting job ${jobId} to FAILED.`, { jobId: jobId, jobType: jobType });
+        setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+          if (currentRow.status !== 'PROCESSING') return undefined;
+          return { status: 'FAILED', error_message: 'No processing service configured.' };
+        });
+        jobsProcessedCount++; // count as processed so we don't loop infinitely on the same bad job
+        continue;
       }
 
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        if (row[statusColIdx] === 'PENDING') {
-          const jobId = row[jobIdColIdx];
-          const jobType = row[jobTypeColIdx];
-          const jobQueueSheetRowNumber = i + 2; // +1 for 0-based index, +1 for header
+      const processingServiceName = jobConfig.processing_service;
+      logger.info(serviceName, functionName, `Delegating job ${jobId} of type '${jobType}' to service: ${processingServiceName}`, { jobId: jobId, jobType: jobType });
 
-          const jobConfig = allConfig[jobType];
-          
-          if (!jobConfig || !jobConfig.processing_service) {
-            logger.error(serviceName, functionName, `No processing service configured for job type: ${jobType}. Setting job ${jobId} to FAILED.`, { jobId: jobId, jobType: jobType });
-            jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
-            jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue('No processing service configured.');
-            // We count this as processed so we don't loop infinitely on the same bad job if logic fails
-            jobsProcessedCount++; 
-            jobFoundAndProcessed = true;
-            break; // Break inner for-loop to re-scan
-          }
+      // Create execution context to pass to the processing service. Re-read
+      // fresh by job_id rather than trusting the row values from the claim
+      // scan, which are already a moment stale by the time we get here.
+      const jobRowLookup = _getJobRowByJobId(jobQueueSheet, jobQueueHeaders, jobId);
+      const executionContext = {
+          sessionId: jobRowLookup.found ? jobRowLookup.row['session_id'] : null,
+          jobId: jobId,
+          jobType: jobType,
+          jobQueueSheetRowNumber: jobQueueSheetRowNumber, // legacy field; real-work functions must not use this for later reads -- see D1
+          jobQueueHeaders: jobQueueHeaders // Pass headers for service to find column indices
+      };
 
-          const processingServiceName = jobConfig.processing_service;
-          logger.info(serviceName, functionName, `Delegating job ${jobId} of type '${jobType}' to service: ${processingServiceName}`, { jobId: jobId, jobType: jobType });
-
-          // Create execution context to pass to the processing service
-          const executionContext = {
-              sessionId: row[jobQueueHeaders.indexOf('session_id')], // Get sessionId from job queue
-              jobId: jobId,
-              jobType: jobType,
-              jobQueueSheetRowNumber: jobQueueSheetRowNumber,
-              jobQueueHeaders: jobQueueHeaders // Pass headers for service to find column indices
-          };
-
-          try {
-            // Set status to PROCESSING before calling service
-            jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('PROCESSING');
-            jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date()); // Update processed timestamp
-
-            switch (processingServiceName) {
-              case 'ProductService':
-                // Legacy routing - ProductService import jobs now handled by ProductImportService
-                ProductImportService.processJob(executionContext);
-                break;
-              case 'ProductImportService':
-                ProductImportService.processJob(executionContext);
-                break;
-              case 'OrderService':
-                const orderServiceInstance = new OrderService(ProductService);
-                orderServiceInstance.processJob(executionContext);
-                break;
-              case 'ValidationOrchestratorService':
-                ValidationOrchestratorService.processJob(executionContext);
-                break;
-              case 'WooInventoryPushService':
-                WooInventoryPushService.processJob(executionContext);
-                break;
-              default:
-                throw new Error(`Unknown processing service: ${processingServiceName}`);
-            }
-            jobsProcessedCount++;
-          } catch (e) {
-            logger.error(serviceName, functionName, `Critical error in Orchestrator while delegating job ${jobId}: ${e.message}`, e, executionContext);
-            // If service failed to update status, Orchestrator catches and sets FAILED
-            jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
-            jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(`Orchestrator delegation failed: ${e.message}`);
-            jobsProcessedCount++;
-          }
-          jobFoundAndProcessed = true;
-          break; // Break inner for-loop to re-scan
+      try {
+        switch (processingServiceName) {
+          case 'ProductService':
+            // Legacy routing - ProductService import jobs now handled by ProductImportService
+            ProductImportService.processJob(executionContext);
+            break;
+          case 'ProductImportService':
+            ProductImportService.processJob(executionContext);
+            break;
+          case 'OrderService':
+            const orderServiceInstance = new OrderService(ProductService);
+            orderServiceInstance.processJob(executionContext);
+            break;
+          case 'ValidationOrchestratorService':
+            ValidationOrchestratorService.processJob(executionContext);
+            break;
+          case 'WooInventoryPushService':
+            WooInventoryPushService.processJob(executionContext);
+            break;
+          default:
+            throw new Error(`Unknown processing service: ${processingServiceName}`);
         }
+        jobsProcessedCount++;
+      } catch (e) {
+        logger.error(serviceName, functionName, `Critical error in Orchestrator while delegating job ${jobId}: ${e.message}`, e, executionContext);
+        // If service failed to update status, Orchestrator catches and sets FAILED
+        setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+          if (currentRow.status !== 'PROCESSING') return undefined;
+          return { status: 'FAILED', error_message: `Orchestrator delegation failed: ${e.message}` };
+        });
+        jobsProcessedCount++;
       }
     }
 
@@ -855,10 +994,10 @@ const OrchestratorService = (function() {
     }
   }
 
-  function finalizeJobCompletion(jobQueueSheetRowNumber) { // Change signature
+  function finalizeJobCompletion(jobId) { // Keyed by job_id, not row number -- see D1's governing rule
     const serviceName = 'OrchestratorService';
     const functionName = 'finalizeJobCompletion';
-    logger.info(serviceName, functionName, `Finalizing job completion for job on row ${jobQueueSheetRowNumber}.`);
+    logger.info(serviceName, functionName, `Finalizing job completion for job ${jobId}.`);
 
     const allConfig = ConfigService.getAllConfig();
     const logSheetConfig = allConfig['system.spreadsheet.logs'];
@@ -866,29 +1005,24 @@ const OrchestratorService = (function() {
     const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
     const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
-    
-    // Get details of the completed job
-    const completedJobDetails = getJobDetailsByRow(jobQueueSheet, jobQueueSheetRowNumber, jobQueueHeaders);
-    if (!completedJobDetails) {
-        logger.error(serviceName, functionName, `Could not retrieve details for completed job on row ${jobQueueSheetRowNumber}.`);
+
+    // Single fresh lookup, reused by Phase 1 below instead of a second,
+    // separate row-number-keyed read.
+    const jobLookup = _getJobRowByJobIdWithRetry(jobQueueSheet, jobQueueHeaders, jobId);
+    if (!jobLookup.found) {
+        logger.error(serviceName, functionName, `Could not retrieve details for completed job ${jobId}.`);
         return;
     }
+    const completedJobDetails = jobLookup.row;
     const completedJobType = completedJobDetails.job_type;
     const completedJobSessionId = completedJobDetails.session_id;
 
     // --- Phase 1: Record file in registry (or defer if sync session active) ---
     try {
-      if (jobQueueSheetRowNumber) {
-        const jobRowData = jobQueueSheet.getRange(jobQueueSheetRowNumber, 1, 1, jobQueueHeaders.length).getValues()[0];
-        const statusIdx = jobQueueHeaders.indexOf('status');
-        const archiveFileIdIdx = jobQueueHeaders.indexOf('archive_file_id');
-        const originalFileIdIdx = jobQueueHeaders.indexOf('original_file_id');
-        const originalTimestampIdx = jobQueueHeaders.indexOf('original_file_last_updated');
-
-        const jobStatus = jobRowData[statusIdx];
-        const archiveFileId = jobRowData[archiveFileIdIdx];
-        const originalFileId = jobRowData[originalFileIdIdx];
-        const originalFileLastUpdated = jobRowData[originalTimestampIdx];
+      {
+        const archiveFileId = completedJobDetails.archive_file_id;
+        const originalFileId = completedJobDetails.original_file_id;
+        const originalFileLastUpdated = completedJobDetails.original_file_last_updated;
 
         if (originalFileId && originalFileLastUpdated) {
           const archiveFile = DriveApp.getFileById(archiveFileId);
@@ -940,24 +1074,33 @@ const OrchestratorService = (function() {
     }
     
     // --- Phase 2: Unblock dependent jobs in the queue ---
+    // Dead-by-code-path today (grep-confirmed: nothing ever writes 'BLOCKED'),
+    // but the guard below handles a real BLOCKED row correctly regardless of
+    // how it got there -- migrated for consistency, per D1.
     try {
       if (jobQueueSheet.getLastRow() > 1) {
         const data = jobQueueSheet.getDataRange().getValues();
         const headers = data.shift();
+        const jobIdCol = headers.indexOf('job_id');
         const jobTypeCol = headers.indexOf('job_type');
         const statusCol = headers.indexOf('status');
-        const sessionIdCol = headers.indexOf('session_id'); // New index
+        const sessionIdCol = headers.indexOf('session_id');
 
-        data.forEach((row, index) => {
+        data.forEach((row) => {
           if (row[statusCol] === 'BLOCKED') {
+            const blockedJobId = row[jobIdCol];
             const blockedJobType = row[jobTypeCol];
             const blockedJobConfig = allConfig[blockedJobType];
-            const blockedJobSessionId = row[sessionIdCol]; // Get session ID of blocked job
-            
+            const blockedJobSessionId = row[sessionIdCol];
+
             if (blockedJobConfig && blockedJobConfig.depends_on === completedJobType && blockedJobSessionId === completedJobSessionId) {
-              const sheetRow = index + 2; // +1 for 0-based index, +1 for header
-              jobQueueSheet.getRange(sheetRow, statusCol + 1).setValue('PENDING');
-              logger.info(serviceName, functionName, `Unblocked job ${row[0]} (type: ${blockedJobType}, Session: ${blockedJobSessionId}) because its dependency '${completedJobType}' was completed in the same session.`, { sessionId: completedJobSessionId, unblockedJobId: row[0], unblockedJobType: blockedJobType });
+              const unblockResult = setJobRowStatusBestEffort(jobQueueSheet, jobQueueHeaders, blockedJobId, function(currentRow) {
+                if (currentRow.status !== 'BLOCKED') return undefined; // already unblocked/handled
+                return { status: 'PENDING' };
+              });
+              if (unblockResult.applied) {
+                logger.info(serviceName, functionName, `Unblocked job ${blockedJobId} (type: ${blockedJobType}, Session: ${blockedJobSessionId}) because its dependency '${completedJobType}' was completed in the same session.`, { sessionId: completedJobSessionId, unblockedJobId: blockedJobId, unblockedJobType: blockedJobType });
+              }
             }
           }
         });
@@ -1150,7 +1293,6 @@ const OrchestratorService = (function() {
         if (isNaN(processedTs.getTime()) || processedTs >= cutoff) continue;
 
         const jobId = row[jobIdCol];
-        const sheetRow = i + 1; // 0-indexed data row + 1 = sheet row number
 
         logger.error(serviceName, functionName, `Reaping stuck job ${jobId} (type: ${jobType}) in session ${sessionId}. Stuck since ${processedTs.toISOString()} (>${thresholdMinutes}min).`, null, {
           sessionId: sessionId,
@@ -1160,20 +1302,26 @@ const OrchestratorService = (function() {
           thresholdMinutes: thresholdMinutes
         });
 
-        NotificationService.reportFailure(
-          `job.${jobType}`,
-          `Job stuck in PROCESSING for >${thresholdMinutes}min (reaped on poll)`,
-          'High',
-          { jobId: jobId, jobType: jobType, stuckSince: processedTs.toISOString() },
-          sessionId
-        );
+        const reapResult = setJobRowStatusBestEffort(jobQueueSheet, headers, jobId, function(currentRow) {
+          if (currentRow.status !== 'PROCESSING') return undefined; // someone already handled it
+          return {
+            status: 'FAILED',
+            error_message: `Job stuck in PROCESSING for >${thresholdMinutes}min (reaped on poll).`,
+            processed_timestamp: new Date()
+          };
+        });
 
-        jobQueueSheet.getRange(sheetRow, statusCol + 1).setValue('FAILED');
-        jobQueueSheet.getRange(sheetRow, errorMsgCol + 1).setValue(`Job stuck in PROCESSING for >${thresholdMinutes}min (reaped on poll).`);
-        jobQueueSheet.getRange(sheetRow, processedTsCol + 1).setValue(new Date());
-        SpreadsheetApp.flush();
+        if (reapResult.applied) {
+          NotificationService.reportFailure(
+            `job.${jobType}`,
+            `Job stuck in PROCESSING for >${thresholdMinutes}min (reaped on poll)`,
+            'High',
+            { jobId: jobId, jobType: jobType, stuckSince: processedTs.toISOString() },
+            sessionId
+          );
+        }
 
-        return true;
+        return reapResult.applied;
       }
       return false;
 
@@ -1749,7 +1897,13 @@ const OrchestratorService = (function() {
       getFileRegistry: getFileRegistry,
       isNewFile: isNewFile,
       getFilesByPattern: getFilesByPattern,
-      processSessionJobs: processSessionJobs
+      processSessionJobs: processSessionJobs,
+      // D1: job-queue locking primitives, for job-processor services' own
+      // terminal writes and real-work functions' archive_file_id lookups.
+      setJobRowStatus: setJobRowStatus,
+      setJobRowStatusBestEffort: setJobRowStatusBestEffort,
+      getJobRowByJobId: _getJobRowByJobId,
+      getJobRowByJobIdWithRetry: _getJobRowByJobIdWithRetry
     };
 
   /**
@@ -1769,27 +1923,25 @@ const OrchestratorService = (function() {
     const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
-    let jobQueueData = jobQueueSheet.getDataRange().getValues();
-    const jobQueueHeaders = jobQueueData[0];
-
-    const sessionColIdx = jobQueueHeaders.indexOf('session_id');
-    const statusColIdx = jobQueueHeaders.indexOf('status');
-    const jobTypeColIdx = jobQueueHeaders.indexOf('job_type');
-    const jobIdColIdx = jobQueueHeaders.indexOf('job_id');
-    const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
-    const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
+    const jobQueueHeaders = jobQueueSheet.getDataRange().getValues()[0];
 
     let jobsProcessed = 0;
 
-    // Find and process PENDING jobs for this session in order
-    for (let i = 1; i < jobQueueData.length; i++) {
-      const row = jobQueueData[i];
-      if (row[sessionColIdx] !== sessionId) continue;
-      if (row[statusColIdx] !== 'PENDING') continue;
+    // Find and process PENDING jobs for this session in order. Only the claim
+    // step is shared with processPendingJobs (_claimNextPendingJobWithRetry);
+    // the stop-immediately-on-first-failure control flow below is this
+    // function's own deliberate, different contract -- a single *Backend
+    // call's own jobs, not a background sweep that should keep working
+    // through unrelated jobs.
+    while (true) {
+      const claim = _claimNextPendingJobWithRetry(jobQueueSheet, jobQueueHeaders, function(row) {
+        return row['session_id'] === sessionId;
+      });
+      if (!claim.claimed) break; // nothing left for this session, or persistent contention
 
-      const jobId = row[jobIdColIdx];
-      const jobType = row[jobTypeColIdx];
-      const jobQueueSheetRowNumber = i + 1;
+      const jobId = claim.jobId;
+      const jobType = claim.jobType;
+      const jobQueueSheetRowNumber = claim.jobQueueSheetRowNumber; // legacy field on executionContext only
 
       logger.info(serviceName, functionName, `Processing job ${jobId} (${jobType}) for session ${sessionId}`);
 
@@ -1797,8 +1949,10 @@ const OrchestratorService = (function() {
       const jobConfig = allConfig[jobType];
       if (!jobConfig || !jobConfig.processing_service) {
         logger.error(serviceName, functionName, `No processing service configured for job type: ${jobType}`);
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue('No processing service configured.');
+        setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+          if (currentRow.status !== 'PROCESSING') return undefined;
+          return { status: 'FAILED', error_message: 'No processing service configured.' };
+        });
         return { success: false, jobsProcessed, error: `No processing service for ${jobType}` };
       }
 
@@ -1807,19 +1961,11 @@ const OrchestratorService = (function() {
         sessionId: sessionId,
         jobId: jobId,
         jobType: jobType,
-        jobQueueSheetRowNumber: jobQueueSheetRowNumber,
+        jobQueueSheetRowNumber: jobQueueSheetRowNumber, // legacy field; real-work functions must not use this for later reads -- see D1
         jobQueueHeaders: jobQueueHeaders
       };
 
       try {
-        // Set status to PROCESSING. Clear any stale error_message from a prior
-        // attempt of this same row so that, if this attempt fails, the catch
-        // block below can trust "error_message is non-empty" to mean "the
-        // sub-processor wrote a specific reason during THIS run" (2026-08-21).
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('PROCESSING');
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue('');
-
         switch (processingServiceName) {
           case 'ProductService':
           case 'ProductImportService':
@@ -1834,12 +1980,8 @@ const OrchestratorService = (function() {
         }
 
         jobsProcessed++;
-        finalizeJobCompletion(jobQueueSheetRowNumber);
+        finalizeJobCompletion(jobId);
         logger.info(serviceName, functionName, `Job ${jobId} completed successfully`);
-
-        // Re-read job queue data to get latest status after finalize
-        // This prevents re-processing jobs that were already processed by processPendingJobs() inside finalizeJobCompletion
-        jobQueueData = jobQueueSheet.getDataRange().getValues();
 
       } catch (e) {
         // The sub-processor (e.g. ProductImportService.processJob) may have
@@ -1848,20 +1990,21 @@ const OrchestratorService = (function() {
         // that over e.message (which is just the generic relay text) if
         // present. Falls back to e.message for failures that never reach a
         // sub-processor (e.g. "Unknown processing service" above) — the
-        // PROCESSING-transition clear above guarantees a non-empty cell here
-        // was written during this run, not stale from a prior attempt.
-        const recordedReason = String(jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).getValue() || '').trim();
+        // claim-time clear guarantees a non-empty cell here was written
+        // during this run, not stale from a prior attempt.
+        const freshLookup = _getJobRowByJobIdWithRetry(jobQueueSheet, jobQueueHeaders, jobId);
+        const recordedReason = freshLookup.found ? String(freshLookup.row.error_message || '').trim() : '';
         const errorMessage = recordedReason || e.message;
 
         logger.error(serviceName, functionName, `Job ${jobId} failed: ${errorMessage}`, e);
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
-        SpreadsheetApp.flush();
+        setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+          if (currentRow.status !== 'PROCESSING') return undefined;
+          return { status: 'FAILED', error_message: errorMessage };
+        });
         return { success: false, jobsProcessed, error: errorMessage };
       }
     }
 
-    SpreadsheetApp.flush();
     logger.info(serviceName, functionName, `Session ${sessionId}: ${jobsProcessed} jobs processed successfully`);
     return { success: true, jobsProcessed };
   }

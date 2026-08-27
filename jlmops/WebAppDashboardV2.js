@@ -542,7 +542,7 @@ function WebAppDashboardV2_confirmBruryaUpdate() {
 
   try {
     // Update timestamp
-    ConfigService.setConfig('system.brurya.last_update', 'value', new Date().toISOString());
+    ConfigService.setConfigLocked('system.brurya.last_update', 'value', new Date().toISOString());
 
     // Close any open brurya update task
     try {

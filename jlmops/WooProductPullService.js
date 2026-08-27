@@ -50,7 +50,7 @@ const WooProductPullService = (function() {
       }
 
       // Step 5: Update last pull timestamp
-      ConfigService.setConfig('woo.api', 'products_last_pull', new Date().toISOString());
+      ConfigService.setConfigLocked('woo.api', 'products_last_pull', new Date().toISOString());
 
       var message = 'Product pull complete. EN: ' + enProducts.length + ', HE: ' + heProducts.length;
       logger.info(SERVICE_NAME, functionName, message, { sessionId: sessionId });
@@ -378,7 +378,7 @@ const WooProductPullService = (function() {
     SpreadsheetApp.flush();
 
     // Update last pull timestamp
-    ConfigService.setConfig('woo.api', 'products_last_pull', new Date().toISOString());
+    ConfigService.setConfigLocked('woo.api', 'products_last_pull', new Date().toISOString());
 
     var message = 'Full pipeline complete. EN: ' + enStaging.length + ', HE: ' + heStaging.length;
     logger.info(SERVICE_NAME, functionName, message, { sessionId: sessionId });

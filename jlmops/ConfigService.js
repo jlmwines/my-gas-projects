@@ -267,6 +267,31 @@ const ConfigService = (function() {
   }
 
   /**
+   * Locked wrapper around setConfig, for general-purpose config writes (D1).
+   * setConfig's own check-then-write (find existing row, or append) is
+   * unlocked and general-purpose across every config key, not just
+   * system.sync.state -- this closes that race for callers that call it
+   * directly, not from inside an already-held lock.
+   *
+   * Do NOT use this from SyncStateService.setSyncState (already runs inside
+   * Bug 5's own mutateSyncState/mutateSyncStateBestEffort lock hold) or from
+   * rebuildSysConfigFromSource's RUNTIME_KEYS restore loop (already locked
+   * per-key by Bug 5 Stage B point 5) -- nesting this lock inside either
+   * would hang for 30s then throw, on every single write.
+   * @throws {Error} if the lock could not be acquired -- setConfig has dozens
+   * of callers with no shared expectation of a silent "write skipped".
+   */
+  function setConfigLocked(settingName, key, value) {
+    const outcome = LockHelpers.withScriptLock('config-write:' + settingName, 30000, function() {
+      setConfig(settingName, key, value);
+      return true;
+    });
+    if (outcome === null) {
+      throw new Error(`Could not acquire SysConfig lock for ${settingName} (busy) -- try again.`);
+    }
+  }
+
+  /**
    * Reads a staging-to-master field mapping from SysConfig and validates that a set
    * of critical fields are present and point where expected, before callers rely on
    * it to move data between staging and master sheets. Throws on any missing/mismatched
@@ -347,6 +372,7 @@ const ConfigService = (function() {
     getConfig: getConfig,
     getAllConfig: getAllConfig,
     setConfig: setConfig,
+    setConfigLocked: setConfigLocked,
     forceReload: forceReload,
     _getSheetDataAsMap: _getSheetDataAsMap,
     getValidatedMapping: getValidatedMapping,

@@ -38,7 +38,7 @@ const WooOrderPullService = (function() {
         logger.info(SERVICE_NAME, functionName, noOrdersMsg, { sessionId: sessionId });
         // A successful pull that found 0 orders is still a live integration — stamp
         // the heartbeat (reliability audit 3.1; was a declared-but-never-written key).
-        ConfigService.setConfig('woo.api', 'orders_last_pull', new Date().toISOString());
+        ConfigService.setConfigLocked('woo.api', 'orders_last_pull', new Date().toISOString());
         return { success: true, orderCount: 0, message: noOrdersMsg };
       }
 
@@ -58,7 +58,7 @@ const WooOrderPullService = (function() {
 
       // Run validation
       var validationResult = ValidationLogic.runValidationSuite('order_staging', sessionId);
-      if (!validationResult.success || validationResult.results.some(function(r) { return r.status === 'FAILED'; })) {
+      if (!validationResult.success || validationResult.results.some(function(r) { return r.status === 'FAILED' || r.status === 'ERROR'; })) {
         throw new Error('Order staging validation failed. Check validation results.');
       }
 
@@ -69,7 +69,7 @@ const WooOrderPullService = (function() {
       logger.info(SERVICE_NAME, functionName, message, { sessionId: sessionId });
 
       // Stamp the orders heartbeat on success (reliability audit 3.1).
-      ConfigService.setConfig('woo.api', 'orders_last_pull', new Date().toISOString());
+      ConfigService.setConfigLocked('woo.api', 'orders_last_pull', new Date().toISOString());
       return { success: true, orderCount: transformedOrders.length, message: message };
 
     } catch (e) {

@@ -19,29 +19,30 @@ function OrderService(productService) {
   function _updateJobStatus(executionContext, status, errorMessage = '') {
     const serviceName = 'OrderService';
     const functionName = '_updateJobStatus';
-    const { jobQueueSheetRowNumber, jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
+    const { jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
 
     try {
       const allConfig = ConfigService.getAllConfig();
       const jobQueueSheet = SheetAccessor.getLogSheet(allConfig['system.sheet_names'].SysJobQueue);
 
-      const statusColIdx = jobQueueHeaders.indexOf('status');
-      const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
-      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+      // Locked, job_id-keyed write (D1) -- real work already happened, so
+      // losing this write silently would misreport a job that succeeded.
+      const result = OrchestratorService.setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, function(currentRow) {
+        if (currentRow.status !== 'PROCESSING') return undefined;
+        const updates = { status: status, processed_timestamp: new Date() };
+        if (errorMessage) updates.error_message = errorMessage;
+        return updates;
+      });
 
-      if (statusColIdx === -1 || errorMsgColIdx === -1 || processedTsColIdx === -1) {
-        logger.error(serviceName, functionName, `Missing required columns in SysJobQueue headers for updating job status.`, null, { sessionId: sessionId, jobId: jobId, jobType: jobType });
-        return;
+      if (result.applied) {
+        logger.info(serviceName, functionName, `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
+      } else {
+        logger.warn(serviceName, functionName, `Job ${jobId} status write to ${status} did not apply (row no longer PROCESSING).`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
       }
-
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue(status);
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
-      if (errorMessage) {
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
-      }
-      logger.info(serviceName, functionName, `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
+      return result.applied;
     } catch (e) {
       logger.error(serviceName, functionName, `Failed to update job status for ${jobId}: ${e.message}`, e, { sessionId: sessionId, jobId: jobId, jobType: jobType });
+      return false;
     }
   }
 
@@ -150,7 +151,7 @@ function OrderService(productService) {
   this.processJob = function(executionContext) {
     const serviceName = 'OrderService';
     const functionName = 'processJob';
-    const { jobType, jobQueueSheetRowNumber, sessionId } = executionContext;
+    const { jobType, jobQueueSheetRowNumber, jobId, sessionId } = executionContext;
     logger.info(serviceName, functionName, `Processing job '${jobType}' on row ${jobQueueSheetRowNumber}`, { sessionId: sessionId, jobType: jobType });
 
     let finalJobStatus = 'FAILED'; // Default to FAILED
@@ -161,7 +162,7 @@ function OrderService(productService) {
         const ordersWithLineItems = this.importWebOrdersToStaging(executionContext); // Pass executionContext
 
         const validationResult = ValidationLogic.runValidationSuite('order_staging', sessionId); // Pass sessionId
-        if (!validationResult.success || validationResult.results.some(r => r.status === 'FAILED')) {
+        if (!validationResult.success || validationResult.results.some(r => r.status === 'FAILED' || r.status === 'ERROR')) {
             logger.error(serviceName, functionName, 'Order staging validation failed. Job will be QUARANTINED.', { sessionId: sessionId, jobType: jobType, validationResults: validationResult.results });
             finalJobStatus = 'QUARANTINED';
             errorMessage = 'Order staging validation failed.';
@@ -174,10 +175,17 @@ function OrderService(productService) {
         throw new Error(errorMessage);
       }
 
-      _updateJobStatus(executionContext, finalJobStatus, errorMessage);
+      const statusApplied = _updateJobStatus(executionContext, finalJobStatus, errorMessage);
 
       if (finalJobStatus === 'COMPLETED') {
-        OrchestratorService.finalizeJobCompletion(jobQueueSheetRowNumber);
+        // Only proceed if the status write actually landed -- otherwise the
+        // row may no longer be PROCESSING, and finalizing now would act on a
+        // stale premise.
+        if (statusApplied) {
+          OrchestratorService.finalizeJobCompletion(jobId);
+        } else {
+          logger.warn(serviceName, functionName, `Job ${jobType} (${jobId}) completed but its status write did not apply -- skipping finalization this run.`);
+        }
       }
       logger.info(serviceName, functionName, `Job ${jobType} completed with status: ${finalJobStatus}.`, { sessionId: sessionId, jobType: jobType, finalStatus: finalJobStatus });
 
@@ -196,19 +204,22 @@ function OrderService(productService) {
   this.importWebOrdersToStaging = function(executionContext) {
     const serviceName = 'OrderService';
     const functionName = 'importWebOrdersToStaging';
-    const { jobQueueSheetRowNumber, sessionId, jobQueueHeaders } = executionContext;
-    
+    const { jobId, sessionId, jobQueueHeaders } = executionContext;
+
     // Extract archiveFileId from the job queue using executionContext
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
     const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue);
-    
-    const archiveFileIdColIdx = jobQueueHeaders.indexOf('archive_file_id');
-    if (archiveFileIdColIdx === -1) {
-        logger.error(serviceName, functionName, `Missing 'archive_file_id' column in SysJobQueue.`, null, { sessionId: sessionId });
-        throw new Error(`Missing 'archive_file_id' column in SysJobQueue.`);
+
+    // Fresh lookup by job_id, never a remembered row number (D1) -- a
+    // purgeOldJobs rewrite between claim and here could otherwise make this
+    // fetch and process the wrong Drive file's content.
+    const jobLookup = OrchestratorService.getJobRowByJobIdWithRetry(jobQueueSheet, jobQueueHeaders, jobId);
+    if (!jobLookup.found) {
+        logger.error(serviceName, functionName, `Could not find job row for job_id: ${jobId} (job may have been purged).`, null, { sessionId: sessionId });
+        throw new Error(`Could not find job row for job_id: ${jobId} (job may have been purged).`);
     }
-    const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdColIdx + 1).getValue();
+    const archiveFileId = jobLookup.row.archive_file_id;
 
     logger.info(serviceName, functionName, `Starting ${functionName} for file ID: ${archiveFileId}`, { sessionId: sessionId, archiveFileId: archiveFileId });
 

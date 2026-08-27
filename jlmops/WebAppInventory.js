@@ -472,7 +472,7 @@ function WebAppInventory_updateBruryaInventory(inventoryData) {
     // If quantities were updated, also update timestamp and close task
     if (result.success && result.updated > 0) {
       // Update last update timestamp
-      ConfigService.setConfig('system.brurya.last_update', 'value', new Date().toISOString());
+      ConfigService.setConfigLocked('system.brurya.last_update', 'value', new Date().toISOString());
 
       // Close any open brurya update task
       try {
@@ -1016,7 +1016,7 @@ function WebAppInventory_importBruryaFromSheet(sheetIdOrUrl) {
 
     // Update last Brurya update timestamp
     if (updated > 0 || created > 0) {
-      ConfigService.setConfig('system.brurya.last_update', 'value', new Date().toISOString());
+      ConfigService.setConfigLocked('system.brurya.last_update', 'value', new Date().toISOString());
     }
 
     const message = `Brurya import complete: ${updated} updated, ${created} created.`;
