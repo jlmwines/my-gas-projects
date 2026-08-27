@@ -858,7 +858,8 @@ function OrderService(productService) {
             if (!order.lineItems) return;
             for (const item of order.lineItems) {
                 if (!item.SKU) {
-                    continue; 
+                    logger.error(serviceName, functionName, `Line item with no SKU dropped from Order ID [${order.orderId}] — name: ${item.Name || 'unknown'}, qty: ${item.Quantity}. Order total will not reflect this item.`, null, { sessionId: sessionId, orderId: order.orderId, itemName: item.Name });
+                    continue;
                 }
                 const webIdEn = _productService.getProductWebIdBySku(item.SKU, sessionId) || ''; // Pass sessionId
                 if (!webIdEn) {

@@ -16,8 +16,8 @@ const ValidationLogic = (function() {
       switch(operator) {
           case '<': return Number(val1) < Number(val2);
           case '>': return Number(val1) > Number(val2);
-          case '=': return String(val1) === val2;
-          case '<>': return String(val1) !== val2;
+          case '=': return str1 === str2;
+          case '<>': return str1 !== str2;
           case 'IS_EMPTY': return str1 === '';
           case 'IS_NOT_EMPTY': return str1 !== '';
           case 'CONTAINS': return str1.includes(str2);

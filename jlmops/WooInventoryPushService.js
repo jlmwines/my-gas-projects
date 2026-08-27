@@ -115,6 +115,19 @@ const WooInventoryPushService = (function() {
         permanentFailures.push(`Row ${i + 2} (SKU ${sku}): missing WC product ID`);
         continue;
       }
+      // A blank/malformed cell here must not silently become stock_quantity:0 or
+      // regular_price:"" (WooCommerce treats an empty price as "clear the price") --
+      // both would push to live WooCommerce and report success with no signal.
+      const stockRaw = String(row[stockIdx] !== undefined && row[stockIdx] !== null ? row[stockIdx] : '').trim();
+      const priceRaw = String(row[priceIdx] !== undefined && row[priceIdx] !== null ? row[priceIdx] : '').trim();
+      if (stockRaw === '' || isNaN(Number(stockRaw))) {
+        permanentFailures.push(`Row ${i + 2} (SKU ${sku}): invalid stock value '${stockRaw}' -- not pushed`);
+        continue;
+      }
+      if (priceRaw === '' || isNaN(Number(priceRaw))) {
+        permanentFailures.push(`Row ${i + 2} (SKU ${sku}): invalid price value '${priceRaw}' -- not pushed`);
+        continue;
+      }
       pending.push({ wcId: wcId, sku: sku, stock: row[stockIdx], price: row[priceIdx] });
     }
 

@@ -22,7 +22,15 @@ const ValidationOrchestratorService = (function() {
         const openTasks = WebAppTasks.getOpenTasksByTypeId(taskType);
         openTasks.forEach(t => {
             const entityId = String(t.st_LinkedEntityId || '').trim();
-            if (entityId) skipEntityKeys.add(taskType + ':' + entityId);
+            if (entityId === 'SYSTEM') {
+                // A summary task (created below in _createSummaryTask) covers every
+                // entity for this rule/type — the per-entity keys below can never
+                // match its 'SYSTEM' entityId, so without this sentinel, individual
+                // tasks that should defer to it get created every single run instead.
+                skipEntityKeys.add(taskType + ':__SUMMARY_OPEN__');
+            } else if (entityId) {
+                skipEntityKeys.add(taskType + ':' + entityId);
+            }
         });
     });
 
@@ -39,7 +47,7 @@ const ValidationOrchestratorService = (function() {
 
             if (discrepancies.length > 10 && allowSummary) {
                 // Create Summary Task
-                _createSummaryTask(rule, discrepancies, sessionId);
+                _createSummaryTask(rule, discrepancies, sessionId, skipEntityKeys);
             } else {
                 // Create Individual Tasks
                 discrepancies.forEach(discrepancy => {
@@ -137,16 +145,22 @@ const ValidationOrchestratorService = (function() {
     });
   }
 
-  function _createSummaryTask(rule, discrepancies, sessionId) {
-      const cleanedTitle = rule.on_failure_title.replace(/\${.*?}/g, '').trim(); 
+  function _createSummaryTask(rule, discrepancies, sessionId, skipEntityKeys) {
+      const cleanedTitle = rule.on_failure_title.replace(/\${.*?}/g, '').trim();
       const title = `${cleanedTitle} (Summary: ${discrepancies.length} Items)`;
-      
+
       // Clean notes as well
       let cleanedNotes = rule.on_failure_notes.replace(/\${.*?}/g, '[Variable]').trim();
       const notes = `${cleanedNotes}\nSummary of ${discrepancies.length} failures.\nSee SysLog for details.\nFirst few: ${discrepancies.slice(0,5).map(d => d.key).join(', ')}`;
-      
+
       // Create a system-level task
       TaskService.createTask(rule.on_failure_task_type, 'SYSTEM', 'System', title, notes, sessionId);
+
+      // Track so other rules deferring to this task type (skip_if_open_task_type)
+      // skip individual-task creation for the rest of this run too, not just future runs.
+      if (skipEntityKeys) {
+          skipEntityKeys.add(rule.on_failure_task_type + ':__SUMMARY_OPEN__');
+      }
   }
 
   function _createIndividualTask(rule, discrepancy, sessionId, skipEntityKeys) {
@@ -164,10 +178,12 @@ const ValidationOrchestratorService = (function() {
           entityId = data.cpm_SKU || data.cps_SKU || data.wdm_SKU || data.wds_SKU || discrepancy.key;
       }
 
-      // Skip if a higher-priority task already exists for this entity
+      // Skip if a higher-priority task already exists for this entity, or a
+      // summary task already covers every entity for this type (see the
+      // '__SUMMARY_OPEN__' sentinel above).
       if (rule.skip_if_open_task_type && skipEntityKeys) {
-          const skipKey = rule.skip_if_open_task_type + ':' + entityId;
-          if (skipEntityKeys.has(skipKey)) {
+          const skipType = rule.skip_if_open_task_type;
+          if (skipEntityKeys.has(skipType + ':__SUMMARY_OPEN__') || skipEntityKeys.has(skipType + ':' + entityId)) {
               return;
           }
       }

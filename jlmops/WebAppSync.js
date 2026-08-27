@@ -653,10 +653,24 @@ function retryFailedStepBackend() {
   // Special case: a failed IMPORTING_COMAX returns the user to WAITING_COMAX_IMPORT
   // (the upload UI) so a corrected CSV can be uploaded instead of re-running the
   // import against the same bad file.
+  // The three cases below (added 2026-08-26, Bug 4 fix candidate #4) are the
+  // same fix extended to every other spinner-only stage (STAGE_CONFIG button:
+  // null) that can appear in failedAtStage. Without this, the default branch
+  // sends the user right back into a stage with no button and no queued job
+  // driving it forward -- a dead end recoverable only via Reset, not Retry.
+  // Every WAITING_* stage (has a button) is left to the default branch as-is.
   if (currentState.failedAtStage === 'PUSHING_WEB_INVENTORY') {
     currentState.stage = 'WAITING_WEB_CONFIRM';
   } else if (currentState.failedAtStage === 'IMPORTING_COMAX') {
     currentState.stage = 'WAITING_COMAX_IMPORT';
+  } else if (currentState.failedAtStage === 'VALIDATING') {
+    // Validation runs as a job chained after Comax import -- re-running the
+    // import re-queues both, same target as the IMPORTING_COMAX case above.
+    currentState.stage = 'WAITING_COMAX_IMPORT';
+  } else if (currentState.failedAtStage === 'IMPORTING_PRODUCTS') {
+    currentState.stage = 'IDLE';
+  } else if (currentState.failedAtStage === 'EXPORTING_ORDERS') {
+    currentState.stage = 'WAITING_ORDER_EXPORT';
   } else {
     currentState.stage = currentState.failedAtStage;
   }
@@ -681,6 +695,17 @@ function resetSyncStateBackend() {
   try {
     const oldState = SyncStateService.getSyncState();
     const sessionId = oldState.sessionId;
+
+    // Flush any file registrations deferred while the session was active
+    // (finalizeJobCompletion defers these into archiveFileIds rather than
+    // registering immediately — normally flushed at COMPLETE, but Reset
+    // overwrites state directly and would otherwise silently drop them,
+    // causing the next sync to re-process a file that already succeeded).
+    try {
+      _registerSessionFiles(oldState);
+    } catch (registerError) {
+      logger.warn(serviceName, functionName, `Could not flush deferred file registrations before reset: ${registerError.message}`);
+    }
 
     // Reset state to IDLE
     SyncStateService.resetSyncState();

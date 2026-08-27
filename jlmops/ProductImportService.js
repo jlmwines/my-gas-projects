@@ -389,10 +389,17 @@ const ProductImportService = (function() {
     // Track mapping errors and missing fields
     const mappingErrors = [];
     const criticalFields = ['cpm_SKU', 'cpm_NameHe', 'cpm_Stock', 'cpm_Price'];
+    let skippedNoKeyCount = 0;
 
     // Iterate through the fresh comaxProducts (Objects) and update/insert into the master map
     comaxProducts.forEach((comaxProductObj, idx) => {
         const key = comaxProductObj['cps_CmxId'] ? String(comaxProductObj['cps_CmxId']).trim() : null;
+
+        if (!key) {
+            const sku = String(comaxProductObj['cps_SKU'] || '').trim();
+            logger.warn(serviceName, functionName, `Skipping product with empty CmxId. SKU: ${sku}`, { sessionId, sku });
+            skippedNoKeyCount++;
+        }
 
         if (key) {
             const newMasterRow = {};
@@ -534,7 +541,7 @@ const ProductImportService = (function() {
         // Apply standard formatting: top-align and single row height
         _applySheetFormatting(masterSheet, finalData.length);
     }
-    logger.info(serviceName, functionName, `Upsert to CmxProdM complete. Total rows: ${finalData.length}.`, { sessionId: sessionId });
+    logger.info(serviceName, functionName, `Upsert to CmxProdM complete. Total rows: ${finalData.length}.${skippedNoKeyCount > 0 ? ` Skipped ${skippedNoKeyCount} product(s) with empty CmxId.` : ''}`, { sessionId: sessionId });
 
     // Maintain SysProductAudit after CmxProdM is updated
     _maintainSysProductAudit(comaxProducts, sessionId);
@@ -940,7 +947,7 @@ const ProductImportService = (function() {
     }
 
     // Write the updated data back to WebProdM
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
     const masterSheet = dataSpreadsheet.getSheetByName('WebProdM');
     masterSheet.getRange(2, 1, masterSheet.getMaxRows() - 1, masterSheet.getMaxColumns()).clearContent();
     if (finalData.length > 0) {
