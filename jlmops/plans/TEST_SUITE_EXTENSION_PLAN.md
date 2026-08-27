@@ -1,7 +1,7 @@
 # Test Suite Extension Plan
 
 **Created:** 2026-08-27
-**Status:** Tier 1 built and deployed 2026-08-27 (jlmops @564), not yet run live (`TestRunner.runAllTests()` needs an Apps Script execution). Tiers 2-4 not started. Follow-up item from `SYNC_HARDENING_PLAN.md` (Implementation order step 8).
+**Status:** Tier 1 built, deployed, and run live 2026-08-27 via the Admin Dev view's "Run Unit Tests" button (`WebAppSystem_runUnitTests` → `TestRunner.runAllTests()`) — 32/33 passed on first run. The one failure was a real bug, not a test error: `evaluateCondition` used `val || ''` before stringifying, coercing boolean `false`/numeric `0` to `''` instead of `'false'`/`'0'` (the same footgun `_rowPassesFilter` already documents and avoids). Fixed (`??` instead of `||`) and deployed @565 — re-run not yet confirmed. Also fixed while reviewing the test run's console output: `LoggerService`'s "[Context Warning] ERROR log generated without explicit Session ID" now respects `testSuppression`, since `ComaxAdapterTest.js`/`WebAdapterTest.js` deliberately call adapters with no session context and were triggering it as expected noise on every run. Tiers 2-4 not started.
 
 ## Goal
 
