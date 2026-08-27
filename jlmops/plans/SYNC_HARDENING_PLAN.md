@@ -15,6 +15,7 @@ Every item below is either already fixed or fully designed + independently revie
 5. **Bug 6, D2, D3, D4.** Independent of Bug 5/D1 and of each other — can move anywhere in this sequence, including before step 2, if that's more convenient.
 6. **Bug 5, Stages C/D/E** (`purgeOldJobs`, `processPendingJobs` pick-up outside D1's scope, `pullOrders` start) — separate future session(s), each its own 24h+ observation window, per §1.3.
 7. **Bugs 1-3** — no action; revisit only if one of them recurs and can be observed live.
+8. **Follow-up, not scoped yet: extend the test suite.** `TestRunner.js`/`TestData.js` give an existing harness pattern (already used by `ComaxAdapterTest.js`/`OrderServiceTest.js`/`ProductServiceTest.js`/`WebAdapterTest.js`), but there's no test file at all for `ValidationLogic.js`, `ValidationOrchestratorService.js`, `WebAppSync.js`, `WooInventoryPushService.js`, or `WooProductPullService.js` — 5 of the 7 files this session touched. Real work, not a quick add: some fixes need specific data conditions mocked (a >10-discrepancy validation run for I5, a malformed CSV row for I8), and the widget/state-machine code is harder to unit-test in isolation than the adapter/service files the existing suite covers. Needs its own scoping pass before starting.
 
 ## Implementation log
 
