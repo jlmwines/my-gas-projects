@@ -419,7 +419,7 @@ Adding the 10 currently-missing keys (`crm.pending_payment_followup.sent_order_i
 
 **Honest scope note (independent review, 2026-08-26):** this is a partial closure of the underlying defect class, not a full one — `runAction` still carries its own hand-maintained copy of the same timeout/`lastActionTimestamp` logic, so a future change to that shared contract (timeout duration, what counts as "done") still has to be updated in two places by hand, the same drift mechanism that produced this bug. Accepted tradeoff, stated explicitly rather than implied as fully solved: unifying all three into one helper would mean touching `runAction`'s step-card and business-success-detection logic too, which is the regression risk this fix deliberately avoids.
 
-**Status, 2026-08-27:** D1-D4 all passed independent review during design (per each section above), all built and deployed live: D1 @566 (verified clean on two real syncs), D2-D4 @567 (locally verified, no live smoke test needed for D2/D3; D4 awaits its first real Retry/Reset click).
+**Status, 2026-08-27:** D1-D4 all passed independent review during design (per each section above), all built and deployed live: D1 @566 (verified clean on two real syncs), D2-D4 @567 -- verified clean on a third real sync (`SYNC-20260827-171631-9A8A0CCF`, 17:16-17:31): 206 log lines, 0 ERROR, 21 expected idempotency-guard WARNs, 1 lock-contention event resolved cleanly, zero duplicate "State saved" rows per stage. D2's guards specifically not yet observed firing (would need a housekeeping trigger to land mid-sync, which didn't happen this run) but caused no regression to the sync itself. D4 still awaits its first real Retry/Reset click.
 
 ## Files in scope
 

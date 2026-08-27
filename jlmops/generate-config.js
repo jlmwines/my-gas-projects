@@ -44,7 +44,10 @@ const RUNTIME_KEYS = [
     { name: 'system.product_costs.last_recompute', key: 'value', default: '' },
     { name: 'system.bundles.push_status', key: 'value', default: '' },
     { name: 'system.category_stock.health', key: 'value', default: '' },
-    { name: 'system.bundles.needs_update_status', key: 'value' }
+    { name: 'system.bundles.needs_update_status', key: 'value' },
+    // Added 2026-08-27 (CONTACT_MANAGER_PLAN.md "Known issue -- welcome-outreach
+    // recency + dedup gap"), same run as the fix in HousekeepingService.js.
+    { name: 'system.crm.welcomed_emails', key: 'value', default: '[]' }
 ];
 
 /**

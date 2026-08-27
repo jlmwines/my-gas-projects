@@ -622,6 +622,7 @@ function HousekeepingService() {
     // default 30-day window, then advances forward.
     const runStart = new Date().toISOString();
     let pullSucceeded = false;
+    let orderCount = null;
     try {
       const cursorCfg = ConfigService.getConfig('crm.frequent_pipeline.last_modified_floor');
       const modifiedAfter = (cursorCfg && cursorCfg.value) ? cursorCfg.value : null;
@@ -629,6 +630,7 @@ function HousekeepingService() {
         modifiedAfter ? { modifiedAfter: modifiedAfter } : undefined
       );
       pullSucceeded = !!(result && result.success);
+      orderCount = result && result.orderCount;
     } catch (e) {
       logger.error('HousekeepingService', functionName, `pullOrders failed: ${e.message}`);
     }
@@ -636,11 +638,30 @@ function HousekeepingService() {
       ConfigService.setConfigLocked('crm.frequent_pipeline.last_modified_floor', 'value', runStart);
     }
 
-    const tasks = [
-      { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
-      { name: 'createPendingPaymentFollowups', fn: () => this.createPendingPaymentFollowups() },
-      { name: 'checkCategoryStockHealth', fn: () => this.checkCategoryStockHealth() }
-    ];
+    // Skip the order-driven subtasks when the pull positively confirms zero
+    // orders changed since the last cursor -- pullOrders queries WooCommerce's
+    // modified_after (not created_after), which WooCommerce bumps on every
+    // status transition (not just new orders), and the pulled orders are
+    // genuinely upserted into WebOrdM's status column (OrderService.js#processStagedOrders),
+    // so orderCount === 0 means WebOrdM's completed/pending order set is
+    // provably unchanged this round, not just "no new orders." Only skips on a
+    // CONFIRMED zero -- a failed pull (orderCount stays null) runs both tasks
+    // anyway rather than risk silently missing a real change. checkCategoryStockHealth
+    // is inventory-driven, not order-driven, so it always runs regardless.
+    const noOrderChanges = pullSucceeded && orderCount === 0;
+
+    const tasks = noOrderChanges
+      ? [{ name: 'checkCategoryStockHealth', fn: () => this.checkCategoryStockHealth() }]
+      : [
+          { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
+          { name: 'createPendingPaymentFollowups', fn: () => this.createPendingPaymentFollowups() },
+          { name: 'checkCategoryStockHealth', fn: () => this.checkCategoryStockHealth() }
+        ];
+
+    if (noOrderChanges) {
+      logger.info('HousekeepingService', functionName,
+        'No order changes since last pull -- skipped order-driven subtasks (welcome outreach, pending-payment followups) this cycle.');
+    }
 
     for (const task of tasks) {
       try {
@@ -1038,10 +1059,67 @@ function HousekeepingService() {
         }
       });
 
-      // Filter to emails whose earliest completed order is on/after the floor.
-      const eligibleEmails = Object.keys(earliestCompletedByEmail).filter(
-        email => earliestCompletedByEmail[email] >= floorDate
-      );
+      // Recency window (fix, 2026-08-27, CONTACT_MANAGER_PLAN.md "Known issue --
+      // welcome-outreach recency + dedup gap"): the floor above is a one-time
+      // lower bound only -- without an upper bound too, a first order from any
+      // time after the floor stays equally eligible forever, so a welcome task
+      // could fire for a months-old order. 7 days, user call 2026-08-27.
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      // Welcomed-emails dedup (same fix): TaskService.createTask's own dedup
+      // only blocks while a matching task is still open -- once a welcome task
+      // is closed, the same email would otherwise become eligible again on the
+      // next sweep, since nothing else remembers "already welcomed." Tracked
+      // independently, mirroring crm.pending_payment_followup.sent_order_ids's
+      // precedent (`:1179-1189` below) rather than changing createTask's dedup
+      // globally for every task type.
+      const welcomedConfig = ConfigService.getConfig('system.crm.welcomed_emails');
+      if (!welcomedConfig || welcomedConfig.value === undefined || welcomedConfig.value === null || welcomedConfig.value === '') {
+        // Migration seed: first run after this key was added. Seed from every
+        // email with ANY existing task.contact.outreach row (any status) in the
+        // live SysTasks sheet, so already-welcomed customers aren't immediately
+        // re-queued, then create zero tasks this round -- same shape as the
+        // floor-date first-run guard above. Doesn't also need to check
+        // SysTasks_Archive: an archived welcome task's underlying order is, by
+        // definition, well past the 7-day recency window (archiving only
+        // happens long after a task closes), so the recency check alone already
+        // blocks recreation for those regardless of whether they're in this seed.
+        const taskSchema = allConfig['schema.data.SysTasks'];
+        const taskSheet = spreadsheet.getSheetByName(sheetNames.SysTasks);
+        const seeded = {};
+        if (taskSchema && taskSchema.headers && taskSheet && taskSheet.getLastRow() > 1) {
+          const taskHeaders = taskSchema.headers.split(',');
+          const typeIdx = taskHeaders.indexOf('st_TaskTypeId');
+          const entityIdx = taskHeaders.indexOf('st_LinkedEntityId');
+          const taskRows = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskHeaders.length).getValues();
+          taskRows.forEach(row => {
+            if (row[typeIdx] === 'task.contact.outreach') {
+              const seedEmail = String(row[entityIdx] || '').toLowerCase().trim();
+              if (seedEmail) seeded[seedEmail] = true;
+            }
+          });
+        }
+        const seededEmails = Object.keys(seeded);
+        ConfigService.setConfigLocked('system.crm.welcomed_emails', 'value', JSON.stringify(seededEmails));
+        logger.info('HousekeepingService', functionName,
+          `Welcomed-emails list initialized with ${seededEmails.length} existing recipient(s). No tasks created this run (migration seed).`);
+        return true;
+      }
+      let welcomedEmails = [];
+      try {
+        welcomedEmails = JSON.parse(welcomedConfig.value);
+      } catch (parseErr) {
+        logger.warn('HousekeepingService', functionName, `Could not parse welcomed-emails list: ${parseErr.message}. Resetting.`);
+        welcomedEmails = [];
+      }
+      const welcomedSet = new Set(welcomedEmails);
+
+      // Filter to emails whose earliest completed order is on/after the floor,
+      // within the recency window, and not already welcomed.
+      const eligibleEmails = Object.keys(earliestCompletedByEmail).filter(email => {
+        const fcd = earliestCompletedByEmail[email];
+        return fcd >= floorDate && fcd >= sevenDaysAgo && !welcomedSet.has(email);
+      });
 
       // Auto-populate start (today) + due (today + 4 days) so the welcome task
       // surfaces to the manager as immediately actionable rather than sitting
@@ -1056,6 +1134,7 @@ function HousekeepingService() {
       const dueDate = new Date(todayMidnight.getTime() + 4 * 24 * 60 * 60 * 1000);
 
       let created = 0;
+      const newlyWelcomed = [];
       eligibleEmails.forEach(email => {
         const fcd = earliestCompletedByEmail[email];
         const contact = ContactService.getContactByEmail(email);
@@ -1081,15 +1160,25 @@ function HousekeepingService() {
               dueDate: dueDate
             }
           );
-          if (result) created++;
+          if (result) {
+            created++;
+            newlyWelcomed.push(email);
+          }
         } catch (taskError) {
           logger.warn('HousekeepingService', functionName,
             `Could not create welcome task for ${email}: ${taskError.message}`);
         }
       });
 
+      // Persist newly-welcomed emails so a future closed task can't re-fire
+      // this same email (the whole point of this fix).
+      if (newlyWelcomed.length > 0) {
+        ConfigService.setConfigLocked('system.crm.welcomed_emails', 'value',
+          JSON.stringify(welcomedEmails.concat(newlyWelcomed)));
+      }
+
       logger.info('HousekeepingService', functionName,
-        `Welcome outreach sweep: ${eligibleEmails.length} eligible, ${created} new (existing skipped via dedupe).`);
+        `Welcome outreach sweep: ${eligibleEmails.length} eligible, ${created} new (already-welcomed/out-of-window skipped).`);
       return true;
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Welcome outreach sweep failed: ${e.message}`);

@@ -29,7 +29,7 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
 - [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop (`HousekeepingService.js`) only detects a task failure if it *throws* — most housekeeping functions catch their own errors internally and `return false`, which the loop never inspects. Found while diagnosing why the SysLog cell-limit failure never surfaced a `task.system.failure` alert despite running nightly for weeks. Not yet fixed — needs the loop to check return values, not just catch exceptions.
-- [ ] 2026-08-21: Welcome-outreach sweep (`HousekeepingService.js`, `task.contact.outreach`) has no rolling window — eligibility is based on a fixed one-time floor date and never shrinks, and `TaskService.createTask`'s dedup only blocks while a task is open. Once a welcome task is closed, the same customer's email stays eligible forever, so the next sweep creates a duplicate welcome task. Design discussed (rolling window on eligibility + dedup should also match a task closed within the last ~7 days) but not yet implemented.
+- [ ] 2026-08-21: Welcome-outreach sweep has no recency window + dedup doesn't survive a closed task. Fix plan → `jlmops/plans/CONTACT_MANAGER_PLAN.md` "Known issue — welcome-outreach recency + dedup gap."
 
 ### Resolved (recent)
 

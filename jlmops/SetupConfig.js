@@ -123,6 +123,11 @@ function rebuildSysConfigFromSource() {
         {
                 "name": "system.bundles.needs_update_status",
                 "key": "value"
+        },
+        {
+                "name": "system.crm.welcomed_emails",
+                "key": "value",
+                "default": "[]"
         }
 ];
 
@@ -1878,6 +1883,27 @@ function getMasterConfiguration() {
         "stable",
         "value",
         "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "system.crm.welcomed_emails",
+        "JSON array of emails already sent a welcome-outreach task, ever -- independent of that task's current status. Prevents a closed welcome task from becoming re-eligible on a later sweep (TaskService.createTask's own dedup only blocks while a task is still open). Seeded once from existing task.contact.outreach recipients on first run after this key was added; that run creates zero new tasks.",
+        "stable",
+        "value",
+        "[]",
         "",
         "",
         "",

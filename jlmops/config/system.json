@@ -876,6 +876,14 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "system.crm.welcomed_emails",
+        "JSON array of emails already sent a welcome-outreach task, ever -- independent of that task's current status. Prevents a closed welcome task from becoming re-eligible on a later sweep (TaskService.createTask's own dedup only blocks while a task is still open). Seeded once from existing task.contact.outreach recipients on first run after this key was added; that run creates zero new tasks.",
+        "stable",
+        "value",
+        "[]",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "kpi.first_purchase_coupons",
         "Comma-separated coupon codes that count as first-purchase coupons for KPI #3 (see jlmops/plans/KPI_SUMMARY_TAB.md). Matched case-insensitively.",
         "stable",
