@@ -594,11 +594,9 @@ function HousekeepingService() {
     logger.info('HousekeepingService', functionName, "Starting frequent maintenance.");
 
     // Sync-state guard: skip if the daily 12-state sync is mid-flight.
-    const session = SyncStateService.getActiveSession();
-    const stage = session && session.stage;
-    if (stage && stage !== 'IDLE' && stage !== 'COMPLETE' && stage !== 'FAILED') {
+    if (SyncStateService.isSyncActive()) {
       logger.info('HousekeepingService', functionName,
-        `Daily sync in progress (${stage}). Skipping.`);
+        `Daily sync in progress (${SyncStateService.getActiveSession().stage}). Skipping.`);
       return;
     }
 
@@ -1682,6 +1680,14 @@ function HousekeepingService() {
     const functionName = 'archiveCompletedOrders';
     logger.info('HousekeepingService', functionName, 'Starting archiving of old completed orders.');
 
+    // Sync-state guard (D2): skip this destructive read-clear-rewrite while the
+    // daily sync is mid-flight, so it can't race the sync's own writes to WebOrdM.
+    if (SyncStateService.isSyncActive()) {
+      logger.info('HousekeepingService', functionName,
+        `Daily sync in progress (${SyncStateService.getActiveSession().stage}). Skipping.`);
+      return false;
+    }
+
     try {
       const allConfig = ConfigService.getAllConfig();
       if (!allConfig) {
@@ -1903,6 +1909,15 @@ function HousekeepingService() {
 
   this.archiveCompletedTasks = function() {
     logger.info('HousekeepingService', 'archiveCompletedTasks', "Starting archiving of completed/cancelled tasks.");
+
+    // Sync-state guard (D2): skip this destructive read-clear-rewrite while the
+    // daily sync is mid-flight.
+    if (SyncStateService.isSyncActive()) {
+      logger.info('HousekeepingService', 'archiveCompletedTasks',
+        `Daily sync in progress (${SyncStateService.getActiveSession().stage}). Skipping.`);
+      return false;
+    }
+
     let movedCount = 0;
     try {
       const allConfig = ConfigService.getAllConfig();
@@ -2078,6 +2093,14 @@ function HousekeepingService() {
   this.purgeOldJobs = function() {
     const functionName = 'purgeOldJobs';
     logger.info('HousekeepingService', functionName, 'Starting purge of old job queue entries.');
+
+    // Sync-state guard (D2): skip this destructive read-clear-rewrite while the
+    // daily sync is mid-flight.
+    if (SyncStateService.isSyncActive()) {
+      logger.info('HousekeepingService', functionName,
+        `Daily sync in progress (${SyncStateService.getActiveSession().stage}). Skipping.`);
+      return false;
+    }
 
     try {
       const allConfig = ConfigService.getAllConfig();

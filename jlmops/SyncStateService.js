@@ -337,6 +337,22 @@ const SyncStateService = (function() {
     return getDefaultState();
   }
 
+  /**
+   * True if a sync session is mid-flight (not IDLE/COMPLETE/FAILED) --
+   * the single check every destructive maintenance/pull function must gate
+   * on before touching sheets a sync can be actively writing to
+   * (D2, SYNC_HARDENING_PLAN.md). Centralized here so the stage-list check
+   * (and its field name) exists in exactly one place -- hand-copied
+   * duplicates of this same check drifted at least twice before
+   * (`WooProductPullService.pullProducts`/`.pullBundleProducts` both
+   * checked a nonexistent `.currentStage` field instead of `.stage`,
+   * silently never firing).
+   */
+  function isSyncActive() {
+    const stage = getActiveSession().stage;
+    return !!(stage && stage !== STAGES.IDLE && stage !== STAGES.COMPLETE && stage !== STAGES.FAILED);
+  }
+
   return {
     STAGES: STAGES,
     TRANSITIONS: TRANSITIONS,
@@ -352,7 +368,8 @@ const SyncStateService = (function() {
     resetSyncState: resetSyncState,
     getDefaultState: getDefaultState,
     isSessionStale: isSessionStale,
-    getActiveSession: getActiveSession
+    getActiveSession: getActiveSession,
+    isSyncActive: isSyncActive
   };
 
 })();

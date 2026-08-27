@@ -21,11 +21,13 @@ const WooProductPullService = (function() {
     var sessionId = generateSessionId();
     logger.info(SERVICE_NAME, functionName, 'Starting automated product pull', { sessionId: sessionId });
 
-    // Guard: skip if a sync session is already active
+    // Guard: skip if a sync session is already active. Was checking a
+    // nonexistent `.currentStage` field (real field is `.stage`) and so
+    // never actually fired -- fixed as part of D2 (SYNC_HARDENING_PLAN.md),
+    // same defect class as `refreshTranslationLinks`'s already-fixed guard below.
     try {
-      var syncState = SyncStateService.getState();
-      if (syncState && syncState.currentStage && syncState.currentStage !== 'IDLE' && syncState.currentStage !== 'COMPLETE' && syncState.currentStage !== 'FAILED') {
-        var msg = 'Skipping product pull — sync session active at stage: ' + syncState.currentStage;
+      if (SyncStateService.isSyncActive()) {
+        var msg = 'Skipping product pull — sync session active at stage: ' + SyncStateService.getActiveSession().stage;
         logger.warn(SERVICE_NAME, functionName, msg, { sessionId: sessionId });
         return { success: false, enCount: 0, heCount: 0, message: msg };
       }
@@ -405,9 +407,8 @@ const WooProductPullService = (function() {
 
     // Guard: skip if a sync session is already active (it clears WebXltM).
     try {
-      var syncState = SyncStateService.getState();
-      if (syncState && syncState.stage && syncState.stage !== 'IDLE' && syncState.stage !== 'COMPLETE' && syncState.stage !== 'FAILED') {
-        var skipMsg = 'Skipping translation refresh — sync session active at stage: ' + syncState.stage;
+      if (SyncStateService.isSyncActive()) {
+        var skipMsg = 'Skipping translation refresh — sync session active at stage: ' + SyncStateService.getActiveSession().stage;
         logger.warn(SERVICE_NAME, functionName, skipMsg, { sessionId: sessionId });
         return { success: false, heCount: 0, message: skipMsg };
       }
@@ -571,6 +572,19 @@ const WooProductPullService = (function() {
     var functionName = 'pullBundleProducts';
     var sessionId = generateSessionId();
     logger.info(SERVICE_NAME, functionName, 'Starting fast bundles-only pull', { sessionId: sessionId });
+
+    // Guard: skip if a sync session is already active (D2, SYNC_HARDENING_PLAN.md
+    // -- this function rewrites WebProdM/WebXltM, a sync can be actively writing to).
+    try {
+      if (SyncStateService.isSyncActive()) {
+        var activeMsg = 'Skipping bundle pull — sync session active at stage: ' + SyncStateService.getActiveSession().stage;
+        logger.warn(SERVICE_NAME, functionName, activeMsg, { sessionId: sessionId });
+        return { success: false, enUpdated: 0, enMissing: 0, heUpdated: 0, heMissing: 0, message: activeMsg };
+      }
+    } catch (e) {
+      // SyncStateService might not be initialized — proceed anyway
+      logger.warn(SERVICE_NAME, functionName, 'Could not check sync state: ' + e.message, { sessionId: sessionId });
+    }
 
     try {
       var enProducts = WooApiService.fetchBundleProducts('en') || [];

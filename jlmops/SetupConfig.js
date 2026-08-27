@@ -20,26 +20,111 @@ function rebuildSysConfigFromSource() {
     const functionName = 'rebuildSysConfigFromSource';
     const masterConfig = getMasterConfiguration();
 
-    // Runtime-mutable keys: their P02 (or other-field) values are written at
-    // runtime via ConfigService.setConfig and must survive a rebuild. Each
-    // entry names the SettingName plus the P01 field whose value is preserved,
-    // and the value that key resets to right after the sheet is cleared and
-    // rewritten from masterConfig -- used by the restore-time race guard below.
-    // 'system.kpi.gsc_last_snapshot' has no masterConfig row at all (created
-    // dynamically at runtime by StatusReportService), so its reset state is the
-    // row not existing at all (default left undefined), not an empty string.
+    // RUNTIME_KEYS is generate-config.js's own const of the same name (top of
+    // file) -- embedded here verbatim at generation time so this function's
+    // copy can never drift from the one checkRuntimeKeysCompleteness() checks
+    // against (D3, SYNC_HARDENING_PLAN.md). See that const's own comment for
+    // what each entry means and the restore-time race guard below for how it's used.
     const RUNTIME_KEYS = [
-        { name: 'system.brurya.last_update', key: 'value', default: '' },
-        { name: 'system.mailchimp.subscribers_last_update', key: 'value', default: '' },
-        { name: 'system.mailchimp.campaigns_last_update', key: 'value', default: '' },
-        { name: 'system.crm.last_refresh', key: 'value', default: '' },
-        { name: 'system.bundle_health.last_check', key: 'value', default: '' },
-        { name: 'system.crm_intelligence.last_run', key: 'value', default: '' },
-        { name: 'system.sync.state', key: 'json', default: '{}' },
-        { name: 'woo.api', key: 'products_last_pull', default: '' },
-        { name: 'woo.api', key: 'orders_last_pull', default: '' },
-        { name: 'system.kpi.gsc_last_snapshot', key: 'value' }
-    ];
+        {
+                "name": "system.brurya.last_update",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.mailchimp.subscribers_last_update",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.mailchimp.campaigns_last_update",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.crm.last_refresh",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.bundle_health.last_check",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.crm_intelligence.last_run",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.sync.state",
+                "key": "json",
+                "default": "{}"
+        },
+        {
+                "name": "woo.api",
+                "key": "products_last_pull",
+                "default": ""
+        },
+        {
+                "name": "woo.api",
+                "key": "orders_last_pull",
+                "default": ""
+        },
+        {
+                "name": "system.kpi.gsc_last_snapshot",
+                "key": "value"
+        },
+        {
+                "name": "system.woocommerce.coupons_last_update",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "crm.frequent_pipeline.last_modified_floor",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.crm.welcome_floor_date",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "crm.pending_payment_followup.floor_date",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "crm.pending_payment_followup.last_pending_ids",
+                "key": "value",
+                "default": "[]"
+        },
+        {
+                "name": "crm.pending_payment_followup.sent_order_ids",
+                "key": "value",
+                "default": "[]"
+        },
+        {
+                "name": "system.product_costs.last_recompute",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.bundles.push_status",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.category_stock.health",
+                "key": "value",
+                "default": ""
+        },
+        {
+                "name": "system.bundles.needs_update_status",
+                "key": "value"
+        }
+];
 
     try {
         console.log('Running ' + functionName + '...');

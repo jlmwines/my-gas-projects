@@ -511,55 +511,71 @@
             .getWebExportFileUrlBackend();
     }
 
-    function retryFailed() {
+    // Shared by retryFailed/resetSync only (D4, SYNC_HARDENING_PLAN.md) --
+    // runAction itself is left untouched (its step-card highlighting and
+    // business-level success/failure detection don't apply here, and aren't
+    // worth the regression risk of refactoring). This gives retry/reset the
+    // same 2-minute stuck-handler safety net and stale-poll guard runAction
+    // already has, which they'd silently drifted without.
+    function _runManagedAction(rpcCall, opts) {
+        opts = opts || {};
         if (actionInProgress) return;
         actionInProgress = true;
         document.querySelectorAll('#sharedAction button').forEach(function(b) { b.disabled = true; });
-        document.getElementById('footerStatus').textContent = 'Retrying...';
+        document.getElementById('footerStatus').textContent = opts.footerBusyText || 'Working...';
+
+        if (actionTimeout) clearTimeout(actionTimeout);
+        actionTimeout = setTimeout(function() {
+            if (actionInProgress) {
+                console.error('SyncWidget: Action timed out after 2 minutes');
+                actionInProgress = false;
+                document.getElementById('footerStatus').textContent = 'Action timed out - refreshing...';
+                refreshNow();
+            }
+        }, 120000);
 
         google.script.run
             .withSuccessHandler(function(status) {
+                if (actionTimeout) clearTimeout(actionTimeout);
                 actionInProgress = false;
+                lastActionTimestamp = status.lastUpdated;
                 updateUI(status);
                 adjustPolling(status);
-                document.getElementById('footerStatus').textContent = 'Ready to retry';
+                document.getElementById('footerStatus').textContent = opts.footerDoneText || 'Done';
+                if (opts.extraOnSuccess) opts.extraOnSuccess(status);
             })
             .withFailureHandler(function(err) {
+                if (actionTimeout) clearTimeout(actionTimeout);
                 actionInProgress = false;
                 document.getElementById('sharedAction').innerHTML =
                     '<button class="btn btn-sm" onclick="window.SyncWidget.refreshNow(); return false;">Refresh</button>';
-                document.getElementById('footerStatus').textContent = 'Retry failed: ' + (err.message || err);
+                document.getElementById('footerStatus').textContent = (opts.failurePrefix || 'Action failed') + ': ' + (err.message || err);
             })
-            .retryFailedStepBackend();
+            [rpcCall]();
+    }
+
+    function retryFailed() {
+        _runManagedAction('retryFailedStepBackend', {
+            footerBusyText: 'Retrying...',
+            footerDoneText: 'Ready to retry',
+            failurePrefix: 'Retry failed'
+        });
     }
 
     function resetSync() {
       TaskWidgets.confirm('Reset the sync workflow? Clears the current session and progress.', function() {
         if (actionInProgress) return;
-        actionInProgress = true;
-        document.querySelectorAll('#sharedAction button').forEach(function(b) { b.disabled = true; });
-        document.getElementById('footerStatus').textContent = 'Resetting...';
-
         progressEntries = [];
         previousStepStatuses = {};
         loggedActions = {};
         document.getElementById('progressLog').innerHTML = '';
 
-        google.script.run
-            .withSuccessHandler(function(status) {
-                actionInProgress = false;
-                updateUI(status);
-                adjustPolling(status);
-                updateInvoiceFolder();
-                document.getElementById('footerStatus').textContent = 'Reset complete';
-            })
-            .withFailureHandler(function(err) {
-                actionInProgress = false;
-                document.getElementById('sharedAction').innerHTML =
-                    '<button class="btn btn-sm" onclick="window.SyncWidget.refreshNow(); return false;">Refresh</button>';
-                document.getElementById('footerStatus').textContent = 'Reset failed: ' + (err.message || err);
-            })
-            .resetSyncStateBackend();
+        _runManagedAction('resetSyncStateBackend', {
+            footerBusyText: 'Resetting...',
+            footerDoneText: 'Reset complete',
+            failurePrefix: 'Reset failed',
+            extraOnSuccess: function() { updateInvoiceFolder(); }
+        });
       }, { danger: true });
     }
 

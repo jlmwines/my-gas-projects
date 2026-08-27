@@ -5,6 +5,106 @@ const path = require('path');
 const inputDir = path.join(__dirname, 'config');
 const outputFile = path.join(__dirname, 'SetupConfig.js');
 
+/**
+ * Runtime-mutable keys: their value is written at runtime via
+ * ConfigService.setConfig/setConfigLocked and must survive rebuildSysConfigFromSource
+ * (which otherwise wipes SysConfig back to this file's shipped defaults). Each entry
+ * names the SettingName plus the key field whose value is preserved, and the value
+ * that key resets to right after the sheet is cleared and rewritten from
+ * masterConfig -- used by the restore-time race guard in rebuildSysConfigFromSource.
+ * 'system.kpi.gsc_last_snapshot' and 'system.bundles.needs_update_status' have no
+ * masterConfig row at all (created dynamically at runtime), so their reset state is
+ * the row not existing (default left undefined), not an empty string.
+ *
+ * This is the single source of truth -- embedded verbatim into the generated
+ * SetupConfig.js (see fileContent below) and checked against every live
+ * ConfigService.setConfig(Locked) call site by checkRuntimeKeysCompleteness()
+ * (D3, SYNC_HARDENING_PLAN.md) so a future runtime-written setting can't drift
+ * out of this list unnoticed the way these 10 did.
+ */
+const RUNTIME_KEYS = [
+    { name: 'system.brurya.last_update', key: 'value', default: '' },
+    { name: 'system.mailchimp.subscribers_last_update', key: 'value', default: '' },
+    { name: 'system.mailchimp.campaigns_last_update', key: 'value', default: '' },
+    { name: 'system.crm.last_refresh', key: 'value', default: '' },
+    { name: 'system.bundle_health.last_check', key: 'value', default: '' },
+    { name: 'system.crm_intelligence.last_run', key: 'value', default: '' },
+    { name: 'system.sync.state', key: 'json', default: '{}' },
+    { name: 'woo.api', key: 'products_last_pull', default: '' },
+    { name: 'woo.api', key: 'orders_last_pull', default: '' },
+    { name: 'system.kpi.gsc_last_snapshot', key: 'value' },
+    // Added 2026-08-27 (D3) -- found via checkRuntimeKeysCompleteness() against
+    // every live ConfigService.setConfig(Locked) call site, not hand-enumerated.
+    { name: 'system.woocommerce.coupons_last_update', key: 'value', default: '' },
+    { name: 'crm.frequent_pipeline.last_modified_floor', key: 'value', default: '' },
+    { name: 'system.crm.welcome_floor_date', key: 'value', default: '' },
+    { name: 'crm.pending_payment_followup.floor_date', key: 'value', default: '' },
+    { name: 'crm.pending_payment_followup.last_pending_ids', key: 'value', default: '[]' },
+    { name: 'crm.pending_payment_followup.sent_order_ids', key: 'value', default: '[]' },
+    { name: 'system.product_costs.last_recompute', key: 'value', default: '' },
+    { name: 'system.bundles.push_status', key: 'value', default: '' },
+    { name: 'system.category_stock.health', key: 'value', default: '' },
+    { name: 'system.bundles.needs_update_status', key: 'value' }
+];
+
+/**
+ * Fails the build loudly if any live ConfigService.setConfig(Locked) call site
+ * writes a (settingName, key) pair covered by neither RUNTIME_KEYS nor a real
+ * (non-blank) default already in masterConfig -- such a pair would be silently
+ * wiped back to blank on the next rebuildSysConfigFromSource() (D3, SYNC_HARDENING_PLAN.md).
+ *
+ * Two known, accepted limitations (not fixed here, stated so they aren't mistaken
+ * for covered): (1) only call sites whose first two arguments are BOTH string
+ * literals are detected -- a variable-keyed call (e.g. SyncStateService.js's
+ * `ConfigService.setConfig(SYNC_STATE_CONFIG_KEY, 'json', ...)`) can't be resolved
+ * by a regex scan and is silently skipped; it happens to already be covered by
+ * RUNTIME_KEYS today, so there's no live gap, but this check doesn't actually
+ * verify that call site. (2) this only catches a setting missing registration
+ * today -- it can't catch a setting that currently has a real masterConfig default
+ * and later, in some other change, starts being written at runtime without ever
+ * being added here.
+ */
+function checkRuntimeKeysCompleteness(masterConfigArray, runtimeKeys) {
+    const covered = new Set(runtimeKeys.map(function(rk) { return rk.name + '::' + rk.key; }));
+
+    const masterDefaults = new Map();
+    masterConfigArray.forEach(function(row) {
+        if (row.length >= 5) {
+            masterDefaults.set(row[0] + '::' + row[3], row[4]);
+        }
+    });
+
+    const callSitePattern = /ConfigService\.(?:setConfig|setConfigLocked)\(\s*['"]([^'"]+)['"]\s*,\s*['"]([^'"]+)['"]/g;
+    const checkedPairs = new Set();
+    const missing = [];
+
+    fs.readdirSync(__dirname)
+        .filter(function(f) { return f.endsWith('.js') && f !== 'generate-config.js' && f !== 'SetupConfig.js'; })
+        .forEach(function(file) {
+            const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
+            let match;
+            while ((match = callSitePattern.exec(source)) !== null) {
+                const pairKey = match[1] + '::' + match[2];
+                if (checkedPairs.has(pairKey)) continue;
+                checkedPairs.add(pairKey);
+
+                const defaultVal = masterDefaults.get(pairKey);
+                const hasRealDefault = defaultVal !== undefined && defaultVal !== '';
+                if (!covered.has(pairKey) && !hasRealDefault) {
+                    missing.push(pairKey + '  (' + file + ')');
+                }
+            }
+        });
+
+    if (missing.length > 0) {
+        console.error('RUNTIME_KEYS completeness check FAILED -- the following ConfigService.setConfig(Locked) call site(s) write a runtime key with no RUNTIME_KEYS registration and no real masterConfig default (rebuildSysConfigFromSource would silently wipe them back to blank/undefined):');
+        missing.forEach(function(m) { console.error('  - ' + m); });
+        console.error('Fix: add a RUNTIME_KEYS entry above, or give the setting a real default in config/*.json if wipe-on-rebuild is actually correct for it.');
+        process.exit(1);
+    }
+    console.log('RUNTIME_KEYS completeness check passed -- ' + checkedPairs.size + ' distinct setConfig(Locked) call-site pair(s) checked.');
+}
+
 function processTemplates(data) {
     const output = [];
     for (const row of data) {
@@ -99,6 +199,8 @@ function generateSetupConfig() {
         process.exit(1);
     }
 
+    checkRuntimeKeysCompleteness(masterConfigArray, RUNTIME_KEYS);
+
     // Convert the JavaScript array to a string representation for the file
     const arrayString = JSON.stringify(masterConfigArray, null, 4);
 
@@ -125,26 +227,12 @@ function rebuildSysConfigFromSource() {
     const functionName = 'rebuildSysConfigFromSource';
     const masterConfig = getMasterConfiguration();
 
-    // Runtime-mutable keys: their P02 (or other-field) values are written at
-    // runtime via ConfigService.setConfig and must survive a rebuild. Each
-    // entry names the SettingName plus the P01 field whose value is preserved,
-    // and the value that key resets to right after the sheet is cleared and
-    // rewritten from masterConfig -- used by the restore-time race guard below.
-    // 'system.kpi.gsc_last_snapshot' has no masterConfig row at all (created
-    // dynamically at runtime by StatusReportService), so its reset state is the
-    // row not existing at all (default left undefined), not an empty string.
-    const RUNTIME_KEYS = [
-        { name: 'system.brurya.last_update', key: 'value', default: '' },
-        { name: 'system.mailchimp.subscribers_last_update', key: 'value', default: '' },
-        { name: 'system.mailchimp.campaigns_last_update', key: 'value', default: '' },
-        { name: 'system.crm.last_refresh', key: 'value', default: '' },
-        { name: 'system.bundle_health.last_check', key: 'value', default: '' },
-        { name: 'system.crm_intelligence.last_run', key: 'value', default: '' },
-        { name: 'system.sync.state', key: 'json', default: '{}' },
-        { name: 'woo.api', key: 'products_last_pull', default: '' },
-        { name: 'woo.api', key: 'orders_last_pull', default: '' },
-        { name: 'system.kpi.gsc_last_snapshot', key: 'value' }
-    ];
+    // RUNTIME_KEYS is generate-config.js's own const of the same name (top of
+    // file) -- embedded here verbatim at generation time so this function's
+    // copy can never drift from the one checkRuntimeKeysCompleteness() checks
+    // against (D3, SYNC_HARDENING_PLAN.md). See that const's own comment for
+    // what each entry means and the restore-time race guard below for how it's used.
+    const RUNTIME_KEYS = ${JSON.stringify(RUNTIME_KEYS, null, 8)};
 
     try {
         console.log('Running ' + functionName + '...');
