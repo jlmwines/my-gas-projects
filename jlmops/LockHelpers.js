@@ -37,14 +37,16 @@ const LockHelpers = (function() {
 /**
  * Editor smoke test for LockHelpers (Smoke A, SYNC_HARDENING_PLAN.md).
  *
- * Manual test: from the Apps Script editor, invoke this function twice within
- * ~1 second of each other (two separate "Run" clicks). Expect one execution to
- * complete after ~100ms and the other to log 'lock-contention' and return null.
- * While the first is sleeping, confirm the admin dashboard (doGet) stays responsive.
+ * Manual test: the Apps Script editor's Run button is disabled per-tab during an
+ * active execution, so two overlapping runs require two separate browser tabs, both
+ * with this function selected. Click Run in tab 1, then immediately switch to tab 2
+ * and click Run while tab 1 is still sleeping (8s window). Expect one execution to
+ * log 'completed' and the other to log 'lock-contention' and return null. While
+ * tab 1 is sleeping, confirm the admin dashboard (doGet) stays responsive.
  */
 function smokeLockHelpers() {
   const result = LockHelpers.withScriptLock('smokeLockHelpers', 30000, function() {
-    Utilities.sleep(100);
+    Utilities.sleep(8000);
     return 'completed';
   });
   Logger.log(result === null ? 'lock-contention (this execution did not acquire the lock)' : result);
