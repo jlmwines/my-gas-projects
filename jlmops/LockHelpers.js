@@ -52,3 +52,19 @@ function smokeLockHelpers() {
   Logger.log(result === null ? 'lock-contention (this execution did not acquire the lock)' : result);
   return result;
 }
+
+/**
+ * Editor smoke test for the lock-contention/reject branch (Smoke A, SYNC_HARDENING_PLAN.md).
+ *
+ * Run smokeLockHelpers() in tab 1 first (holds the lock 8s). Then, within that 8s
+ * window, run THIS function in tab 2 — its timeoutMs (2s) is shorter than tab 1's
+ * remaining hold, so tryLock cannot succeed in time. Expect this to log
+ * 'lock-contention' and return null immediately (~2s), not wait the full 8s.
+ */
+function smokeLockHelpersShortTimeout() {
+  const result = LockHelpers.withScriptLock('smokeLockHelpersShortTimeout', 2000, function() {
+    return 'completed';
+  });
+  Logger.log(result === null ? 'lock-contention (this execution did not acquire the lock)' : result);
+  return result;
+}
