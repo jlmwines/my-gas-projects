@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-26/27 — Full sync-pipeline audit + fix plan, everything designed and reviewed, nothing built (jlmops)
+
+- User opened with strong frustration: prior sessions repeatedly claimed "sync is fixed" without it holding. Built `jlmops/plans/SYNC_HARDENING_PLAN.md` into the single, comprehensive home for every sync-pipeline defect, not just the one bug originally asked about.
+- **Bug 5** (cross-execution sync-state race) — 11 rounds of independent adversarial review before passing. Core design: `mutateSyncState`/`mutateSyncStateBestEffort` wrapping `LockService.getScriptLock()` (one script-wide, non-reentrant lock — no named locks in GAS, a constraint that broke several early designs).
+- **Bug 6** (validation-ERROR silently treated as pass) — 1 round, passed.
+- **5 parallel audit agents** swept the whole sync-adjacent codebase (state machine, Comax validation, web/order pull, inventory push + housekeeping, widget frontend) for undiscovered bugs — found ~25, split into 4 design-level gaps (D1-D4) and 12 individual bugs (I1-I12).
+- **D1** (job-queue locking) — 15 review rounds, the longest chain in the project, most of it a recurring "stale row number used across an unlocked work window" pattern that kept resurfacing in one more function each round until generalized into one governing rule (`_getJobRowByJobId`, job_id-keyed, never a remembered row number). D2/D3/D4 passed in 1-2 rounds each.
+- **Fixed in code, uncommitted, untested:** I1-I8, I10 (wrong Comax brand field, dropped order line items with no SKU, disabled CRM boolean checks, unvalidated live inventory/price push, others) across `OrderService.js`, `ProductImportService.js`, `ValidationLogic.js`, `ValidationOrchestratorService.js`, `WebAppSync.js`, `WooInventoryPushService.js`, `WooProductPullService.js`. Bug 4's retry-dead-end gap also fixed (`retryFailedStepBackend`).
+- **Test suite checked, not run:** exists (`TestRunner.js` + 4 test files, last touched 2026-07-03) but has zero coverage for 5 of the 7 files touched this session. Can't verify most fixes even if run.
+- **Next session:** test/commit the working-tree fixes first (smallest risk), then Bug 5 Stage A with its mandatory 24h+ observation gate before Stage B — full order is in the plan doc's new "Implementation order" section, not just this log.
+- One accidental commit included a code file alongside a plan-doc-only commit (`WooProductPullService.js`) — left as-is, not pushed, flagged to the user, not reverted.
+
 ## 2026-08-25 (2nd session) — Meta Ads ended, Woo push date_created fix shipped (marketing, jlmops)
 
 - **Meta Ads Jerusalem test ending 2026-08-31, user call — channel not productive.** Overrides the 2026-08-17 "extend 2-3 weeks" decision; bucket 18 build dropped (was the top production priority). The 2026-08-17 swap (drop bucket 8, add bucket 18) was never executed, so all 3 original ads ride out to the end date as-is. Google Search Ads continuation stays undecided, reading as promising, plausibly aided by the popup. Updated `marketing/plans/META_ADS_PLAN.md` (Status/Round Log/Open Items) and `plans/STATUS.md`. Caught and fixed one contradiction (top Status line said "2 ads" after Round Log was corrected to "3") when the user asked whether the docs were actually consistent — worth a deliberate re-check pass after any multi-spot edit like this.
