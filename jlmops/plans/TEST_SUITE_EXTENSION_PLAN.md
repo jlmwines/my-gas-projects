@@ -1,7 +1,7 @@
 # Test Suite Extension Plan
 
 **Created:** 2026-08-27
-**Status:** Tier 1 built, deployed, and run live 2026-08-27 via the Admin Dev view's "Run Unit Tests" button (`WebAppSystem_runUnitTests` → `TestRunner.runAllTests()`) — 32/33 passed on first run. The one failure was a real bug, not a test error: `evaluateCondition` used `val || ''` before stringifying, coercing boolean `false`/numeric `0` to `''` instead of `'false'`/`'0'` (the same footgun `_rowPassesFilter` already documents and avoids). Fixed (`??` instead of `||`) and deployed @565 — re-run confirmed 33/33 passing. Also fixed while reviewing the test run's console output: `LoggerService`'s "[Context Warning] ERROR log generated without explicit Session ID" now respects `testSuppression`, since `ComaxAdapterTest.js`/`WebAdapterTest.js` deliberately call adapters with no session context and were triggering it as expected noise on every run. Tiers 2-4 not started.
+**Status:** Tier 1 built, deployed, and run live 2026-08-27 via the Admin Dev view's "Run Unit Tests" button (`WebAppSystem_runUnitTests` → `TestRunner.runAllTests()`) — 32/33 passed on first run. The one failure was a real bug, not a test error: `evaluateCondition` used `val || ''` before stringifying, coercing boolean `false`/numeric `0` to `''` instead of `'false'`/`'0'` (the same footgun `_rowPassesFilter` already documents and avoids). Fixed (`??` instead of `||`) and deployed @565 — re-run confirmed 33/33 passing. Also fixed while reviewing the test run's console output: `LoggerService`'s "[Context Warning] ERROR log generated without explicit Session ID" now respects `testSuppression`, since `ComaxAdapterTest.js`/`WebAdapterTest.js` deliberately call adapters with no session context and were triggering it as expected noise on every run. Tier 3 (`ValidationOrchestratorServiceTest.js`) and Tier 2 (`_execute*` rule functions, folded into `ValidationLogicTest.js`) built, deployed (@566), and run live 2026-08-27 — 54/54 passing (33 Tier 1 + 21 new). Tier 4 not started.
 
 ## Goal
 
@@ -27,13 +27,15 @@ Zero I/O. Each test directly locks in a bug already fixed this plan, so these te
 - **`WooInventoryPushServiceTest.js`** (new):
   - `_buildAttributesPayload(row, idx)`, `_buildDateCreated(row, idx)` — pure row-to-payload transforms, no API/Sheet calls.
 
-## Tier 2 — rule-execution functions (pure, one caveat)
+## Tier 2 — rule-execution functions (pure, two caveats) — BUILT 2026-08-27
 
-`ValidationLogic.js`'s `_execute*` functions (`_executeExistenceCheck`, `_executeSchemaComparison`, `_executeRowCountComparison`, `_executeDataCompleteness`, `_executeInternalAudit`) take already-built `prebuiltMaps` (plain JS `Map`s) as input and do no I/O themselves — confirmed by reading `_executeExistenceCheck`'s body. A fixture is just constructing a `Map` by hand; no stubbing needed. Add these to `ValidationLogicTest.js` alongside Tier 1.
+`ValidationLogic.js`'s `_execute*` functions (`_executeExistenceCheck`, `_executeFieldComparison`, `_executeSchemaComparison`, `_executeRowCountComparison`, `_executeDataCompleteness`, `_executeInternalAudit`) all now added to the public return object and covered in `ValidationLogicTest.js` — a fixture is just constructing a `Map`/`dataMaps` object by hand; no stubbing needed for five of the six.
 
-**One caveat:** `_executeFieldComparison` has a conditional escape hatch — if a rule sets a `field_translations_map_*` key that isn't inline JSON, it calls `LookupService.getLookupMap(configValue)` (real I/O). Test fixtures should avoid setting that rule field, and the plan should say plainly that this one function's translation-map path stays untested, not imply full coverage.
+**Caveat 1:** `_executeFieldComparison` has a conditional escape hatch — if a rule sets a `field_translations_map_*` key that isn't inline JSON, it calls `LookupService.getLookupMap(configValue)` (real I/O). Fixtures never set that rule field, so this path stays untested, not silently implied covered.
 
-## Tier 3 — today's Bug 6 fix, avoidable I/O
+**Caveat 2 (correction — this plan's original claim was wrong):** `_executeSchemaComparison` is **not** I/O-free like the other four — it calls `ConfigService.getAllConfig()` directly (confirmed by reading its body while building the test, not assumed from the others). Only its guard-clause path is tested (a schema key absent from live config → `ERROR`); the missing-columns comparison logic itself would need a config mock to test without a fixture that silently depends on live schema content, so it stays untested and is named here per this plan's own "name the gap" rule.
+
+## Tier 3 — today's Bug 6 fix, avoidable I/O — BUILT 2026-08-27
 
 **`ValidationOrchestratorServiceTest.js`** (new): `processValidationResults(analysisResult, sessionId)` is the function Bug 6 changed today (added the `ERROR` branch, unconditional quarantine). It calls `TaskService.createTask`/`WebAppTasks.getOpenTasksByTypeId` — but only for `FAILED` results or rules with `skip_if_open_task_type` set. A fixture `analysisResult.results` containing only `ERROR` and `PASSED` statuses, with no `skip_if_open_task_type` rule field, exercises the new branch with **zero I/O** — assert `quarantineTriggered === true` and `failureCount` is correct regardless of the rule's own `on_failure_quarantine` flag (the fix's whole point: an errored rule quarantines unconditionally). This is the highest-value single test in this plan — it directly verifies a fix shipped today with no mocking investment at all.
 
@@ -48,10 +50,10 @@ These need either a real mocking/dependency-injection layer (a separate project)
 
 ## Build order
 
-1. Tier 1 (4 small test files, all pure, no fixtures needed beyond literal values) — smallest effort, immediate regression protection for 2 already-shipped bug fixes.
-2. Tier 3 (`ValidationOrchestratorServiceTest.js`, the Bug 6 branch) — one focused test, verifies today's work specifically.
-3. Tier 2 (`_execute*` rule functions folded into `ValidationLogicTest.js`) — needs constructing fixture `Map`s per rule type, more setup per test but still no mocking framework.
-4. Register all new suites in `TestRunner.js`'s `suites` array (same pattern as the existing 4).
+1. Tier 1 (4 small test files, all pure, no fixtures needed beyond literal values) — smallest effort, immediate regression protection for 2 already-shipped bug fixes. DONE 2026-08-27, run live 33/33.
+2. Tier 3 (`ValidationOrchestratorServiceTest.js`, the Bug 6 branch) — one focused test, verifies today's work specifically. DONE 2026-08-27, run live @566, passing.
+3. Tier 2 (`_execute*` rule functions folded into `ValidationLogicTest.js`) — needs constructing fixture `Map`s per rule type, more setup per test but still no mocking framework. DONE 2026-08-27, run live @566, passing.
+4. Register all new suites in `TestRunner.js`'s `suites` array (same pattern as the existing 4). DONE — `ValidationOrchestratorServiceTest` registered; Tier 2 additions live in the already-registered `ValidationLogicTest`.
 5. Tier 4 — do not start without a separate decision to invest in a mocking/stub layer. If that investment happens, D1's primitives are the highest-value target in this tier (newest code, zero prior precedent, branch-heavy).
 
 ## What this plan does not do

@@ -610,7 +610,15 @@ const ValidationLogic = (function() {
     buildMapFromData: buildMapFromData,
     formatString: formatString,
     rowPassesFilter: _rowPassesFilter,
-    extractName: _extractName
+    extractName: _extractName,
+    // Exposed for ValidationLogicTest.js Tier 2 (TEST_SUITE_EXTENSION_PLAN.md) --
+    // rule-execution functions, fixture-driven via prebuiltMaps/dataMaps.
+    executeExistenceCheck: _executeExistenceCheck,
+    executeFieldComparison: _executeFieldComparison,
+    executeSchemaComparison: _executeSchemaComparison,
+    executeRowCountComparison: _executeRowCountComparison,
+    executeDataCompleteness: _executeDataCompleteness,
+    executeInternalAudit: _executeInternalAudit
   };
 
 })();

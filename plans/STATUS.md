@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-08-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @565 · theme v1.2.32 |
+| Deploy Version | jlmops @566 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-08-27 · theme 2026-08-20 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -50,7 +50,7 @@ The live "what now" — daily review reads these first.
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E, G, and J (product-editor load time + manager submit/verify hang, plus the follow-on product-detail load-performance work) resolved and smoke-tested clean. Session F folded into `jlmops/plans/SYNC_HARDENING_PLAN.md`, now the single home for all sync-pipeline work: Bug 5 (sync-state race) and D1 (job-queue locking) built and verified live on real syncs (2026-08-27); Bug 6 (validation ERROR-as-pass) built and deployed. One widget UI bug (Generate button not visually resetting) got its first live repro during this work, root cause still open; 2 others (Bugs 1-3 family) still need a repro. D2/D3/D4 and Bug 5 Stages C/D/E remain, each independent/future-sessioned. H (timestamps + date-format audit), I (count-task creation audit) still pending, unrelated to sync.
-- **Test suite extension** (`jlmops/plans/TEST_SUITE_EXTENSION_PLAN.md`) — Tier 1 (pure-function unit tests, no mocking framework needed) built, deployed, and run live 2026-08-27: 33/33 passing, caught a real bug on first run (`evaluateCondition`'s boolean/zero coercion, fixed). Tier 3 (a focused test for Bug 6's ERROR-handling branch) is the next cheapest item; Tier 2 (rule-execution functions) and Tier 4 (explicitly-deferred I/O-heavy code, needs a mocking layer) remain after that.
+- **Test suite extension** (`jlmops/plans/TEST_SUITE_EXTENSION_PLAN.md`) — Tiers 1-3 built, deployed (@566), and run live 2026-08-27: 54/54 passing (Tier 1 caught a real bug on first run, `evaluateCondition`'s boolean/zero coercion, fixed; Tier 2 caught and corrected a wrong plan claim — `_executeSchemaComparison` isn't I/O-free like its four siblings, it calls `ConfigService.getAllConfig()`, so only its guard path is tested). Only Tier 4 remains (I/O-heavy code, explicitly deferred, needs a mocking-layer decision).
 - **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — only Phase 1 still open: refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks", investigated, root cause not found, needs a live repro. Phases 2-4 shipped and documented in `jlmops/docs/WORKFLOWS.md` §13.1.
