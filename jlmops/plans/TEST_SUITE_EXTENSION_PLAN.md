@@ -1,7 +1,7 @@
 # Test Suite Extension Plan
 
 **Created:** 2026-08-27
-**Status:** Tier 1 built 2026-08-27, not yet deployed or run live. Tiers 2-4 not started. Follow-up item from `SYNC_HARDENING_PLAN.md` (Implementation order step 8).
+**Status:** Tier 1 built and deployed 2026-08-27 (jlmops @564), not yet run live (`TestRunner.runAllTests()` needs an Apps Script execution). Tiers 2-4 not started. Follow-up item from `SYNC_HARDENING_PLAN.md` (Implementation order step 8).
 
 ## Goal
 
