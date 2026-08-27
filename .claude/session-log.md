@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-27 (2nd session) — Sync hardening built and verified live: Bug 5, D1, Bug 6 (jlmops)
+
+- Continued straight from the prior session's fully-reviewed plan. Shipped, in order, each deployed and live-verified on a real sync before the next: I1-I8/I10 + Bug 4 gap (@558), LockHelpers Stage A (@558-561, both branches deliberately triggered — wait-then-acquire and contention/reject — plus an A/B dashboard-responsiveness check), Bug 5 Stage B (@562, exhaustive sync-state write-site migration, ~20 sites), D1 (@563, job-queue locking — 15-round spec, the largest single item in the plan), Bug 6 (@563, validation ERROR now treated as FAILED).
+- **Decision:** skipped Bug 5 Stage A's planned 24h+ wait before Stage B, after checking that nothing called `withScriptLock` in production between the two — the wait had nothing to observe. Recorded in the plan doc as a deliberate call, not a silently-skipped step.
+- **Two real syncs post-Stage-B and post-D1 both came back clean:** zero duplicate "State saved" rows (Bug 5's original symptom, gone), job-queue log lines now read by job_id, one genuine lock-contention event fired and was handled without error, the known pre-existing `finalizeJobCompletion` double-fire still happens (deliberately left alone per the plan) but now resolves correctly by job_id either way.
+- **Found live, not yet fixed:** the "Generate" button doesn't visually reset for the ~21s an export runs — first-ever live repro of the long-standing Bug 1/2/4 button-state family (previously stuck at "no repro possible"). Root cause traced into the widget's `runAction`/poll-gating code but not found — both mechanisms should have prevented it. Needs browser console/DOM live, not another blind code change.
+- Graduated the concurrency-safety mechanism into `jlmops/docs/ARCHITECTURE.md` §2.5.4.1 (new) as current architecture fact, since it's now live and durable, not just plan intent.
+- **Remaining in the plan:** D2/D3/D4 (independent, unstarted), Bug 5 Stages C/D/E (each its own future-session 24h+ window), test-suite extension (unscoped), `JLMops_Logs` workbook cleanup (user directive, sequenced after this plan closes out).
+- User caught two of my mistakes worth remembering: a `.claude/bugs.md` entry I filed turned out to be spurious (two separate tasks, not a display bug — I hadn't verified before logging it), and I initially proposed a `logger.warn` inside `mutateSyncStateBestEffort`'s expected/routine no-op path that would fire on every sync, at odds with SysLog's own known cell-count sensitivity — left as WARN for now pending real contention-rate data, but flagged as probably wrong at INFO-vs-WARN level.
+
 ## 2026-08-26/27 — Full sync-pipeline audit + fix plan, everything designed and reviewed, nothing built (jlmops)
 
 - User opened with strong frustration: prior sessions repeatedly claimed "sync is fixed" without it holding. Built `jlmops/plans/SYNC_HARDENING_PLAN.md` into the single, comprehensive home for every sync-pipeline defect, not just the one bug originally asked about.
