@@ -4,6 +4,18 @@
 **Status (current, 2026-08-26):** Six named bugs. **Bug 4** — resolved: the stuck-job reaper + 2026-08-25 auto-retry/error-surfacing hardening covers the stuck-spinner symptom; the remaining gap (retry landing on a dead-end spinner stage for `IMPORTING_PRODUCTS`/`EXPORTING_ORDERS`/`VALIDATING` failures — `PUSHING_WEB_INVENTORY`/`IMPORTING_COMAX` were already handled) is fixed in the working tree, see `retryFailedStepBackend` below. **Bugs 1-3** — no code-level fix possible without a live staging repro (confirmed independently in May and re-confirmed 2026-08-26); cross-cutting hardening committed to build regardless. **Bug 5** (cross-execution sync-state race) and **Bug 6** (validation ERROR silently treated as pass) — both fully designed and independently reviewed, ready to build. Full detail per bug below.
 **Scope:** Daily Sync widget UI/state drift. Excludes failed-Comax-import recovery (rare; tracked separately in `.claude/bugs.md`).
 
+## Implementation order
+
+Every item below is either already fixed or fully designed + independently reviewed + passed. Nothing has been built/deployed yet. Order reflects real dependencies, not priority — items marked independent can move anywhere in the sequence.
+
+1. **Test and commit what's already fixed.** I1-I8, I10 (see "Individual-bug status" under Bugs 7+) and Bug 4's `retryFailedStepBackend` gap are sitting in the working tree, uncommitted, untested. Smallest risk, already done — verify live, then commit.
+2. **Bug 5, Stage A only.** Ship `LockHelpers.js#withScriptLock` + its smoke test. **Stop. Wait 24h+, observe `doGet`/`doPost` responsiveness**, before touching anything else — this is Bug 5's own explicit gate, not optional.
+3. **Bug 5, Stage B.** The full write-site migration (`mutateSyncState`/`mutateSyncStateBestEffort`, every sync-state write site, the completeness gates). One deploy, per Bug 5's own "why Stage B isn't split further" reasoning.
+4. **D1.** Depends on Stage A + B existing (reuses `withScriptLock` and the `mutateSyncState` contract shape directly) — cannot build before this point.
+5. **Bug 6, D2, D3, D4.** Independent of Bug 5/D1 and of each other — can move anywhere in this sequence, including before step 2, if that's more convenient.
+6. **Bug 5, Stages C/D/E** (`purgeOldJobs`, `processPendingJobs` pick-up outside D1's scope, `pullOrders` start) — separate future session(s), each its own 24h+ observation window, per §1.3.
+7. **Bugs 1-3** — no action; revisit only if one of them recurs and can be observed live.
+
 ## Implementation log
 
 - **2026-05-05** — Implemented Bug 4 fix #1 in `OrchestratorService.js`:
