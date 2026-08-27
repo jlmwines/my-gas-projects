@@ -37,8 +37,12 @@ const LoggerService = (function() {
     
     if (!currentSessionId) {
         currentSessionId = getInternalSessionId();
-        // Strict Context Enforcement: Warn on ERROR logs if no session ID was provided
-        if (level === 'ERROR') {
+        // Strict Context Enforcement: Warn on ERROR logs if no session ID was provided.
+        // Suppressed during test runs -- adapter tests deliberately call with no
+        // session context to exercise error handling, so this warning is expected
+        // noise there, not a real hygiene lapse (found via manual test-run review,
+        // 2026-08-27).
+        if (level === 'ERROR' && !testSuppression) {
             console.warn(`[Context Warning] ERROR log generated without explicit Session ID in ${serviceName}.${functionName}`);
         }
     }

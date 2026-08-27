@@ -10,8 +10,12 @@ const ValidationLogic = (function() {
   // =================================================================================
 
   function evaluateCondition(val1, operator, val2) {
-      const str1 = String(val1 || '').toLowerCase().trim();
-      const str2 = String(val2 || '').toLowerCase().trim();
+      // Nullish coalesce, not `||`: boolean false / numeric 0 must compare as
+      // 'false' / '0', not be coerced to '' (the exact bug `_rowPassesFilter`
+      // below already avoids for this reason -- found via ValidationLogicTest
+      // 2026-08-27, evaluateCondition(false, '=', 'FALSE') was wrongly false).
+      const str1 = String(val1 ?? '').toLowerCase().trim();
+      const str2 = String(val2 ?? '').toLowerCase().trim();
 
       switch(operator) {
           case '<': return Number(val1) < Number(val2);
