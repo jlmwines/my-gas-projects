@@ -895,26 +895,43 @@ const OrchestratorService = (function() {
           const archiveFileName = archiveFile.getName();
           const originalFileName = archiveFileName.substring(0, archiveFileName.lastIndexOf('_'));
 
-          // Check if a sync session is active — defer registration if so
-          const syncState = SyncStateService.getSyncState();
-          const isSyncSession = syncState.sessionId && completedJobSessionId === syncState.sessionId &&
-                                syncState.stage !== 'IDLE' && syncState.stage !== 'COMPLETE';
+          // Cheap unlocked pre-check to skip the lock entirely for the common case
+          // (a job completing outside any active sync session) -- register
+          // immediately doesn't touch sync state, so no race exists on that path.
+          const preCheckState = SyncStateService.getSyncState();
+          const looksLikeSyncSession = preCheckState.sessionId && completedJobSessionId === preCheckState.sessionId &&
+                                preCheckState.stage !== 'IDLE' && preCheckState.stage !== 'COMPLETE';
 
-          if (isSyncSession) {
-            // Store file info in sync state for deferred registration at COMPLETE
-            if (!syncState.archiveFileIds) syncState.archiveFileIds = {};
-            syncState.archiveFileIds[completedJobType] = {
-              originalFileId: originalFileId,
-              originalFileName: originalFileName,
-              originalFileLastUpdated: originalFileLastUpdated,
-              archiveFileId: archiveFileId
-            };
-            syncState.lastUpdated = new Date().toISOString();
-            SyncStateService.setSyncState(syncState);
-            logger.info(serviceName, functionName, `Deferred file registration for ${originalFileName} (sync session active).`);
-          } else {
-            // Not a sync session — register immediately as before
+          if (!looksLikeSyncSession) {
             _recordFileInRegistry(originalFileId, originalFileName, originalFileLastUpdated);
+          } else {
+            // Re-verify fresh inside the lock -- the session could have started
+            // or ended between the pre-check above and now. Non-stage-changing
+            // write (only touches archiveFileIds/lastUpdated) -- best-effort.
+            const applyResult = SyncStateService.mutateSyncStateBestEffort(function(state) {
+              const isSyncSession = state.sessionId && completedJobSessionId === state.sessionId &&
+                                    state.stage !== 'IDLE' && state.stage !== 'COMPLETE';
+              if (!isSyncSession) {
+                throw new SyncStateService.SyncStageStaleError('Sync session ended before this deferred write could apply.', state);
+              }
+              if (!state.archiveFileIds) state.archiveFileIds = {};
+              state.archiveFileIds[completedJobType] = {
+                originalFileId: originalFileId,
+                originalFileName: originalFileName,
+                originalFileLastUpdated: originalFileLastUpdated,
+                archiveFileId: archiveFileId
+              };
+              state.lastUpdated = new Date().toISOString();
+            });
+
+            if (applyResult.applied) {
+              logger.info(serviceName, functionName, `Deferred file registration for ${originalFileName} (sync session active).`);
+            } else {
+              // Session ended (or lock contention) between the pre-check and the
+              // locked write -- register immediately as a safe fallback rather
+              // than silently lose it.
+              _recordFileInRegistry(originalFileId, originalFileName, originalFileLastUpdated);
+            }
           }
         }
       }
@@ -1182,43 +1199,61 @@ const OrchestratorService = (function() {
       }
 
       // --- IMPORTING_COMAX -> VALIDATING ---
+      // All three branches below use mutateSyncStateBestEffort with their own
+      // idempotency re-check (no-op if this session already advanced past the
+      // target stage) -- this is what stops Bug 5's duplicate "Advancing to..."
+      // log line when multiple concurrent pollers observe the same terminal job
+      // status. Every side effect (not just NotificationService.reportFailure)
+      // fires only when the write's result has applied:true, since only the
+      // execution that actually won the race should notify/advance downstream.
       if (state.stage === 'IMPORTING_COMAX') {
           const jobType = 'import.drive.comax_products';
           _reapStuckJobInSession(jobType, state.sessionId, STUCK_JOB_THRESHOLD_MIN);
           const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+          const sessionId = state.sessionId;
 
           if (jobStatus === 'COMPLETED') {
-              logger.info(serviceName, functionName, `Comax import completed for session ${state.sessionId}. Advancing to VALIDATING.`);
+              const advanceResult = SyncStateService.mutateSyncStateBestEffort(function(s) {
+                if (s.stage !== 'IMPORTING_COMAX') {
+                  throw new SyncStateService.SyncStageStaleError('Already advanced past IMPORTING_COMAX.', s);
+                }
+                s.stage = 'VALIDATING';
+                s.lastUpdated = new Date().toISOString();
+                s.errorMessage = null;
+                if (!s.steps) s.steps = {};
+                s.steps.step4 = { status: 'completed', message: 'Comax product data imported successfully' };
+              });
 
-              state.stage = 'VALIDATING';
-              state.lastUpdated = new Date().toISOString();
-              state.errorMessage = null;
-              if (!state.steps) state.steps = {};
-              state.steps.step4 = { status: 'completed', message: 'Comax product data imported successfully' };
-              SyncStateService.setSyncState(state);
-
-              // Queue validation job and process immediately
-              finalizeSync(state.sessionId);
-              processPendingJobs();
+              if (advanceResult.applied) {
+                logger.info(serviceName, functionName, `Comax import completed for session ${sessionId}. Advancing to VALIDATING.`);
+                // Queue validation job and process immediately
+                finalizeSync(sessionId);
+                processPendingJobs();
+              }
 
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
-              logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}.`);
+              const failResult = SyncStateService.mutateSyncStateBestEffort(function(s) {
+                if (s.stage !== 'IMPORTING_COMAX') {
+                  throw new SyncStateService.SyncStageStaleError('Already advanced past IMPORTING_COMAX.', s);
+                }
+                s.stage = 'FAILED';
+                s.failedAtStage = 'IMPORTING_COMAX';
+                s.errorMessage = `Comax import job failed. Status: ${jobStatus}`;
+                s.lastUpdated = new Date().toISOString();
+                if (!s.steps) s.steps = {};
+                s.steps.step4 = { status: 'failed', message: `Import failed: ${jobStatus}` };
+              });
 
-              NotificationService.reportFailure(
-                'sync.comax_product_import',
-                `Comax import failed: ${jobStatus}`,
-                jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
-                { sessionId: state.sessionId, jobStatus: jobStatus },
-                state.sessionId
-              );
-
-              state.stage = 'FAILED';
-              state.failedAtStage = 'IMPORTING_COMAX';
-              state.errorMessage = `Comax import job failed. Status: ${jobStatus}`;
-              state.lastUpdated = new Date().toISOString();
-              if (!state.steps) state.steps = {};
-              state.steps.step4 = { status: 'failed', message: `Import failed: ${jobStatus}` };
-              SyncStateService.setSyncState(state);
+              if (failResult.applied) {
+                logger.error(serviceName, functionName, `Comax import failed for session ${sessionId}.`);
+                NotificationService.reportFailure(
+                  'sync.comax_product_import',
+                  `Comax import failed: ${jobStatus}`,
+                  jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
+                  { sessionId: sessionId, jobStatus: jobStatus },
+                  sessionId
+                );
+              }
           }
       }
 
@@ -1227,32 +1262,44 @@ const OrchestratorService = (function() {
         const jobType = 'job.periodic.validation.master';
         _reapStuckJobInSession(jobType, state.sessionId, STUCK_JOB_THRESHOLD_MIN);
         const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+        const sessionId = state.sessionId;
 
         if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
-           logger.error(serviceName, functionName, `Validation failed for session ${state.sessionId}.`);
+           const failResult = SyncStateService.mutateSyncStateBestEffort(function(s) {
+             if (s.stage !== 'VALIDATING') {
+               throw new SyncStateService.SyncStageStaleError('Already advanced past VALIDATING.', s);
+             }
+             s.stage = 'FAILED';
+             s.failedAtStage = 'VALIDATING';
+             s.errorMessage = `Master Validation job failed. Status: ${jobStatus}`;
+             s.lastUpdated = new Date().toISOString();
+           });
 
-           NotificationService.reportFailure(
-             'validation.master_master',
-             `Master Validation failed: ${jobStatus}`,
-             'High',
-             { sessionId: state.sessionId },
-             state.sessionId
-           );
-
-           state.stage = 'FAILED';
-           state.failedAtStage = 'VALIDATING';
-           state.errorMessage = `Master Validation job failed. Status: ${jobStatus}`;
-           state.lastUpdated = new Date().toISOString();
-           SyncStateService.setSyncState(state);
+           if (failResult.applied) {
+             logger.error(serviceName, functionName, `Validation failed for session ${sessionId}.`);
+             NotificationService.reportFailure(
+               'validation.master_master',
+               `Master Validation failed: ${jobStatus}`,
+               'High',
+               { sessionId: sessionId },
+               sessionId
+             );
+           }
         } else if (jobStatus === 'COMPLETED') {
-           logger.info(serviceName, functionName, `Validation completed for session ${state.sessionId}. Advancing to WAITING_WEB_EXPORT.`);
+           const advanceResult = SyncStateService.mutateSyncStateBestEffort(function(s) {
+             if (s.stage !== 'VALIDATING') {
+               throw new SyncStateService.SyncStageStaleError('Already advanced past VALIDATING.', s);
+             }
+             s.stage = 'WAITING_WEB_EXPORT';
+             s.lastUpdated = new Date().toISOString();
+             s.errorMessage = null;
+             if (!s.steps) s.steps = {};
+             s.steps.step5 = { status: 'waiting', message: 'Ready to generate web inventory export' };
+           });
 
-           state.stage = 'WAITING_WEB_EXPORT';
-           state.lastUpdated = new Date().toISOString();
-           state.errorMessage = null;
-           if (!state.steps) state.steps = {};
-           state.steps.step5 = { status: 'waiting', message: 'Ready to generate web inventory export' };
-           SyncStateService.setSyncState(state);
+           if (advanceResult.applied) {
+             logger.info(serviceName, functionName, `Validation completed for session ${sessionId}. Advancing to WAITING_WEB_EXPORT.`);
+           }
         }
       }
 
@@ -1264,61 +1311,72 @@ const OrchestratorService = (function() {
           const jobType = 'export.web.inventory.api';
           _reapStuckJobInSession(jobType, state.sessionId, STUCK_JOB_THRESHOLD_MIN);
           const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+          const sessionId = state.sessionId;
 
           if (jobStatus === 'COMPLETED') {
-              const updatedState = SyncStateService.getSyncState();
-              if (!updatedState.steps) updatedState.steps = {};
-              updatedState.stage = 'COMPLETE';
-              updatedState.steps.step5 = { status: 'completed', message: 'Inventory pushed via API' };
-              updatedState.lastUpdated = new Date().toISOString();
-              updatedState.errorMessage = null;
-              SyncStateService.setSyncState(updatedState);
-
-              try {
-                TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', updatedState.sessionId);
-              } catch (taskError) {
-                logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
-              }
-
-              // Close the manual-confirm signal task (same task type the manual path closes)
-              try {
-                const confirmTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.web_inventory_export');
-                if (confirmTasks && confirmTasks.length > 0) {
-                  confirmTasks.forEach(function(task) {
-                    TaskService.completeTask(task.st_TaskId);
-                  });
+              const advanceResult = SyncStateService.mutateSyncStateBestEffort(function(s) {
+                if (s.stage !== 'PUSHING_WEB_INVENTORY') {
+                  throw new SyncStateService.SyncStageStaleError('Already advanced past PUSHING_WEB_INVENTORY.', s);
                 }
-              } catch (taskError) {
-                logger.warn(serviceName, functionName, `Could not complete web inventory confirmation task: ${taskError.message}`);
-              }
+                if (!s.steps) s.steps = {};
+                s.stage = 'COMPLETE';
+                s.steps.step5 = { status: 'completed', message: 'Inventory pushed via API' };
+                s.lastUpdated = new Date().toISOString();
+                s.errorMessage = null;
+              });
 
-              // Register the CSV file for audit (same as the no-changes auto-complete path)
-              _registerSessionFilesFromOrchestrator(updatedState);
+              if (advanceResult.applied) {
+                try {
+                  TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', sessionId);
+                } catch (taskError) {
+                  logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
+                }
+
+                // Close the manual-confirm signal task (same task type the manual path closes)
+                try {
+                  const confirmTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.web_inventory_export');
+                  if (confirmTasks && confirmTasks.length > 0) {
+                    confirmTasks.forEach(function(task) {
+                      TaskService.completeTask(task.st_TaskId);
+                    });
+                  }
+                } catch (taskError) {
+                  logger.warn(serviceName, functionName, `Could not complete web inventory confirmation task: ${taskError.message}`);
+                }
+
+                // Register the CSV file for audit (same as the no-changes auto-complete path)
+                _registerSessionFilesFromOrchestrator(advanceResult.state);
+              }
 
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
               // Prefer the job's own recorded reason (e.g. WooInventoryPushService's
               // per-SKU detail) over a generic status string -- same fix as the
               // 2026-08-21 Comax-import error-clobbering fix.
-              const jobErrorMessage = getJobErrorMessageInSession(jobType, state.sessionId);
+              const jobErrorMessage = getJobErrorMessageInSession(jobType, sessionId);
               const reason = jobErrorMessage || `Status: ${jobStatus}`;
 
-              logger.error(serviceName, functionName, `Inventory API push failed for session ${state.sessionId}: ${reason}`);
+              const failResult = SyncStateService.mutateSyncStateBestEffort(function(s) {
+                if (s.stage !== 'PUSHING_WEB_INVENTORY') {
+                  throw new SyncStateService.SyncStageStaleError('Already advanced past PUSHING_WEB_INVENTORY.', s);
+                }
+                s.stage = 'FAILED';
+                s.failedAtStage = 'PUSHING_WEB_INVENTORY';
+                s.errorMessage = `Inventory API push job failed. ${reason}`;
+                s.lastUpdated = new Date().toISOString();
+                if (!s.steps) s.steps = {};
+                s.steps.step5 = { status: 'failed', message: `Push failed: ${reason}` };
+              });
 
-              NotificationService.reportFailure(
-                'sync.web_inventory_push',
-                `Inventory API push failed: ${jobStatus}`,
-                jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
-                { sessionId: state.sessionId, jobStatus: jobStatus, reason: reason },
-                state.sessionId
-              );
-
-              state.stage = 'FAILED';
-              state.failedAtStage = 'PUSHING_WEB_INVENTORY';
-              state.errorMessage = `Inventory API push job failed. ${reason}`;
-              state.lastUpdated = new Date().toISOString();
-              if (!state.steps) state.steps = {};
-              state.steps.step5 = { status: 'failed', message: `Push failed: ${reason}` };
-              SyncStateService.setSyncState(state);
+              if (failResult.applied) {
+                logger.error(serviceName, functionName, `Inventory API push failed for session ${sessionId}: ${reason}`);
+                NotificationService.reportFailure(
+                  'sync.web_inventory_push',
+                  `Inventory API push failed: ${jobStatus}`,
+                  jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
+                  { sessionId: sessionId, jobStatus: jobStatus, reason: reason },
+                  sessionId
+                );
+              }
           }
       }
 

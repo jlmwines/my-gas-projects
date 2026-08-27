@@ -332,12 +332,15 @@ const ProductService = (function() {
         // Update state to indicate "No changes" or empty filename?
         // User wants to see the filename. If no file, maybe "No Changes"?
         if (sessionId) {
-            const currentState = SyncStateService.getSyncState();
-            if (currentState.sessionId === sessionId) {
-                currentState.webExportFilename = 'No Changes Detected';
-                currentState.lastUpdated = new Date().toISOString();
-                SyncStateService.setSyncState(currentState);
-            }
+            // Non-stage-changing write (only touches webExportFilename/lastUpdated) --
+            // best-effort, silently no-ops if this isn't the current session.
+            SyncStateService.mutateSyncStateBestEffort(function(state) {
+                if (state.sessionId !== sessionId) {
+                    throw new SyncStateService.SyncStageStaleError('Not the current sync session.', state);
+                }
+                state.webExportFilename = 'No Changes Detected';
+                state.lastUpdated = new Date().toISOString();
+            });
         }
         return { success: true, changed: false, message: 'No product changes detected. Export file not created.' };
       }
@@ -353,15 +356,16 @@ const ProductService = (function() {
       const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
       LoggerService.info('ProductService', functionName, `WooCommerce inventory update file created: ${file.getName()} (ID: ${file.getId()})`);
 
-      // Update Sync State with Filename
+      // Update Sync State with Filename. Non-stage-changing write -- best-effort,
+      // silently no-ops if this isn't the current session.
       if (sessionId) {
-          const currentState = SyncStateService.getSyncState();
-          // Ensure we are updating the correct session's state (though job runs in context)
-          if (currentState.sessionId === sessionId) {
-              currentState.webExportFilename = fileName;
-              currentState.lastUpdated = new Date().toISOString();
-              SyncStateService.setSyncState(currentState);
-          }
+          SyncStateService.mutateSyncStateBestEffort(function(state) {
+              if (state.sessionId !== sessionId) {
+                  throw new SyncStateService.SyncStageStaleError('Not the current sync session.', state);
+              }
+              state.webExportFilename = fileName;
+              state.lastUpdated = new Date().toISOString();
+          });
       }
 
       // Close the "signal" task that indicated the export was ready

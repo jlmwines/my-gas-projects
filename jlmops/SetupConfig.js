@@ -22,17 +22,22 @@ function rebuildSysConfigFromSource() {
 
     // Runtime-mutable keys: their P02 (or other-field) values are written at
     // runtime via ConfigService.setConfig and must survive a rebuild. Each
-    // entry names the SettingName plus the P01 field whose value is preserved.
+    // entry names the SettingName plus the P01 field whose value is preserved,
+    // and the value that key resets to right after the sheet is cleared and
+    // rewritten from masterConfig -- used by the restore-time race guard below.
+    // 'system.kpi.gsc_last_snapshot' has no masterConfig row at all (created
+    // dynamically at runtime by StatusReportService), so its reset state is the
+    // row not existing at all (default left undefined), not an empty string.
     const RUNTIME_KEYS = [
-        { name: 'system.brurya.last_update', key: 'value' },
-        { name: 'system.mailchimp.subscribers_last_update', key: 'value' },
-        { name: 'system.mailchimp.campaigns_last_update', key: 'value' },
-        { name: 'system.crm.last_refresh', key: 'value' },
-        { name: 'system.bundle_health.last_check', key: 'value' },
-        { name: 'system.crm_intelligence.last_run', key: 'value' },
-        { name: 'system.sync.state', key: 'json' },
-        { name: 'woo.api', key: 'products_last_pull' },
-        { name: 'woo.api', key: 'orders_last_pull' },
+        { name: 'system.brurya.last_update', key: 'value', default: '' },
+        { name: 'system.mailchimp.subscribers_last_update', key: 'value', default: '' },
+        { name: 'system.mailchimp.campaigns_last_update', key: 'value', default: '' },
+        { name: 'system.crm.last_refresh', key: 'value', default: '' },
+        { name: 'system.bundle_health.last_check', key: 'value', default: '' },
+        { name: 'system.crm_intelligence.last_run', key: 'value', default: '' },
+        { name: 'system.sync.state', key: 'json', default: '{}' },
+        { name: 'woo.api', key: 'products_last_pull', default: '' },
+        { name: 'woo.api', key: 'orders_last_pull', default: '' },
         { name: 'system.kpi.gsc_last_snapshot', key: 'value' }
     ];
 
@@ -82,21 +87,49 @@ function rebuildSysConfigFromSource() {
         ConfigService.forceReload(); // Invalidate cache so the restore reads fresh rows
 
         // ----- Restore runtime-mutable values -----
+        // Each restore acquires a short lock, re-reads the CURRENT live value with
+        // the same raw (undefaulted) read the snapshot phase used, and compares it
+        // to this key's own known reset value. If the live value still matches --
+        // nothing wrote real state during the clear/rewrite window -- it's safe to
+        // restore the snapshot. If it doesn't match, a real write landed during the
+        // window; skip the restore and leave that live write in place. The compare
+        // and the restore write happen inside the same lock hold so this can't
+        // itself become a check-then-write race (SYNC_HARDENING_PLAN.md Stage B
+        // point 5 -- closes the one path Bug 5's write-site migration can't reach,
+        // since this rewrite touches system.sync.state via a variable key, not a
+        // SyncStateService call).
         let restored = 0;
         let restoreErrors = 0;
+        let skippedLiveWrite = 0;
         RUNTIME_KEYS.forEach(function(rk) {
             const value = snapshot[rk.name + '::' + rk.key];
             if (!value) return; // nothing snapshotted for this key
             try {
-                ConfigService.setConfig(rk.name, rk.key, value);
-                restored++;
+                const applied = LockHelpers.withScriptLock('rebuild-sysconfig-restore:' + rk.name + ':' + rk.key, 30000, function() {
+                    const liveConfig = ConfigService.getConfig(rk.name);
+                    const liveValue = liveConfig ? liveConfig[rk.key] : undefined;
+                    if (liveValue !== rk.default) {
+                        console.warn('Restore skipped for ' + rk.name + ' / ' + rk.key + ': live value changed since clear (a real write landed during the window).');
+                        return false;
+                    }
+                    ConfigService.setConfig(rk.name, rk.key, value);
+                    return true;
+                });
+                if (applied === null) {
+                    console.warn('Restore skipped for ' + rk.name + ' / ' + rk.key + ': could not acquire lock.');
+                    skippedLiveWrite++;
+                } else if (applied) {
+                    restored++;
+                } else {
+                    skippedLiveWrite++;
+                }
             } catch (restErr) {
                 console.error('Restore failed for ' + rk.name + ' / ' + rk.key + ': ' + restErr.message);
                 restoreErrors++;
             }
         });
         ConfigService.forceReload();
-        console.log('Restored ' + restored + ' runtime-mutable value(s) (' + restoreErrors + ' error(s)).');
+        console.log('Restored ' + restored + ' runtime-mutable value(s), skipped ' + skippedLiveWrite + ' due to a live write/contention, ' + restoreErrors + ' error(s).');
 
         console.log(functionName + ' completed successfully.');
 

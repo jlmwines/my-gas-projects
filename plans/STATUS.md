@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-27. jlmops @557 live, unchanged since 2026-08-25. A full sync-pipeline audit (5 parallel agents) plus deep design work produced a complete, independently-reviewed fix plan in `jlmops/plans/SYNC_HARDENING_PLAN.md`: Bug 5 (cross-execution sync-state race, 11 review rounds) and D1 (job-queue locking, 15 review rounds — the longest chain in the project) both passed; Bug 6 (validation-ERROR silently treated as pass) and D2-D4 also passed. 9 smaller individual bugs (wrong Comax brand data, dropped order line items, disabled CRM checks, unvalidated live inventory/price push, others) are fixed in the working tree, uncommitted, untested — jlmops test suite has no coverage for 5 of the 7 files touched. Nothing built/deployed yet; full build order is in the plan doc itself. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
+**Updated:** 2026-08-27. jlmops @560 live: Step 1 of `jlmops/plans/SYNC_HARDENING_PLAN.md`'s build order (9 individual bug fixes) and Step 2 (`LockHelpers.js#withScriptLock`, Bug 5 Stage A) are both deployed and Smoke A is fully confirmed live (mutual exclusion, dashboard unaffected, contention/reject branch all verified). **24h+ observation window now running: started 2026-08-27 07:28 (Israel), closes 2026-08-28 07:28+.** Stage B (the full sync-state write-site migration) does not start before that window closes and the user gives an explicit go-ahead. The 9 individual fixes have no single smoke test and confirm as normal sync operations occur naturally. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-08-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @557 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-08-25 · theme 2026-08-20 |
+| Deploy Version | jlmops @561 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-08-27 · theme 2026-08-20 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |

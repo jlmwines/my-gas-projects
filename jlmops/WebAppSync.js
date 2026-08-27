@@ -36,13 +36,15 @@ function importWebProductsBackend() {
   const serviceName = 'WebAppSync';
   const functionName = 'importWebProductsBackend';
 
-  // --- Stage guard ---
+  // --- Stage guard (cheap pre-check; the authoritative check is the locked write below) ---
   const currentState = SyncStateService.getSyncState();
   if (currentState.stage !== 'IDLE') {
     throw new Error(`Cannot start import: sync is at stage ${currentState.stage}, expected IDLE.`);
   }
 
   logger.info(serviceName, functionName, 'Starting web products import.');
+  let write1Done = false;
+  let expectedCurrentStage = 'IDLE';
 
   try {
     const sessionId = OrchestratorService.generateSessionId();
@@ -61,13 +63,21 @@ function importWebProductsBackend() {
       logger.warn(serviceName, functionName, `Could not create sync session task: ${taskError.message}`);
     }
 
-    // Initialize state: IDLE -> IMPORTING_PRODUCTS
-    const newState = SyncStateService.getDefaultState();
-    newState.sessionId = sessionId;
-    newState.stage = 'IMPORTING_PRODUCTS';
-    newState.lastUpdated = new Date().toISOString();
-    newState.steps.step1 = { status: 'processing', message: 'Importing translations and products...' };
-    SyncStateService.setSyncState(newState);
+    // Initialize state: IDLE -> IMPORTING_PRODUCTS. User-initiated (IDLE button click) --
+    // this is this function's first stage-changing write, so it throws on contention.
+    SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot start import: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      Object.assign(state, SyncStateService.getDefaultState());
+      state.sessionId = sessionId;
+      state.stage = 'IMPORTING_PRODUCTS';
+      state.lastUpdated = new Date().toISOString();
+      state.steps.step1 = { status: 'processing', message: 'Importing translations and products...' };
+    });
+    write1Done = true;
+    expectedCurrentStage = 'IMPORTING_PRODUCTS';
 
     // Queue jobs: translations first, then products
     OrchestratorService.queueWebProductsImport(sessionId);
@@ -77,35 +87,79 @@ function importWebProductsBackend() {
 
     if (!result.success) {
       logger.error(serviceName, functionName, `Web products import failed: ${result.error}`, null, { sessionId });
-      const failState = SyncStateService.getSyncState();
-      failState.stage = 'FAILED';
-      failState.failedAtStage = 'IMPORTING_PRODUCTS';
-      failState.errorMessage = result.error;
-      failState.lastUpdated = new Date().toISOString();
-      failState.steps.step1 = { status: 'failed', message: `Import failed: ${result.error}` };
-      SyncStateService.setSyncState(failState);
+      const failResult = SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before failure could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'IMPORTING_PRODUCTS';
+        state.errorMessage = result.error;
+        state.lastUpdated = new Date().toISOString();
+        state.steps.step1 = { status: 'failed', message: `Import failed: ${result.error}` };
+      });
+      if (!failResult.applied) {
+        NotificationService.reportFailure(
+          'sync.import_web_products',
+          `Web products import failed (${result.error}) but the FAILED state write did not apply.`,
+          'High',
+          { error: result.error },
+          sessionId
+        );
+      }
     } else {
       logger.info(serviceName, functionName, `Web products import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
-      const doneState = SyncStateService.getSyncState();
-      doneState.stage = 'IMPORTING_ORDERS';
-      doneState.lastUpdated = new Date().toISOString();
-      doneState.steps.step1 = { status: 'completed', message: 'Products and translations imported' };
-      doneState.steps.step2 = { status: 'waiting', message: 'Ready to import orders' };
-      SyncStateService.setSyncState(doneState);
+      SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before completion could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        state.stage = 'IMPORTING_ORDERS';
+        state.lastUpdated = new Date().toISOString();
+        state.steps.step1 = { status: 'completed', message: 'Products and translations imported' };
+        state.steps.step2 = { status: 'waiting', message: 'Ready to import orders' };
+      });
     }
 
     return SyncStateService.getSyncState();
   } catch (e) {
+    if (e instanceof SyncStateService.SyncStageStaleError) {
+      logger.warn(serviceName, functionName, `Lost the race before this action began -- no failure to record: ${e.message}`);
+      return SyncStateService.getSyncState();
+    }
+    if (e instanceof SyncStateService.SyncLockContentionError) {
+      logger.warn(serviceName, functionName, `Lock contention: ${e.message}`);
+      throw e;
+    }
     logger.error(serviceName, functionName, `Error starting web products import: ${e.message}`, e);
-    // If we already wrote state, mark it failed
-    const errState = SyncStateService.getSyncState();
-    if (errState.stage !== 'IDLE') {
-      errState.stage = 'FAILED';
-      errState.failedAtStage = 'IMPORTING_PRODUCTS';
-      errState.errorMessage = e.message;
-      errState.lastUpdated = new Date().toISOString();
-      errState.steps.step1 = { status: 'failed', message: `Error: ${e.message}` };
-      SyncStateService.setSyncState(errState);
+    try {
+      const recoveryFn = function(state) {
+        state.stage = 'FAILED';
+        state.failedAtStage = 'IMPORTING_PRODUCTS';
+        state.errorMessage = e.message;
+        state.lastUpdated = new Date().toISOString();
+        if (!state.steps) state.steps = {};
+        state.steps.step1 = { status: 'failed', message: `Error: ${e.message}` };
+      };
+      if (!write1Done) {
+        SyncStateService.mutateSyncState(function(state) {
+          if (state.stage !== 'IDLE') {
+            throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+          }
+          recoveryFn(state);
+        });
+      } else {
+        SyncStateService.mutateSyncStateBestEffort(function(state) {
+          if (state.stage !== expectedCurrentStage) {
+            throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+          }
+          recoveryFn(state);
+        });
+      }
+    } catch (recoveryError) {
+      if (!(recoveryError instanceof SyncStateService.SyncStageStaleError) && !(recoveryError instanceof SyncStateService.SyncLockContentionError)) {
+        logger.error(serviceName, functionName, `Recovery write also failed: ${recoveryError.message}`, recoveryError);
+      }
     }
     return SyncStateService.getSyncState();
   }
@@ -132,6 +186,7 @@ function importWebOrdersBackend() {
 
   logger.info(serviceName, functionName, 'Starting web orders import.');
   const sessionId = currentState.sessionId;
+  const expectedCurrentStage = 'IMPORTING_ORDERS';
 
   try {
     // Update step status
@@ -142,13 +197,28 @@ function importWebOrdersBackend() {
     const pullResult = WooOrderPullService.pullOrders();
     if (!pullResult.success) {
       logger.error(serviceName, functionName, `API order pull failed: ${pullResult.message}`);
-      const failState = SyncStateService.getSyncState();
-      failState.stage = 'FAILED';
-      failState.failedAtStage = 'IMPORTING_ORDERS';
-      failState.errorMessage = pullResult.message;
-      failState.lastUpdated = new Date().toISOString();
-      failState.steps.step2 = { status: 'failed', message: `Import failed: ${pullResult.message}` };
-      SyncStateService.setSyncState(failState);
+      // Auto-continuation (no button click waiting on this) -- best-effort, and
+      // surface via NotificationService if the FAILED write itself doesn't land.
+      const failResult = SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before failure could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'IMPORTING_ORDERS';
+        state.errorMessage = pullResult.message;
+        state.lastUpdated = new Date().toISOString();
+        state.steps.step2 = { status: 'failed', message: `Import failed: ${pullResult.message}` };
+      });
+      if (!failResult.applied) {
+        NotificationService.reportFailure(
+          'sync.import_web_orders',
+          `Web orders import failed (${pullResult.message}) but the FAILED state write did not apply.`,
+          'High',
+          { error: pullResult.message },
+          sessionId
+        );
+      }
     } else {
       logger.info(serviceName, functionName, `API order pull complete: ${pullResult.message}`);
 
@@ -156,35 +226,45 @@ function importWebOrdersBackend() {
       const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
       const invoiceCount = OrchestratorService.getInvoiceFileCount();
 
-      const doneState = SyncStateService.getSyncState();
-      doneState.ordersPendingExportCount = ordersToExportCount;
-      doneState.invoiceFileCount = invoiceCount;
-      doneState.lastUpdated = new Date().toISOString();
-      doneState.steps.step2 = { status: 'completed', message: `${pullResult.orderCount} orders imported` };
+      SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before completion could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        state.ordersPendingExportCount = ordersToExportCount;
+        state.invoiceFileCount = invoiceCount;
+        state.lastUpdated = new Date().toISOString();
+        state.steps.step2 = { status: 'completed', message: `${pullResult.orderCount} orders imported` };
 
-      if (ordersToExportCount > 0) {
-        doneState.stage = 'WAITING_ORDER_EXPORT';
-        doneState.steps.step3 = { status: 'waiting', message: `${ordersToExportCount} orders ready for export` };
-      } else {
-        // Skip step 3 entirely — go straight to Comax import
-        doneState.stage = 'WAITING_COMAX_IMPORT';
-        doneState.steps.step3 = { status: 'skipped', message: 'No new web orders to export' };
-        doneState.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
-      }
-
-      SyncStateService.setSyncState(doneState);
+        if (ordersToExportCount > 0) {
+          state.stage = 'WAITING_ORDER_EXPORT';
+          state.steps.step3 = { status: 'waiting', message: `${ordersToExportCount} orders ready for export` };
+        } else {
+          // Skip step 3 entirely — go straight to Comax import
+          state.stage = 'WAITING_COMAX_IMPORT';
+          state.steps.step3 = { status: 'skipped', message: 'No new web orders to export' };
+          state.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
+        }
+      });
     }
 
     return SyncStateService.getSyncState();
   } catch (e) {
     logger.error(serviceName, functionName, `Error importing web orders: ${e.message}`, e);
-    const errState = SyncStateService.getSyncState();
-    errState.stage = 'FAILED';
-    errState.failedAtStage = 'IMPORTING_ORDERS';
-    errState.errorMessage = e.message;
-    errState.lastUpdated = new Date().toISOString();
-    errState.steps.step2 = { status: 'failed', message: `Error: ${e.message}` };
-    SyncStateService.setSyncState(errState);
+    // Best-effort recovery write -- never throws, so no surrounding try/catch
+    // needed. The underlying failure is already logged above regardless of
+    // whether this write applies.
+    SyncStateService.mutateSyncStateBestEffort(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+      }
+      state.stage = 'FAILED';
+      state.failedAtStage = 'IMPORTING_ORDERS';
+      state.errorMessage = e.message;
+      state.lastUpdated = new Date().toISOString();
+      if (!state.steps) state.steps = {};
+      state.steps.step2 = { status: 'failed', message: `Error: ${e.message}` };
+    });
     return SyncStateService.getSyncState();
   }
 }
@@ -210,55 +290,111 @@ function exportComaxOrdersBackend() {
 
   const sessionId = currentState.sessionId;
   logger.info(serviceName, functionName, `Exporting Comax orders for session: ${sessionId}`);
+  let write1Done = false;
+  let expectedCurrentStage = 'WAITING_ORDER_EXPORT';
 
   try {
-    // Transition to EXPORTING_ORDERS
-    currentState.stage = 'EXPORTING_ORDERS';
-    currentState.lastUpdated = new Date().toISOString();
-    currentState.steps.step3 = { status: 'processing', message: 'Generating order export file...' };
-    SyncStateService.setSyncState(currentState);
+    // Transition to EXPORTING_ORDERS. User-initiated (WAITING_ORDER_EXPORT
+    // button click) -- this function's first stage-changing write.
+    SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot export orders: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      state.stage = 'EXPORTING_ORDERS';
+      state.lastUpdated = new Date().toISOString();
+      state.steps.step3 = { status: 'processing', message: 'Generating order export file...' };
+    });
+    write1Done = true;
+    expectedCurrentStage = 'EXPORTING_ORDERS';
 
     const orderService = new OrderService(ProductService);
     const result = orderService.exportOrdersToComax(sessionId);
 
     if (result.success) {
-      const newState = SyncStateService.getSyncState();
       const exportedCount = result.exportedCount || 0;
-
-      if (exportedCount === 0) {
-        // No orders — skip confirmation, go to Comax import
-        newState.stage = 'WAITING_COMAX_IMPORT';
-        newState.lastUpdated = new Date().toISOString();
-        newState.steps.step3 = { status: 'completed', message: 'No orders to export' };
-        newState.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
-      } else {
-        // Orders exported — need user confirmation
-        newState.stage = 'WAITING_ORDER_CONFIRM';
-        newState.comaxOrderExportFilename = result.fileName || '';
-        newState.lastUpdated = new Date().toISOString();
-        newState.steps.step3 = { status: 'waiting', message: `Export ready: ${result.fileName || ''} (${exportedCount} orders)` };
-      }
-      SyncStateService.setSyncState(newState);
+      SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before completion could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        if (exportedCount === 0) {
+          // No orders — skip confirmation, go to Comax import
+          state.stage = 'WAITING_COMAX_IMPORT';
+          state.lastUpdated = new Date().toISOString();
+          state.steps.step3 = { status: 'completed', message: 'No orders to export' };
+          state.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
+        } else {
+          // Orders exported — need user confirmation
+          state.stage = 'WAITING_ORDER_CONFIRM';
+          state.comaxOrderExportFilename = result.fileName || '';
+          state.lastUpdated = new Date().toISOString();
+          state.steps.step3 = { status: 'waiting', message: `Export ready: ${result.fileName || ''} (${exportedCount} orders)` };
+        }
+      });
     } else {
-      const failState = SyncStateService.getSyncState();
-      failState.stage = 'FAILED';
-      failState.failedAtStage = 'EXPORTING_ORDERS';
-      failState.errorMessage = result.message || 'Export failed';
-      failState.lastUpdated = new Date().toISOString();
-      failState.steps.step3 = { status: 'failed', message: `Export failed: ${result.message || 'Unknown error'}` };
-      SyncStateService.setSyncState(failState);
+      const failResult = SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before failure could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'EXPORTING_ORDERS';
+        state.errorMessage = result.message || 'Export failed';
+        state.lastUpdated = new Date().toISOString();
+        state.steps.step3 = { status: 'failed', message: `Export failed: ${result.message || 'Unknown error'}` };
+      });
+      if (!failResult.applied) {
+        NotificationService.reportFailure(
+          'sync.export_comax_orders',
+          `Comax order export failed (${result.message || 'Unknown error'}) but the FAILED state write did not apply.`,
+          'High',
+          { error: result.message },
+          sessionId
+        );
+      }
     }
 
     return SyncStateService.getSyncState();
   } catch (e) {
+    if (e instanceof SyncStateService.SyncStageStaleError) {
+      logger.warn(serviceName, functionName, `Lost the race before this action began -- no failure to record: ${e.message}`);
+      return SyncStateService.getSyncState();
+    }
+    if (e instanceof SyncStateService.SyncLockContentionError) {
+      logger.warn(serviceName, functionName, `Lock contention: ${e.message}`);
+      throw e;
+    }
     logger.error(serviceName, functionName, `Error exporting Comax orders: ${e.message}`, e);
-    const errState = SyncStateService.getSyncState();
-    errState.stage = 'FAILED';
-    errState.failedAtStage = 'EXPORTING_ORDERS';
-    errState.errorMessage = e.message;
-    errState.lastUpdated = new Date().toISOString();
-    errState.steps.step3 = { status: 'failed', message: `Error: ${e.message}` };
-    SyncStateService.setSyncState(errState);
+    try {
+      const recoveryFn = function(state) {
+        state.stage = 'FAILED';
+        state.failedAtStage = 'EXPORTING_ORDERS';
+        state.errorMessage = e.message;
+        state.lastUpdated = new Date().toISOString();
+        if (!state.steps) state.steps = {};
+        state.steps.step3 = { status: 'failed', message: `Error: ${e.message}` };
+      };
+      if (!write1Done) {
+        SyncStateService.mutateSyncState(function(state) {
+          if (state.stage !== 'WAITING_ORDER_EXPORT') {
+            throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+          }
+          recoveryFn(state);
+        });
+      } else {
+        SyncStateService.mutateSyncStateBestEffort(function(state) {
+          if (state.stage !== expectedCurrentStage) {
+            throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+          }
+          recoveryFn(state);
+        });
+      }
+    } catch (recoveryError) {
+      if (!(recoveryError instanceof SyncStateService.SyncStageStaleError) && !(recoveryError instanceof SyncStateService.SyncLockContentionError)) {
+        logger.error(serviceName, functionName, `Recovery write also failed: ${recoveryError.message}`, recoveryError);
+      }
+    }
     return SyncStateService.getSyncState();
   }
 }
@@ -283,6 +419,7 @@ function confirmComaxUpdateBackend() {
   }
 
   logger.info(serviceName, functionName, 'Confirming Comax update.');
+  const expectedCurrentStage = 'WAITING_ORDER_CONFIRM';
 
   try {
     // Complete the Comax order export confirmation task
@@ -295,22 +432,46 @@ function confirmComaxUpdateBackend() {
       logger.warn(serviceName, functionName, `Could not complete confirmation task: ${taskError.message}`);
     }
 
-    currentState.stage = 'WAITING_COMAX_IMPORT';
-    currentState.lastUpdated = new Date().toISOString();
-    currentState.steps.step3 = { status: 'completed', message: 'Orders exported and uploaded to Comax' };
-    currentState.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
-    SyncStateService.setSyncState(currentState);
+    // User-initiated (WAITING_ORDER_CONFIRM button click) -- this function's
+    // only write, so it throws on contention.
+    SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot confirm Comax update: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      state.stage = 'WAITING_COMAX_IMPORT';
+      state.lastUpdated = new Date().toISOString();
+      state.steps.step3 = { status: 'completed', message: 'Orders exported and uploaded to Comax' };
+      state.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
+    });
 
     return SyncStateService.getSyncState();
   } catch (e) {
+    if (e instanceof SyncStateService.SyncStageStaleError) {
+      logger.warn(serviceName, functionName, `Lost the race before this action began -- no failure to record: ${e.message}`);
+      return SyncStateService.getSyncState();
+    }
+    if (e instanceof SyncStateService.SyncLockContentionError) {
+      logger.warn(serviceName, functionName, `Lock contention: ${e.message}`);
+      throw e;
+    }
     logger.error(serviceName, functionName, `Error confirming Comax update: ${e.message}`, e);
-    const errState = SyncStateService.getSyncState();
-    errState.stage = 'FAILED';
-    errState.failedAtStage = 'WAITING_ORDER_CONFIRM';
-    errState.errorMessage = e.message;
-    errState.lastUpdated = new Date().toISOString();
-    errState.steps.step3 = { status: 'failed', message: `Confirmation failed: ${e.message}` };
-    SyncStateService.setSyncState(errState);
+    try {
+      SyncStateService.mutateSyncState(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'WAITING_ORDER_CONFIRM';
+        state.errorMessage = e.message;
+        state.lastUpdated = new Date().toISOString();
+        state.steps.step3 = { status: 'failed', message: `Confirmation failed: ${e.message}` };
+      });
+    } catch (recoveryError) {
+      if (!(recoveryError instanceof SyncStateService.SyncStageStaleError) && !(recoveryError instanceof SyncStateService.SyncLockContentionError)) {
+        logger.error(serviceName, functionName, `Recovery write also failed: ${recoveryError.message}`, recoveryError);
+      }
+    }
     return SyncStateService.getSyncState();
   }
 }
@@ -336,13 +497,23 @@ function startComaxImportBackend() {
 
   logger.info(serviceName, functionName, 'Starting Comax import process.');
   const sessionId = currentState.sessionId;
+  let write1Done = false;
+  let expectedCurrentStage = 'WAITING_COMAX_IMPORT';
 
   try {
-    // Transition to IMPORTING_COMAX
-    currentState.stage = 'IMPORTING_COMAX';
-    currentState.lastUpdated = new Date().toISOString();
-    currentState.steps.step4 = { status: 'processing', message: 'Importing Comax product data...' };
-    SyncStateService.setSyncState(currentState);
+    // Transition to IMPORTING_COMAX. User-initiated (WAITING_COMAX_IMPORT
+    // button click) -- this function's first stage-changing write.
+    SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot start Comax import: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      state.stage = 'IMPORTING_COMAX';
+      state.lastUpdated = new Date().toISOString();
+      state.steps.step4 = { status: 'processing', message: 'Importing Comax product data...' };
+    });
+    write1Done = true;
+    expectedCurrentStage = 'IMPORTING_COMAX';
 
     // Queue Comax import job
     OrchestratorService.queueComaxFileForSync(sessionId);
@@ -352,27 +523,70 @@ function startComaxImportBackend() {
 
     if (!result.success) {
       logger.error(serviceName, functionName, `Comax import failed: ${result.error}`, null, { sessionId });
-      const failState = SyncStateService.getSyncState();
-      failState.stage = 'FAILED';
-      failState.failedAtStage = 'IMPORTING_COMAX';
-      failState.errorMessage = result.error;
-      failState.lastUpdated = new Date().toISOString();
-      failState.steps.step4 = { status: 'failed', message: `Import failed: ${result.error}` };
-      SyncStateService.setSyncState(failState);
+      const failResult = SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before failure could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'IMPORTING_COMAX';
+        state.errorMessage = result.error;
+        state.lastUpdated = new Date().toISOString();
+        state.steps.step4 = { status: 'failed', message: `Import failed: ${result.error}` };
+      });
+      if (!failResult.applied) {
+        NotificationService.reportFailure(
+          'sync.start_comax_import',
+          `Comax import failed (${result.error}) but the FAILED state write did not apply.`,
+          'High',
+          { error: result.error },
+          sessionId
+        );
+      }
     }
     // On success, _checkAndAdvanceSyncState will handle the transition
     // to VALIDATING and then WAITING_WEB_EXPORT
 
     return SyncStateService.getSyncState();
   } catch (e) {
+    if (e instanceof SyncStateService.SyncStageStaleError) {
+      logger.warn(serviceName, functionName, `Lost the race before this action began -- no failure to record: ${e.message}`);
+      return SyncStateService.getSyncState();
+    }
+    if (e instanceof SyncStateService.SyncLockContentionError) {
+      logger.warn(serviceName, functionName, `Lock contention: ${e.message}`);
+      throw e;
+    }
     logger.error(serviceName, functionName, `Error starting Comax import: ${e.message}`, e);
-    const errState = SyncStateService.getSyncState();
-    errState.stage = 'FAILED';
-    errState.failedAtStage = 'IMPORTING_COMAX';
-    errState.errorMessage = e.message;
-    errState.lastUpdated = new Date().toISOString();
-    errState.steps.step4 = { status: 'failed', message: `Error: ${e.message}` };
-    SyncStateService.setSyncState(errState);
+    try {
+      const recoveryFn = function(state) {
+        state.stage = 'FAILED';
+        state.failedAtStage = 'IMPORTING_COMAX';
+        state.errorMessage = e.message;
+        state.lastUpdated = new Date().toISOString();
+        if (!state.steps) state.steps = {};
+        state.steps.step4 = { status: 'failed', message: `Error: ${e.message}` };
+      };
+      if (!write1Done) {
+        SyncStateService.mutateSyncState(function(state) {
+          if (state.stage !== 'WAITING_COMAX_IMPORT') {
+            throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+          }
+          recoveryFn(state);
+        });
+      } else {
+        SyncStateService.mutateSyncStateBestEffort(function(state) {
+          if (state.stage !== expectedCurrentStage) {
+            throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+          }
+          recoveryFn(state);
+        });
+      }
+    } catch (recoveryError) {
+      if (!(recoveryError instanceof SyncStateService.SyncStageStaleError) && !(recoveryError instanceof SyncStateService.SyncLockContentionError)) {
+        logger.error(serviceName, functionName, `Recovery write also failed: ${recoveryError.message}`, recoveryError);
+      }
+    }
     return SyncStateService.getSyncState();
   }
 }
@@ -398,6 +612,7 @@ function generateWebExportBackend() {
 
   logger.info(serviceName, functionName, 'Starting Web Inventory Export generation (inline).');
   const sessionId = currentState.sessionId;
+  const expectedCurrentStage = 'WAITING_WEB_EXPORT';
 
   try {
     // Run the export inline. Decide changes-vs-none from the RETURN VALUE, not a
@@ -407,56 +622,80 @@ function generateWebExportBackend() {
     const result = ProductService.exportWebInventory(sessionId) || {};
     const changed = result.changed === true;
 
-    const postState = SyncStateService.getSyncState();
-    if (!postState.steps) postState.steps = {};
+    // User-initiated (WAITING_WEB_EXPORT button click) -- this function's only
+    // stage-changing write, so it throws on contention. Side effects
+    // (task completion, file registration) run after the write succeeds,
+    // not inside the lock hold.
+    const writeResult = SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot generate Web Export: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      if (!state.steps) state.steps = {};
+
+      if (!changed) {
+        state.stage = 'COMPLETE';
+        state.steps.step5 = { status: 'skipped', message: 'No inventory changes detected' };
+      } else {
+        // The export created a file. If shared state lost the filename, a concurrent
+        // writer clobbered it — repair from the return value and flag it loudly so a
+        // real export is never again silently dropped.
+        if (state.webExportFilename !== result.fileName) {
+          logger.warn(serviceName, functionName, `webExportFilename clobbered in state (state='${state.webExportFilename}', export='${result.fileName}') — repairing from return value.`);
+          NotificationService.reportFailure(
+            'sync.web_export.state_clobber',
+            `Web export state lost the filename (state='${state.webExportFilename}', file='${result.fileName}'). Recovered from the export return value; file is NOT lost.`,
+            'High',
+            { fileName: result.fileName, fileId: result.fileId, count: result.count },
+            sessionId
+          );
+        }
+        state.webExportFilename = result.fileName;
+        state.stage = 'WAITING_WEB_CONFIRM';
+        state.steps.step5 = { status: 'waiting', message: `Export ready: ${result.fileName}` };
+      }
+
+      state.lastUpdated = new Date().toISOString();
+      state.errorMessage = null;
+    });
 
     if (!changed) {
-      postState.stage = 'COMPLETE';
-      postState.steps.step5 = { status: 'skipped', message: 'No inventory changes detected' };
-
       try {
-        TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', postState.sessionId);
+        TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', writeResult.state.sessionId);
       } catch (taskError) {
         logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
       }
-    } else {
-      // The export created a file. If shared state lost the filename, a concurrent
-      // writer clobbered it — repair from the return value and flag it loudly so a
-      // real export is never again silently dropped.
-      if (postState.webExportFilename !== result.fileName) {
-        logger.warn(serviceName, functionName, `webExportFilename clobbered in state (state='${postState.webExportFilename}', export='${result.fileName}') — repairing from return value.`);
-        NotificationService.reportFailure(
-          'sync.web_export.state_clobber',
-          `Web export state lost the filename (state='${postState.webExportFilename}', file='${result.fileName}'). Recovered from the export return value; file is NOT lost.`,
-          'High',
-          { fileName: result.fileName, fileId: result.fileId, count: result.count },
-          sessionId
-        );
-      }
-      postState.webExportFilename = result.fileName;
-      postState.stage = 'WAITING_WEB_CONFIRM';
-      postState.steps.step5 = { status: 'waiting', message: `Export ready: ${result.fileName}` };
-    }
-
-    postState.lastUpdated = new Date().toISOString();
-    postState.errorMessage = null;
-    SyncStateService.setSyncState(postState);
-
-    if (!changed) {
-      _registerSessionFiles(postState);
+      _registerSessionFiles(writeResult.state);
     }
 
     return SyncStateService.getSyncState();
   } catch (e) {
+    if (e instanceof SyncStateService.SyncStageStaleError) {
+      logger.warn(serviceName, functionName, `Lost the race before this action began -- no failure to record: ${e.message}`);
+      return SyncStateService.getSyncState();
+    }
+    if (e instanceof SyncStateService.SyncLockContentionError) {
+      logger.warn(serviceName, functionName, `Lock contention: ${e.message}`);
+      throw e;
+    }
     logger.error(serviceName, functionName, `Error generating Web Export: ${e.message}`, e);
-    const errState = SyncStateService.getSyncState();
-    errState.stage = 'FAILED';
-    errState.failedAtStage = 'WAITING_WEB_EXPORT';
-    errState.errorMessage = e.message;
-    errState.lastUpdated = new Date().toISOString();
-    if (!errState.steps) errState.steps = {};
-    errState.steps.step5 = { status: 'failed', message: `Error: ${e.message}` };
-    SyncStateService.setSyncState(errState);
+    try {
+      SyncStateService.mutateSyncState(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'WAITING_WEB_EXPORT';
+        state.errorMessage = e.message;
+        state.lastUpdated = new Date().toISOString();
+        if (!state.steps) state.steps = {};
+        state.steps.step5 = { status: 'failed', message: `Error: ${e.message}` };
+      });
+    } catch (recoveryError) {
+      if (!(recoveryError instanceof SyncStateService.SyncStageStaleError) && !(recoveryError instanceof SyncStateService.SyncLockContentionError)) {
+        logger.error(serviceName, functionName, `Recovery write also failed: ${recoveryError.message}`, recoveryError);
+      }
+    }
     return SyncStateService.getSyncState();
   }
 }
@@ -519,14 +758,21 @@ function pushWebInventoryBackend() {
 
   logger.info(serviceName, functionName, `Starting Web Inventory API push. Source CSV: ${currentState.webExportFilename}`);
   const sessionId = currentState.sessionId;
+  const expectedCurrentStage = 'WAITING_WEB_CONFIRM';
 
   try {
-    // Transition to PUSHING_WEB_INVENTORY
-    currentState.stage = 'PUSHING_WEB_INVENTORY';
-    currentState.lastUpdated = new Date().toISOString();
-    if (!currentState.steps) currentState.steps = {};
-    currentState.steps.step5 = { status: 'processing', message: 'Pushing inventory updates via API...' };
-    SyncStateService.setSyncState(currentState);
+    // Transition to PUSHING_WEB_INVENTORY. User-initiated (WAITING_WEB_CONFIRM
+    // "Push via API" button) -- this function's only write.
+    SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot push web inventory: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      state.stage = 'PUSHING_WEB_INVENTORY';
+      state.lastUpdated = new Date().toISOString();
+      if (!state.steps) state.steps = {};
+      state.steps.step5 = { status: 'processing', message: 'Pushing inventory updates via API...' };
+    });
 
     // Queue + run. _checkAndAdvanceSyncState handles transition to COMPLETE/FAILED on poll.
     OrchestratorService.queueWebInventoryPush(sessionId);
@@ -534,15 +780,32 @@ function pushWebInventoryBackend() {
 
     return SyncStateService.getSyncState();
   } catch (e) {
+    if (e instanceof SyncStateService.SyncStageStaleError) {
+      logger.warn(serviceName, functionName, `Lost the race before this action began -- no failure to record: ${e.message}`);
+      return SyncStateService.getSyncState();
+    }
+    if (e instanceof SyncStateService.SyncLockContentionError) {
+      logger.warn(serviceName, functionName, `Lock contention: ${e.message}`);
+      throw e;
+    }
     logger.error(serviceName, functionName, `Error during Web Inventory push: ${e.message}`, e);
-    const errState = SyncStateService.getSyncState();
-    errState.stage = 'FAILED';
-    errState.failedAtStage = 'PUSHING_WEB_INVENTORY';
-    errState.errorMessage = e.message;
-    errState.lastUpdated = new Date().toISOString();
-    if (!errState.steps) errState.steps = {};
-    errState.steps.step5 = { status: 'failed', message: `Error: ${e.message}` };
-    SyncStateService.setSyncState(errState);
+    try {
+      SyncStateService.mutateSyncState(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'PUSHING_WEB_INVENTORY';
+        state.errorMessage = e.message;
+        state.lastUpdated = new Date().toISOString();
+        if (!state.steps) state.steps = {};
+        state.steps.step5 = { status: 'failed', message: `Error: ${e.message}` };
+      });
+    } catch (recoveryError) {
+      if (!(recoveryError instanceof SyncStateService.SyncStageStaleError) && !(recoveryError instanceof SyncStateService.SyncLockContentionError)) {
+        logger.error(serviceName, functionName, `Recovery write also failed: ${recoveryError.message}`, recoveryError);
+      }
+    }
     return SyncStateService.getSyncState();
   }
 }
@@ -568,6 +831,7 @@ function confirmWebInventoryUpdateBackend() {
 
   logger.info(serviceName, functionName, 'Confirming Web Inventory Update and completing sync cycle.');
   const sessionId = currentState.sessionId;
+  const expectedCurrentStage = 'WAITING_WEB_CONFIRM';
 
   try {
     // Verify the export actually produced a CSV. WAITING_WEB_CONFIRM is only
@@ -579,11 +843,18 @@ function confirmWebInventoryUpdateBackend() {
       throw new Error(`Cannot confirm: webExportFilename not set on state.`);
     }
 
-    // Transition to COMPLETE
-    currentState.stage = 'COMPLETE';
-    currentState.lastUpdated = new Date().toISOString();
-    currentState.steps.step5 = { status: 'completed', message: 'Web inventory exported and uploaded successfully' };
-    SyncStateService.setSyncState(currentState);
+    // Transition to COMPLETE. User-initiated (WAITING_WEB_CONFIRM "Confirm"
+    // button) -- this function's only write. Side effects run after it
+    // succeeds, not inside the lock hold.
+    const writeResult = SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot confirm Web Inventory Update: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      state.stage = 'COMPLETE';
+      state.lastUpdated = new Date().toISOString();
+      state.steps.step5 = { status: 'completed', message: 'Web inventory exported and uploaded successfully' };
+    });
 
     // Complete the sync session task
     try {
@@ -605,18 +876,35 @@ function confirmWebInventoryUpdateBackend() {
     }
 
     // Register all session files in registry (deferred registration)
-    _registerSessionFiles(currentState);
+    _registerSessionFiles(writeResult.state);
 
     return SyncStateService.getSyncState();
   } catch (e) {
+    if (e instanceof SyncStateService.SyncStageStaleError) {
+      logger.warn(serviceName, functionName, `Lost the race before this action began -- no failure to record: ${e.message}`);
+      return SyncStateService.getSyncState();
+    }
+    if (e instanceof SyncStateService.SyncLockContentionError) {
+      logger.warn(serviceName, functionName, `Lock contention: ${e.message}`);
+      throw e;
+    }
     logger.error(serviceName, functionName, `Error confirming Web Inventory Update: ${e.message}`, e);
-    const errState = SyncStateService.getSyncState();
-    errState.stage = 'FAILED';
-    errState.failedAtStage = 'WAITING_WEB_CONFIRM';
-    errState.errorMessage = e.message;
-    errState.lastUpdated = new Date().toISOString();
-    errState.steps.step5 = { status: 'failed', message: `Confirmation failed: ${e.message}` };
-    SyncStateService.setSyncState(errState);
+    try {
+      SyncStateService.mutateSyncState(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'WAITING_WEB_CONFIRM';
+        state.errorMessage = e.message;
+        state.lastUpdated = new Date().toISOString();
+        state.steps.step5 = { status: 'failed', message: `Confirmation failed: ${e.message}` };
+      });
+    } catch (recoveryError) {
+      if (!(recoveryError instanceof SyncStateService.SyncStageStaleError) && !(recoveryError instanceof SyncStateService.SyncLockContentionError)) {
+        logger.error(serviceName, functionName, `Recovery write also failed: ${recoveryError.message}`, recoveryError);
+      }
+    }
     return SyncStateService.getSyncState();
   }
 }
@@ -646,38 +934,47 @@ function retryFailedStepBackend() {
 
   logger.info(serviceName, functionName, `Retrying from stage: ${currentState.failedAtStage}`);
 
-  // Special case: a failed PUSHING_WEB_INVENTORY returns the user to the
-  // pre-fork WAITING_WEB_CONFIRM stage rather than back to PUSHING. The CSV
-  // is still on Drive — the user can either retry the API push or fall back
-  // to manual upload of the same file.
-  // Special case: a failed IMPORTING_COMAX returns the user to WAITING_COMAX_IMPORT
-  // (the upload UI) so a corrected CSV can be uploaded instead of re-running the
-  // import against the same bad file.
-  // The three cases below (added 2026-08-26, Bug 4 fix candidate #4) are the
-  // same fix extended to every other spinner-only stage (STAGE_CONFIG button:
-  // null) that can appear in failedAtStage. Without this, the default branch
-  // sends the user right back into a stage with no button and no queued job
-  // driving it forward -- a dead end recoverable only via Reset, not Retry.
-  // Every WAITING_* stage (has a button) is left to the default branch as-is.
-  if (currentState.failedAtStage === 'PUSHING_WEB_INVENTORY') {
-    currentState.stage = 'WAITING_WEB_CONFIRM';
-  } else if (currentState.failedAtStage === 'IMPORTING_COMAX') {
-    currentState.stage = 'WAITING_COMAX_IMPORT';
-  } else if (currentState.failedAtStage === 'VALIDATING') {
-    // Validation runs as a job chained after Comax import -- re-running the
-    // import re-queues both, same target as the IMPORTING_COMAX case above.
-    currentState.stage = 'WAITING_COMAX_IMPORT';
-  } else if (currentState.failedAtStage === 'IMPORTING_PRODUCTS') {
-    currentState.stage = 'IDLE';
-  } else if (currentState.failedAtStage === 'EXPORTING_ORDERS') {
-    currentState.stage = 'WAITING_ORDER_EXPORT';
-  } else {
-    currentState.stage = currentState.failedAtStage;
-  }
-  currentState.errorMessage = null;
-  currentState.lastUpdated = new Date().toISOString();
-  // Don't clear failedAtStage — it stays as a breadcrumb until next successful transition
-  SyncStateService.setSyncState(currentState);
+  // User-initiated (FAILED "Retry" button) -- this function's only write.
+  SyncStateService.mutateSyncState(function(state) {
+    if (state.stage !== 'FAILED') {
+      throw new SyncStateService.SyncStageStaleError('Cannot retry: sync is not in FAILED state.', state);
+    }
+    if (!state.failedAtStage) {
+      throw new SyncStateService.SyncStageStaleError('Cannot retry: no failedAtStage recorded. Please use Reset.', state);
+    }
+
+    // Special case: a failed PUSHING_WEB_INVENTORY returns the user to the
+    // pre-fork WAITING_WEB_CONFIRM stage rather than back to PUSHING. The CSV
+    // is still on Drive — the user can either retry the API push or fall back
+    // to manual upload of the same file.
+    // Special case: a failed IMPORTING_COMAX returns the user to WAITING_COMAX_IMPORT
+    // (the upload UI) so a corrected CSV can be uploaded instead of re-running the
+    // import against the same bad file.
+    // The three cases below (added 2026-08-26, Bug 4 fix candidate #4) are the
+    // same fix extended to every other spinner-only stage (STAGE_CONFIG button:
+    // null) that can appear in failedAtStage. Without this, the default branch
+    // sends the user right back into a stage with no button and no queued job
+    // driving it forward -- a dead end recoverable only via Reset, not Retry.
+    // Every WAITING_* stage (has a button) is left to the default branch as-is.
+    if (state.failedAtStage === 'PUSHING_WEB_INVENTORY') {
+      state.stage = 'WAITING_WEB_CONFIRM';
+    } else if (state.failedAtStage === 'IMPORTING_COMAX') {
+      state.stage = 'WAITING_COMAX_IMPORT';
+    } else if (state.failedAtStage === 'VALIDATING') {
+      // Validation runs as a job chained after Comax import -- re-running the
+      // import re-queues both, same target as the IMPORTING_COMAX case above.
+      state.stage = 'WAITING_COMAX_IMPORT';
+    } else if (state.failedAtStage === 'IMPORTING_PRODUCTS') {
+      state.stage = 'IDLE';
+    } else if (state.failedAtStage === 'EXPORTING_ORDERS') {
+      state.stage = 'WAITING_ORDER_EXPORT';
+    } else {
+      state.stage = state.failedAtStage;
+    }
+    state.errorMessage = null;
+    state.lastUpdated = new Date().toISOString();
+    // Don't clear failedAtStage — it stays as a breadcrumb until next successful transition
+  });
 
   return SyncStateService.getSyncState();
 }
@@ -786,17 +1083,22 @@ function _registerSessionFiles(state) {
  * Used when background jobs complete and need to advance state.
  */
 function updateSyncStateFromOrchestrator(sessionId, statusUpdate) {
+  // Dead code -- zero live callers anywhere in the repo (grep-confirmed,
+  // SYNC_HARDENING_PLAN.md Stage B point 3). Migrated for completeness only.
   const serviceName = 'WebAppSync';
   const functionName = 'updateSyncStateFromOrchestrator';
   try {
-    const currentState = SyncStateService.getSyncState();
-    if (currentState.sessionId === sessionId) {
-      Object.assign(currentState, statusUpdate);
-      currentState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(currentState);
+    const result = SyncStateService.mutateSyncStateBestEffort(function(state) {
+      if (state.sessionId !== sessionId) {
+        throw new SyncStateService.SyncStageStaleError('Orchestrator tried to update state for non-current session.', state);
+      }
+      Object.assign(state, statusUpdate);
+      state.lastUpdated = new Date().toISOString();
+    });
+    if (result.applied) {
       logger.info(serviceName, functionName, `Sync state updated by Orchestrator.`, { sessionId, statusUpdate });
     } else {
-      logger.warn(serviceName, functionName, `Orchestrator tried to update state for non-current session.`, { currentSessionId: currentState.sessionId, attemptedSessionId: sessionId });
+      logger.warn(serviceName, functionName, `Orchestrator tried to update state for non-current or busy session.`, { attemptedSessionId: sessionId });
     }
   } catch (e) {
     logger.error(serviceName, functionName, `Error updating sync state from Orchestrator: ${e.message}`, e, { sessionId, statusUpdate });
@@ -1001,6 +1303,8 @@ function apiPullAllBackend() {
   }
 
   logger.info(serviceName, functionName, 'Starting full API pull pipeline.');
+  let write1Done = false;
+  let expectedCurrentStage = 'IDLE';
 
   try {
     const sessionId = OrchestratorService.generateSessionId();
@@ -1019,62 +1323,115 @@ function apiPullAllBackend() {
       logger.warn(serviceName, functionName, `Could not create sync session task: ${taskError.message}`);
     }
 
-    // Initialize state: IDLE → IMPORTING_PRODUCTS
-    const newState = SyncStateService.getDefaultState();
-    newState.sessionId = sessionId;
-    newState.stage = 'IMPORTING_PRODUCTS';
-    newState.lastUpdated = new Date().toISOString();
-    newState.steps.step1 = { status: 'processing', message: 'Pulling EN products...' };
-    SyncStateService.setSyncState(newState);
+    // Initialize state: IDLE → IMPORTING_PRODUCTS. User-initiated (IDLE "API
+    // Pull" button) -- this function's first stage-changing write.
+    SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot start API pull: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      Object.assign(state, SyncStateService.getDefaultState());
+      state.sessionId = sessionId;
+      state.stage = 'IMPORTING_PRODUCTS';
+      state.lastUpdated = new Date().toISOString();
+      state.steps.step1 = { status: 'processing', message: 'Pulling EN products...' };
+    });
+    write1Done = true;
+    expectedCurrentStage = 'IMPORTING_PRODUCTS';
 
-    // Run the full pipeline — updates step1 and step2 internally
+    // Run the full pipeline — updates step1 and step2 internally, via
+    // updateStep(), already routed through mutateSyncStateBestEffort.
     const result = WooProductPullService.pullAndImportAll();
 
     if (!result.success) {
-      const failState = SyncStateService.getSyncState();
-      failState.stage = 'FAILED';
-      failState.failedAtStage = 'IMPORTING_PRODUCTS';
-      failState.errorMessage = result.message;
-      failState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(failState);
+      const failResult = SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before failure could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        state.stage = 'FAILED';
+        state.failedAtStage = 'IMPORTING_PRODUCTS';
+        state.errorMessage = result.message;
+        state.lastUpdated = new Date().toISOString();
+      });
+      if (!failResult.applied) {
+        NotificationService.reportFailure(
+          'sync.api_pull_all',
+          `API pull pipeline failed (${result.message}) but the FAILED state write did not apply.`,
+          'High',
+          { error: result.message },
+          sessionId
+        );
+      }
     } else {
       // Pipeline complete — determine next stage based on pending orders
       const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
       const invoiceCount = OrchestratorService.getInvoiceFileCount();
 
-      const doneState = SyncStateService.getSyncState();
-      doneState.ordersPendingExportCount = ordersToExportCount;
-      doneState.invoiceFileCount = invoiceCount;
-      doneState.lastUpdated = new Date().toISOString();
+      SyncStateService.mutateSyncStateBestEffort(function(state) {
+        if (state.stage !== expectedCurrentStage) {
+          throw new SyncStateService.SyncStageStaleError(
+            `Stage moved on before completion could be recorded (expected ${expectedCurrentStage}, found ${state.stage}).`, state);
+        }
+        state.ordersPendingExportCount = ordersToExportCount;
+        state.invoiceFileCount = invoiceCount;
+        state.lastUpdated = new Date().toISOString();
 
-      if (ordersToExportCount > 0) {
-        doneState.stage = 'WAITING_ORDER_EXPORT';
-        doneState.steps.step3 = { status: 'waiting', message: `${ordersToExportCount} orders ready for export` };
-      } else {
-        doneState.stage = 'WAITING_COMAX_IMPORT';
-        doneState.steps.step3 = { status: 'skipped', message: 'No new web orders to export' };
-        doneState.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
-      }
-
-      SyncStateService.setSyncState(doneState);
+        if (ordersToExportCount > 0) {
+          state.stage = 'WAITING_ORDER_EXPORT';
+          state.steps.step3 = { status: 'waiting', message: `${ordersToExportCount} orders ready for export` };
+        } else {
+          state.stage = 'WAITING_COMAX_IMPORT';
+          state.steps.step3 = { status: 'skipped', message: 'No new web orders to export' };
+          state.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
+        }
+      });
     }
 
     return SyncStateService.getSyncState();
   } catch (e) {
+    if (e instanceof SyncStateService.SyncStageStaleError) {
+      logger.warn(serviceName, functionName, `Lost the race before this action began -- no failure to record: ${e.message}`);
+      return SyncStateService.getSyncState();
+    }
+    if (e instanceof SyncStateService.SyncLockContentionError) {
+      logger.warn(serviceName, functionName, `Lock contention: ${e.message}`);
+      throw e;
+    }
     logger.error(serviceName, functionName, `Error in API pull pipeline: ${e.message}`, e);
-    const errState = SyncStateService.getSyncState();
-    if (errState.stage !== 'IDLE') {
-      errState.stage = 'FAILED';
-      errState.failedAtStage = 'IMPORTING_PRODUCTS';
-      errState.errorMessage = e.message;
-      errState.lastUpdated = new Date().toISOString();
-      // Mark whichever step was processing as failed
-      if (!errState.steps.step2 || errState.steps.step2.status !== 'processing') {
-        errState.steps.step1 = { status: 'failed', message: `Failed: ${e.message}` };
+    try {
+      const recoveryFn = function(state) {
+        state.stage = 'FAILED';
+        state.failedAtStage = 'IMPORTING_PRODUCTS';
+        state.errorMessage = e.message;
+        state.lastUpdated = new Date().toISOString();
+        // Mark whichever step was processing as failed
+        if (!state.steps) state.steps = {};
+        if (!state.steps.step2 || state.steps.step2.status !== 'processing') {
+          state.steps.step1 = { status: 'failed', message: `Failed: ${e.message}` };
+        } else {
+          state.steps.step2 = { status: 'failed', message: `Failed: ${e.message}` };
+        }
+      };
+      if (!write1Done) {
+        SyncStateService.mutateSyncState(function(state) {
+          if (state.stage !== 'IDLE') {
+            throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+          }
+          recoveryFn(state);
+        });
       } else {
-        errState.steps.step2 = { status: 'failed', message: `Failed: ${e.message}` };
+        SyncStateService.mutateSyncStateBestEffort(function(state) {
+          if (state.stage !== expectedCurrentStage) {
+            throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
+          }
+          recoveryFn(state);
+        });
       }
-      SyncStateService.setSyncState(errState);
+    } catch (recoveryError) {
+      if (!(recoveryError instanceof SyncStateService.SyncStageStaleError) && !(recoveryError instanceof SyncStateService.SyncLockContentionError)) {
+        logger.error(serviceName, functionName, `Recovery write also failed: ${recoveryError.message}`, recoveryError);
+      }
     }
     return SyncStateService.getSyncState();
   }
