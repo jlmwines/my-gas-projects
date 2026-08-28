@@ -11,10 +11,10 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Open
 
-- [ ] 2026-08-04: `task.system.failure` tasks store their de-dup key in `st_LinkedEntityId` (`NotificationService.js#_createFailureTask`) — same field the UI treats as a real SysLibrary entity link, so `WebAppLibrary_getEntityDetail` fails ("Entity '<context>' not found") whenever a UI path looks it up (e.g. Publishing-view entity drawer, `PublishingView.html:1316`). Harmless on the dashboard task-open path (failure swallowed there). No plan doc yet.
-- [ ] 2026-07-24: Admin Dashboard's Tasks card (`_getAdminTasksList`) dumps every open task system-wide as a flat table with no summarization — 200+ rows, by design scoped to all tasks (not Admin-assigned only, confirmed intentional), but no grouping/counts make it useless at that size. Needs a real summary (counts by type/priority/overdue, or similar) instead of a raw list. Design decision on summary shape deferred — not yet scheduled into `CODE_AUDIT_FIX_SEQUENCE.md`.
-- [ ] 2026-07-24: `ManagerDashboardView_v2.html`'s Projects card (`renderProjectsCard`) is fed by unfiltered `_getProjectSummaries`/`ProjectService.getAllProjects()` — includes `COMPLETED`/`ARCHIVED` projects alongside `ACTIVE`/`PLANNING`. Owner's view: projects aren't directly manipulated by either role day-to-day, so downgraded to low priority — revisit only if it becomes a real point of confusion.
-- [ ] 2026-07-23: **`doGet`'s role check is a login gate, not an authorization boundary** — it only blocks unlisted "viewer" users; any listed user of any role gets the identical full SPA shell, `availableRoles` lists every role regardless of caller, and the role-switcher dropdown is 100% client-side (no server round-trip). A manager can click "Admin" in the UI and load real Admin screens + every mutating `google.script.run` endpoint elsewhere in the codebase (Product/Inventory, CRM/Campaigns, Library/Project — no server-side re-check exists anywhere). `jlmops/plans/CODE_AUDIT_PLAN.md` §9 (WebApp controllers pass); sequenced as Session R in `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md` — scoped as its own program (needs a dedicated `AUTHORIZATION_PLAN.md`), not a quick fix.
+- [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`). No plan doc yet.
+- [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization. Not yet scheduled into `CODE_AUDIT_FIX_SEQUENCE.md`.
+- [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects, not just ACTIVE/PLANNING — low priority, revisit only if it causes real confusion.
+- [ ] 2026-07-23: **`doGet`'s role check is a login gate, not an authorization boundary** — no server-side re-check on mutating endpoints. See `CODE_AUDIT_FIX_SEQUENCE.md` Session R.
 - [ ] 2026-07-22: Woo API push's `attributes` array doesn't prune Region/Grape/Harmonize/Contrast on existing products — WooCommerce PUT doesn't full-replace `attributes` as assumed. Not urgent, owner OK'd leaving as-is. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
 - [ ] 2026-07-20: Admin Products "Correct Product Name" action (SKU Management) applies with no confirmation step first — risk of accidental edit. `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh when re-run from Admin Dev — only a nightly/manual housekeeping run updates the dashboard's cached status.
@@ -25,19 +25,18 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 - [ ] 2026-06-16: Product Replacement reads dead WebProdM columns (`wpm_WebIdEn`/`wpm_WebIdHe`) — not yet traced whether this breaks the reassign step or is cosmetic.
 - [ ] 2026-06-14: Web inventory export sync-state race (concurrency, not the silent-loss leg — that's fixed). `jlmops/plans/RELIABILITY_AUDIT.md` §1.3.
 - [ ] 2026-05-28: Mailchimp campaign sends not written to per-contact activity log — `pullRecentCampaigns` doesn't write `comm.campaign` rows to `SysContactActivity`.
-- [ ] 2026-05-04: Sync state-machine hardening (bundle, 3 items pending staging repro). `jlmops/plans/SYNC_HARDENING_PLAN.md`.
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
-- [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop (`HousekeepingService.js`) only detects a task failure if it *throws* — most housekeeping functions catch their own errors internally and `return false`, which the loop never inspects. Found while diagnosing why the SysLog cell-limit failure never surfaced a `task.system.failure` alert despite running nightly for weeks. Not yet fixed — needs the loop to check return values, not just catch exceptions.
+- [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop only detects failures that *throw* — most catch internally, unchecked. Needs return-value checks.
 - [ ] 2026-08-21: Welcome-outreach sweep has no recency window + dedup doesn't survive a closed task. Fix plan → `jlmops/plans/CONTACT_MANAGER_PLAN.md` "Known issue — welcome-outreach recency + dedup gap."
 
 ### Resolved (recent)
 
 _One line each; full root-cause analysis lives in the git commit._
 
-- [x] 2026-08-21: `JLMops_Logs` workbook hit Google Sheets' 10M-cell limit, blocking every write to it (SysLog appends, Comax imports, etc. all failing) — SysLog had grown to 33,000+ rows since Aug 1 (~1,570 entries/day) because `cleanOldLogs`'s nightly archive-to-`SysLog_Archive` write was itself failing on the same cell limit (silently, so the alert system never saw it — see the open failure-detection gap above). Fixed: `cleanOldLogs` now deletes rows older than 7 days outright instead of archiving in-workbook. jlmops @547.
-- [x] 2026-08-21: Two confirmed sources of excessive log volume feeding the above — `BundleService._parseWoosbJson` logged unconditionally on every successful parse (not just failures), and `ProductService.exportWebInventory` logged a "not found in Comax" warning for every bundle product on every export because its bundle-exclusion check read a field (`wpm_Type`) that's never populated anywhere in the codebase (fixed to read `wpm_TaxProductType`, the field every other bundle check in the codebase correctly uses). jlmops @547.
-- [x] 2026-08-21: Real error messages from failed Comax imports (and other job types) were getting overwritten with a generic "Job X failed with status: FAILED" on the way up through three call layers (`ProductImportService.processJob` → `OrchestratorService.processSessionJobs` → `WebAppSync.startComaxImportBackend`) — each layer's own catch block re-recorded the generic relay error instead of preserving the specific reason a sub-processor had already logged. Fixed across all three; the specific reason now survives into the sync widget. jlmops @547-@548.
+- [x] 2026-08-21: `JLMops_Logs` hit Sheets' 10M-cell limit (33,000+ row SysLog), blocking all writes — `cleanOldLogs` now deletes rows >7 days. jlmops @547.
+- [x] 2026-08-21: Two log-volume sources fixed — `BundleService._parseWoosbJson` unconditional log; `exportWebInventory` wrong-field warn. jlmops @547.
+- [x] 2026-08-21: Real error messages from failed jobs got overwritten with a generic relay error across 3 layers — fixed. jlmops @547-@548.
 
 - [x] 2026-08-17: Vendor SKU Update couldn't find a product via its stale Web SKU once Comax had already synced to the vendor's new SKU, so Step 2 falsely rejected the real target SKU as a conflict — fixed and smoke-tested confirmed working, jlmops @546. `jlmops/plans/VENDOR_SKU_UPDATE_FIX_PLAN.md`.
 
@@ -116,7 +115,7 @@ _One line each; full root-cause analysis lives in the git commit._
 
 ### Resolved
 
-- [x] 2026-08-20: `deploy-theme.ps1` truncated live theme files to 0 bytes (`functions.php`, `style.css`, `assets/css/main.css`, `assets/js/main.js`) mid-deploy, breaking the live site — root cause unclear (script/credentials unchanged for weeks; likely a server-side change at SiteGround's FTP). Site restored via SiteGround backup, confirmed live. Script hardened (upload → byte-verify → atomic rename, never writes the live filename directly) and transport switched from .NET's `FtpWebRequest` (kept failing/hanging against SiteGround) to `curl` (worked immediately, clean). Redeployed successfully, live site confirmed healthy. See `.claude/session-log.md` 2026-08-20.
+- [x] 2026-08-20: `deploy-theme.ps1` truncated live files to 0 bytes mid-deploy — restored via SiteGround backup, hardened (byte-verify+atomic rename), curl transport. See session-log 2026-08-20.
 - [x] 2026-07-01: Homepage tracked as two separate URLs in GSC — investigated, redirect confirmed correct; residual index history, not a live bug.
 - [x] 2026-05-11: Mixed-content HTTP images on EN+HE homepages — fixed 2026-07-01 (9 images across both pages).
 - [x] 2026-05-08: Removed "Magnums" product category — shipped 2026-05-18.
@@ -137,7 +136,7 @@ _One line each; full root-cause analysis lives in the git commit._
 
 ### Open
 
-- [ ] 2026-08-17: `content/scripts/push-posts.js` MANIFEST paths are stale for the 9 flat/basics posts (acidity, complexity, intensity, pairing, good-wine, selection, price, evyatar, context, handling) — they still point at `content/<Name>.post.md` but those files now live under `content/basics/<topic>/`, so every one of those entries reports MISSING. Discovered and fixed for `negev`/`galilee` only (their region-subfolder paths) while producing the Galilee post; the 9 basics entries are untouched.
+- [ ] 2026-08-17: `push-posts.js` MANIFEST paths stale for 9 basics posts — point at old flat path, not `content/basics/<topic>/`. Fixed for negev/galilee only.
 
 ### Resolved
 

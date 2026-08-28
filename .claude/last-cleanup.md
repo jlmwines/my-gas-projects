@@ -1,3 +1,20 @@
+2026-08-28 — portfolio-scoped cleanup pass touching jlmwines (bug-list hygiene follow-up); full jlmwines sweep was 2026-08-25 (below), still current for everything except bugs.md.
+
+Touched this pass:
+- `.claude/bugs.md` — trimmed 8 entries that had grown into paragraph-length root-cause essays (violating this file's own one-line-per-item rule; the `/review-claude` doc-hygiene sweep flagged it as DRIFT) down to symptom + pointer, since the analysis already lives in the git commit or plan doc named on each line: the 2026-08-04 entity-drawer bug, both 2026-07-24 dashboard-card entries, the 2026-07-23 `doGet` authorization entry, the 2026-08-21 `phase1Tasks` entry, the three 2026-08-21 log-volume/JLMops_Logs resolved entries, the 2026-08-20 deploy-theme.ps1 incident, and the 2026-08-17 push-posts.js MANIFEST entry. Also removed one fully-redundant stub ("2026-05-04: Sync state-machine hardening (bundle, 3 items pending staging repro)") — superseded by `SYNC_HARDENING_PLAN.md`, which is now the actively-maintained single home for that work and already covered by more specific entries elsewhere in this file.
+- `.claude/wishlist.md` — reviewed against the same DRIFT flag; every long entry checked (Newsletter UTM/QR helper, Product-centered ops view, Woo App/Jetpack replacement, unpaid-orders outreach, Comax export decouple, bundle explainer message, nav menu review, bundle+package imagery refresh) carries unique feature-spec detail with no other home (not a git commit, not a plan doc) — trimming would destroy the only record of that spec. Left as-is deliberately; this is a judgment call, not an oversight.
+- `plans/STATUS.md` + `../CALENDAR.md` (portfolio root) — see `projects/.claude/last-cleanup.md` for that half of this pass.
+
+Audited, no change needed:
+- Inbox (`plans/STATUS.md`) — still empty, both sections.
+- Plan-graduation spot check (done as part of the same `/review-claude` doc-hygiene sweep this session) — `CONFIG_COMPLIANCE_PLAN.md`, `CODE_AUDIT_PLAN.md`, `ADMIN_BUNDLES_UI_PLAN.md`, `ADMIN_TASK_UI_PLAN.md`, `UI_T4_3_inventory_mobile.md`, `CONTACT_MANAGER_PLAN.md` all self-declare partial/phased completion consistent with `plans/STATUS.md`'s Active Plans tracking — no plan reading as finished-but-unarchived.
+- Memory (`~/.claude/projects/.../memory/MEMORY.md` + linked files) — deploy-ID memory spot-verified against `jlmops/.deployment-id` this session, matches; nothing stale.
+- `.claude/session-log.md` — 212 lines, 4 entries added since the 2026-08-25 prune (160→212); not yet excessive, no pruning needed.
+
+Not re-touched (still current from 2026-08-25): everything else from that pass — see below.
+
+---
+
 2026-08-25 — project-scoped cleanup pass (jlmwines, all folders), user-invoked ("cleanup") after the session found a recurring plan-graduation gap.
 
 Touched this pass:
