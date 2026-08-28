@@ -23,6 +23,14 @@
               "C:/Users/B/projects/jlmwines/.claude/hooks/cd-guard.js"
             ],
             "statusMessage": "Checking for chained cd"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/deploy-auth-guard.js"
+            ],
+            "statusMessage": "Checking deploy authorization"
           }
         ]
       },
@@ -57,6 +65,19 @@
               "C:/Users/B/projects/jlmwines/.claude/hooks/stray-doc-guard.js"
             ],
             "statusMessage": "Checking for stray doc filenames"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/bugs-wishlist-hygiene-guard.js"
+            ],
+            "statusMessage": "Checking bugs.md/wishlist.md line length"
           }
         ]
       }

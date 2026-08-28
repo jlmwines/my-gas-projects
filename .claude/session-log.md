@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-28 — Five reliability hooks built after live failures; two redundant memories pruned (Claude environment, not jlmops)
+
+- Session opened with /review-claude, then pivoted to fixing Claude Code's own reliability gaps after two live failures: ran `grep` via Bash instead of the Grep tool (a rule sitting in the system prompt), then treated "review the memory list" as authorization to edit it. Built + pipe-tested 5 hooks: `deploy-auth-guard.js` (forces a permission prompt on `clasp deploy`/`deploy.ps1`/`deploy-theme.ps1` — these were previously unconditionally allowed, a real gap, not hypothetical), `bash-search-tool-guard.js` (blocks grep/find/cat/head/tail/sed/awk via Bash, global), `bugs-wishlist-hygiene-guard.js` (200-char line cap on bugs.md/wishlist.md, same pattern as STATUS.md's existing hook), `portfolio-staleness-check.js` (new SessionStart hook + new `projects/.claude/settings.json` — caught the portfolio dashboard's real @544/2026-08-10 staleness live), and `question-before-write-guard.js` (asks for confirmation before Edit/Write when the user's last message looks like a question — built directly after the memory-pruning incident).
+- Pruned `feedback_no_redundant_cd_prefix.md` and `feedback_deploy_needs_own_authorization.md` — both now mechanically enforced by hooks built this session, so the memory was pure duplication.
+- Next: none of the 5 new hooks are live in a running session yet — the settings watcher needs `/hooks` or a restart. Worth confirming each actually fires once that happens.
+
 ## 2026-08-27 (3rd session) — Test suite Tiers 2-3, sync hardening D2-D4, welcome-outreach fix, Central Mountains re-sync (jlmops, content)
 
 - **Test suite Tiers 2-3** built, deployed @566, live 54/54 passing. Caught a real plan inaccuracy along the way: `_executeSchemaComparison` isn't I/O-free like its Tier-2 siblings (calls `ConfigService.getAllConfig()`), only its guard path is tested.
