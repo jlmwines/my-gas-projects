@@ -40,11 +40,12 @@ add_action('woocommerce_coupon_options_save', function ($post_id) {
 /**
  * Validate the rule at apply / checkout time.
  *
- * If the coupon has the flag and the resolved customer has any
- * completed / processing / on-hold orders, the coupon is invalid.
- * If no user can be resolved (e.g., logged-out guest with a brand-new
- * email), the coupon passes — they get the discount on the order that
- * creates their account.
+ * If the coupon has the flag and this customer has any completed /
+ * processing / on-hold order already, the coupon is invalid. Checked
+ * two ways: by billing email (catches guest checkout, which has no
+ * linked account) and by account (catches an old order placed under a
+ * different email while logged in). If neither turns up a past order,
+ * the coupon passes.
  */
 add_filter('woocommerce_coupon_is_valid_for_user', function ($valid, $coupon, $user_email) {
     if (!$valid) {
@@ -54,28 +55,47 @@ add_filter('woocommerce_coupon_is_valid_for_user', function ($valid, $coupon, $u
         return $valid;
     }
 
-    // Resolve the customer: prefer the email passed in (covers guest
-    // checkout) and fall back to the logged-in user.
-    $user = null;
-    if ($user_email) {
-        $user = get_user_by('email', $user_email);
+    $statuses = ['wc-completed', 'wc-processing', 'wc-on-hold'];
+
+    // Resolve the customer's email: prefer the value passed in (covers
+    // guest checkout) and fall back to the logged-in user's account email.
+    $email = $user_email;
+    if (!$email && is_user_logged_in()) {
+        $email = wp_get_current_user()->user_email;
     }
+
+    // Primary check: any past order billed to this email, guest or
+    // account-holder alike. This is the check that actually covers
+    // guest checkout, since a guest order has no linked customer_id.
+    if ($email) {
+        $byEmail = wc_get_orders([
+            'billing_email' => $email,
+            'status'        => $statuses,
+            'limit'         => 1,
+            'return'        => 'ids',
+        ]);
+        if (!empty($byEmail)) {
+            return false;
+        }
+    }
+
+    // Secondary check: any past order linked to this account, in case
+    // an old order was placed under a different billing email.
+    $user = $email ? get_user_by('email', $email) : null;
     if (!$user && is_user_logged_in()) {
         $user = wp_get_current_user();
     }
-    if (!$user || !$user->ID) {
-        // Brand-new email — let the discount through.
-        return $valid;
+    if ($user && $user->ID) {
+        $byAccount = wc_get_orders([
+            'customer_id' => $user->ID,
+            'status'      => $statuses,
+            'limit'       => 1,
+            'return'      => 'ids',
+        ]);
+        if (!empty($byAccount)) {
+            return false;
+        }
     }
 
-    $existing = wc_get_orders([
-        'customer_id' => $user->ID,
-        'status'      => ['wc-completed', 'wc-processing', 'wc-on-hold'],
-        'limit'       => 1,
-        'return'      => 'ids',
-    ]);
-    if (!empty($existing)) {
-        return false;
-    }
     return $valid;
 }, 10, 3);
