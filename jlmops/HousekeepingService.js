@@ -623,17 +623,37 @@ function HousekeepingService() {
     const runStart = new Date().toISOString();
     let pullSucceeded = false;
     let orderCount = null;
-    try {
-      const cursorCfg = ConfigService.getConfig('crm.frequent_pipeline.last_modified_floor');
-      const modifiedAfter = (cursorCfg && cursorCfg.value) ? cursorCfg.value : null;
-      const result = WooOrderPullService.pullOrders(
-        modifiedAfter ? { modifiedAfter: modifiedAfter } : undefined
-      );
-      pullSucceeded = !!(result && result.success);
-      orderCount = result && result.orderCount;
-    } catch (e) {
-      logger.error('HousekeepingService', functionName, `pullOrders failed: ${e.message}`);
+
+    // Stage E (SYNC_HARDENING_PLAN.md #1.3): the isSyncActive() check at the top of
+    // this function can go stale by the time we reach here (business-hour math, a
+    // config read in between). Re-check fresh inside the lock immediately before
+    // starting the pull, so a sync that started in that gap is caught here instead
+    // of racing pullOrders' writes against the sync's own order pipeline. Lock
+    // covers only this re-check, not the pull itself -- same reasoning as Stage D,
+    // the slow inner-service call stays outside the lock.
+    const clearToPull = LockHelpers.withScriptLock(functionName, 30000, function() {
+      return !SyncStateService.isSyncActive();
+    });
+
+    if (clearToPull === null) {
+      logger.info('HousekeepingService', functionName, 'Could not acquire lock for pre-pull check; skipping this cycle.');
+    } else if (!clearToPull) {
+      logger.info('HousekeepingService', functionName,
+        `Daily sync started since the initial check (${SyncStateService.getActiveSession().stage}). Skipping order pull this cycle.`);
+    } else {
+      try {
+        const cursorCfg = ConfigService.getConfig('crm.frequent_pipeline.last_modified_floor');
+        const modifiedAfter = (cursorCfg && cursorCfg.value) ? cursorCfg.value : null;
+        const result = WooOrderPullService.pullOrders(
+          modifiedAfter ? { modifiedAfter: modifiedAfter } : undefined
+        );
+        pullSucceeded = !!(result && result.success);
+        orderCount = result && result.orderCount;
+      } catch (e) {
+        logger.error('HousekeepingService', functionName, `pullOrders failed: ${e.message}`);
+      }
     }
+
     if (pullSucceeded) {
       ConfigService.setConfigLocked('crm.frequent_pipeline.last_modified_floor', 'value', runStart);
     }
@@ -2221,45 +2241,61 @@ function HousekeepingService() {
         return false;
       }
 
-      const jobData = jobQueueSheet.getDataRange().getValues();
-      if (jobData.length <= 1) {
-        logger.info('HousekeepingService', functionName, 'No jobs to process.');
-        return true;
-      }
-
       const thresholdDate = _getThresholdDate(JOB_QUEUE_RETENTION_DAYS);
-      const jobsToKeep = [jobData[0]]; // Keep headers
-      let purgedCount = 0;
 
-      for (let i = 1; i < jobData.length; i++) {
-        const row = jobData[i];
-        const status = String(row[statusCol]).toLowerCase();
-        const processedDate = row[processedCol] ? new Date(row[processedCol]) : null;
-
-        // Purge if: (completed or failed) AND processed > threshold days ago
-        const isTerminal = ['completed', 'failed'].includes(status);
-        const isOld = processedDate && processedDate < thresholdDate;
-
-        if (isTerminal && isOld) {
-          purgedCount++;
-        } else {
-          jobsToKeep.push(row);
+      // Stage C (SYNC_HARDENING_PLAN.md #1.3): lock the read-clear-rewrite so a
+      // concurrent processPendingJobs enqueue between our read and our rewrite
+      // can't be wiped out. Re-read inside the lock, same shape as Stage B's
+      // mutateSyncState, so the row set we act on is current at write time.
+      const result = LockHelpers.withScriptLock(functionName, 30000, function() {
+        const jobData = jobQueueSheet.getDataRange().getValues();
+        if (jobData.length <= 1) {
+          return { purged: 0 };
         }
+
+        const jobsToKeep = [jobData[0]]; // Keep headers
+        let purgedCount = 0;
+
+        for (let i = 1; i < jobData.length; i++) {
+          const row = jobData[i];
+          const status = String(row[statusCol]).toLowerCase();
+          const processedDate = row[processedCol] ? new Date(row[processedCol]) : null;
+
+          // Purge if: (completed or failed) AND processed > threshold days ago
+          const isTerminal = ['completed', 'failed'].includes(status);
+          const isOld = processedDate && processedDate < thresholdDate;
+
+          if (isTerminal && isOld) {
+            purgedCount++;
+          } else {
+            jobsToKeep.push(row);
+          }
+        }
+
+        if (purgedCount === 0) {
+          return { purged: 0 };
+        }
+
+        // Rewrite sheet with kept jobs only
+        jobQueueSheet.clearContents();
+        if (jobsToKeep.length > 0) {
+          jobQueueSheet.getRange(1, 1, jobsToKeep.length, jobsToKeep[0].length).setValues(jobsToKeep);
+        }
+        SpreadsheetApp.flush();
+
+        return { purged: purgedCount };
+      });
+
+      if (result === null) {
+        logger.info('HousekeepingService', functionName, 'Could not acquire lock; skipping this run.');
+        return false;
       }
 
-      if (purgedCount === 0) {
+      if (result.purged === 0) {
         logger.info('HousekeepingService', functionName, 'No old jobs to purge.');
-        return true;
+      } else {
+        logger.info('HousekeepingService', functionName, `Purged ${result.purged} old job queue entries.`);
       }
-
-      // Rewrite sheet with kept jobs only
-      jobQueueSheet.clearContents();
-      if (jobsToKeep.length > 0) {
-        jobQueueSheet.getRange(1, 1, jobsToKeep.length, jobsToKeep[0].length).setValues(jobsToKeep);
-      }
-      SpreadsheetApp.flush();
-
-      logger.info('HousekeepingService', functionName, `Purged ${purgedCount} old job queue entries.`);
       return true;
 
     } catch (e) {

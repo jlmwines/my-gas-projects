@@ -28,9 +28,11 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
 - [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop only detects failures that *throw* — most catch internally, unchecked. Needs return-value checks.
-- [ ] 2026-08-21: Welcome-outreach sweep has no recency window + dedup doesn't survive a closed task. Fix plan → `jlmops/plans/CONTACT_MANAGER_PLAN.md` "Known issue — welcome-outreach recency + dedup gap."
+- [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead — no UI, no push, empty for known sold-individually SKUs. Needs UI field + push payload addition. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
 
 ### Resolved (recent)
+
+- [x] 2026-08-21: Welcome-outreach recency + dedup gap — fixed, deployed @568. `jlmops/plans/CONTACT_MANAGER_PLAN.md`.
 
 _One line each; full root-cause analysis lives in the git commit._
 

@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-08-31 — Sync hardening Bug 5 Stages C/E built + deployed live (@570); queue.failed_job_sweep root-caused and cleared; wdm_IsSoldIndividually dead-field gap found (jlmops)
+
+- **Bug 5 Stages C/E** built and deployed live @570. Stage C (`purgeOldJobs`): read-clear-rewrite now runs inside `withScriptLock`, re-reading `SysJobQueue` fresh inside the lock. Stage E (`performFrequentMaintenance`): the plan's original anchor (`WebAppSync.js`) was stale — `pullOrders` now lives in `WooOrderPullService.js` with no state-set of its own — so the fix re-checks `isSyncActive()` a second time, fresh, inside a lock, immediately before calling `pullOrders()`, rather than locking the whole ~60s+ pull. First live data point recorded same day: a real `purgeOldJobs` run overlapped with a full `performFrequentMaintenance` cycle, no errors, no lock-contention — but no actual sync-widget collision has been exercised yet, so the 24h+ observation window isn't closed out.
+- **`queue.failed_job_sweep` alert** traced to 5 genuinely recent FAILED `SysJobQueue` rows (8/18, 8/21 x3, 8/25 — Woo API push partial failures + a Comax import failure tied to the already-fixed 8/21 SysLog cell-limit incident), separate from 9 unrelated ~300-day-old legacy rows that `purgeOldJobs` can never clear because they lack a `processed_timestamp`. User deleted the 5 recent rows directly; `checkFailedJobs` confirmed back to severity Normal same day. Found in passing: `checkFailedJobs` never calls `NotificationService.resolveFailure`, so the task doesn't self-heal — flagged to the user, not logged to bugs.md (no confirmation to log it).
+- **`wdm_IsSoldIndividually`** (WebDetM) found dead — schema-declared, zero code references, no UI, not in the Woo API push payload. Logged to `.claude/bugs.md`; not built.
+- Generate-button spinner report investigated (widget code traced, no reset path found without reload/failure/2min-timeout) — inconclusive, not logged as a confirmed bug.
+- Next: keep watching for a real sync-widget-vs-housekeeping collision to close out Stage E's observation window; `JLMops_Logs` workbook cleanup queued after.
+
+---
+
 ## 2026-08-28 (2nd session) — Portfolio cleanup pass; 50NEW coupon guest-checkout bug found, fixed, deployed live (jlmwines.com, jlmwines/portfolio repos)
 
 - Ran `/review-claude`, then fixed what it flagged: portfolio `STATUS.md`/`CALENDAR.md` were 16 days stale (jlmops @544→@569 not reflected); refreshed and stamped `last-cleanup.md` in both repos. Groomed `.claude/bugs.md` — trimmed 8 entries that had grown into paragraph-length essays back to symptom+pointer, removed one entry fully superseded by `SYNC_HARDENING_PLAN.md`. `wishlist.md` deliberately left alone — its long entries carry unique spec detail with no other home.
