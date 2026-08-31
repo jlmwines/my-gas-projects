@@ -330,7 +330,7 @@
             if (newStatus === 'completed' && prevStatus !== 'completed') {
                 addProgressEntry(stepNames[i] + ' - ' + (msg || 'completed'), true);
             } else if (newStatus === 'skipped' && prevStatus !== 'skipped') {
-                addProgressEntry(stepNames[i] + ' - skipped', true);
+                addProgressEntry(stepNames[i] + ' - ' + (msg || 'skipped'), true);
             }
 
             previousStepStatuses['step' + i] = newStatus;
