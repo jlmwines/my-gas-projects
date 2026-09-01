@@ -179,7 +179,6 @@ const CONTENT_STAGES = [
   { id: 'email', typeId: 'task.content.email', label: 'Email', title: 'Email: ', target_sibling: 'en' },
   { id: 'social', typeId: 'task.content.social', label: 'Social', title: 'Social: ', target_sibling: 'en' },
   { id: 'whatsapp', typeId: 'task.content.whatsapp', label: 'WhatsApp', title: 'WhatsApp: ', target_sibling: 'en' },
-  { id: 'newsletter', typeId: 'task.newsletter.distribute', label: 'Newsletter', title: 'Newsletter: ', target_sibling: 'en' },
   { id: 'print_create_en', typeId: 'task.content.print.create-en', label: 'Assemble EN Newsletter', title: 'Assemble EN: ', target_sibling: 'en' },
   { id: 'print_create_he', typeId: 'task.content.print.create-he', label: 'Assemble HE Newsletter', title: 'Assemble HE: ', target_sibling: 'he' },
   { id: 'print_distribute', typeId: 'task.content.print.distribute', label: 'Print & Distribute', title: 'Print & Distribute: ', target_sibling: 'en' },
