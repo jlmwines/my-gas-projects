@@ -125,7 +125,8 @@ Single state machine in `SyncStateService.js`. One JSON object in SysConfig (`sy
 IDLE → IMPORTING_PRODUCTS → IMPORTING_ORDERS
   → WAITING_ORDER_EXPORT → EXPORTING_ORDERS → WAITING_ORDER_CONFIRM
   → WAITING_COMAX_IMPORT → IMPORTING_COMAX → VALIDATING
-  → WAITING_WEB_EXPORT → WAITING_WEB_CONFIRM
+  → WAITING_WEB_EXPORT → GENERATING_WEB_EXPORT → WAITING_WEB_CONFIRM
+  → PUSHING_WEB_INVENTORY (API-push route only; manual-upload route confirms straight to COMPLETE)
   → COMPLETE
   → FAILED (from any *ING_* stage, retry returns to failedAtStage)
 ```

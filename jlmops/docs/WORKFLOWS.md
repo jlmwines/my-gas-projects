@@ -26,21 +26,20 @@ This workflow orchestrates the synchronization of data between the Web (WooComme
 
 4.  **Validation (Automated):**
     *   **Trigger:** Automatically starts after Comax Import completes.
-    *   **Process:** Runs master data validation (SKU checks, price integrity).
+    *   **Process:** Runs master data validation (SKU checks, price integrity). A rule that returns `ERROR` is treated the same as one that `FAILED` — no longer a silent pass (fixed 2026-08-27).
     *   **State:** Transitions to `VALIDATING`.
 
-5.  **Export Web Inventory:**
-    *   **Trigger:** Enabled only after Validation succeeds.
-    *   **Action:** User clicks "Generate Export".
-    *   **Process:** Generates a CSV diff of inventory changes for WooCommerce.
-    *   **Action:** User clicks "Download Export" to get the file.
-    *   **Action:** User clicks "Confirm Web Update" to complete the cycle.
+5.  **Update Web Inventory:**
+    *   **Trigger:** Enabled only after Validation succeeds (stage `WAITING_WEB_EXPORT`).
+    *   **Action:** User clicks "Generate".
+    *   **Process:** Transitions to `GENERATING_WEB_EXPORT` — a processing stage claimed before the export starts (fixed 2026-09-01; previously the export ran with no stage change, leaving `WAITING_WEB_EXPORT`'s Generate button guard-passing and clickable for the whole export, which could and once did fire a genuine second export) — then generates a CSV diff of inventory changes for WooCommerce. If no changes are detected, the step is marked skipped and the sync completes directly.
+    *   **Delivery (two routes from `WAITING_WEB_CONFIRM`):** the user clicks "API Push" (transitions through `PUSHING_WEB_INVENTORY`, pushes directly via the WooCommerce REST API), or clicks "I uploaded it" after uploading the CSV manually.
     *   **State:** Transitions to `COMPLETE`.
 
 ### 11.2. Error Handling & Reset
 *   **Failure:** If any step fails, the widget turns red and displays the error — the message shown is the failing job's own recorded reason (e.g. per-SKU push failures), not a generic status string (`OrchestratorService.getJobErrorMessageInSession`, 2026-08-25).
 *   **Inventory push auto-retry:** the daily inventory-price/stock push (`WooInventoryPushService._runPush`) retries just the still-failing rows automatically, up to 2 extra passes a few seconds apart, before marking the job FAILED — added 2026-08-25 after frequent transient hosting-side (not payload) failures on the push API.
-*   **Retry:** Users can retry specific actions (e.g., "Generate Export") without restarting the whole flow. Retry and Reset are guarded against double-submission the same way every step button already is (2026-08-25).
+*   **Retry:** Users can retry specific actions (e.g., "Generate") without restarting the whole flow. Retry and Reset run through a shared `_runManagedAction` helper carrying the same 2-minute stuck-handler timeout and stale-poll guard the regular step actions already have (2026-08-27).
 *   **Reset:** A "Reset" link is available to clear the state and start a fresh sync cycle if necessary.
 
 ---
