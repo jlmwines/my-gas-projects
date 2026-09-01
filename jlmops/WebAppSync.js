@@ -612,9 +612,27 @@ function generateWebExportBackend() {
 
   logger.info(serviceName, functionName, 'Starting Web Inventory Export generation (inline).');
   const sessionId = currentState.sessionId;
-  const expectedCurrentStage = 'WAITING_WEB_EXPORT';
+  let expectedCurrentStage = 'WAITING_WEB_EXPORT';
 
   try {
+    // Write 1: claim the action before starting the long-running export, so a
+    // concurrent repaint (second tab, remounted widget) sees GENERATING_WEB_EXPORT
+    // instead of a still-guard-passing WAITING_WEB_EXPORT for the whole export
+    // duration -- the gap that let a real double-submit happen (2026-09-01,
+    // SYNC_HARDENING_PLAN.md Bug 2). Same shape as startComaxImportBackend/
+    // pushWebInventoryBackend's own first write.
+    SyncStateService.mutateSyncState(function(state) {
+      if (state.stage !== expectedCurrentStage) {
+        throw new SyncStateService.SyncStageStaleError(
+          `Cannot generate Web Export: sync is at stage ${state.stage}, expected ${expectedCurrentStage}.`, state);
+      }
+      state.stage = 'GENERATING_WEB_EXPORT';
+      state.lastUpdated = new Date().toISOString();
+      if (!state.steps) state.steps = {};
+      state.steps.step5 = { status: 'processing', message: 'Generating export...' };
+    });
+    expectedCurrentStage = 'GENERATING_WEB_EXPORT';
+
     // Run the export inline. Decide changes-vs-none from the RETURN VALUE, not a
     // re-read of state.webExportFilename — a concurrent writer can clobber that
     // field and make a real export look like "no changes" (2026-06-14 incident;
@@ -622,10 +640,9 @@ function generateWebExportBackend() {
     const result = ProductService.exportWebInventory(sessionId) || {};
     const changed = result.changed === true;
 
-    // User-initiated (WAITING_WEB_EXPORT button click) -- this function's only
-    // stage-changing write, so it throws on contention. Side effects
-    // (task completion, file registration) run after the write succeeds,
-    // not inside the lock hold.
+    // Write 2: this function's terminal stage-changing write, so it throws on
+    // contention. Side effects (task completion, file registration) run after
+    // the write succeeds, not inside the lock hold.
     const writeResult = SyncStateService.mutateSyncState(function(state) {
       if (state.stage !== expectedCurrentStage) {
         throw new SyncStateService.SyncStageStaleError(
@@ -685,7 +702,7 @@ function generateWebExportBackend() {
           throw new SyncStateService.SyncStageStaleError('Stage moved on before recovery could run.', state);
         }
         state.stage = 'FAILED';
-        state.failedAtStage = 'WAITING_WEB_EXPORT';
+        state.failedAtStage = 'GENERATING_WEB_EXPORT';
         state.errorMessage = e.message;
         state.lastUpdated = new Date().toISOString();
         if (!state.steps) state.steps = {};
@@ -968,6 +985,9 @@ function retryFailedStepBackend() {
       state.stage = 'IDLE';
     } else if (state.failedAtStage === 'EXPORTING_ORDERS') {
       state.stage = 'WAITING_ORDER_EXPORT';
+    } else if (state.failedAtStage === 'GENERATING_WEB_EXPORT') {
+      // Re-running the export is just re-clicking Generate.
+      state.stage = 'WAITING_WEB_EXPORT';
     } else {
       state.stage = state.failedAtStage;
     }
