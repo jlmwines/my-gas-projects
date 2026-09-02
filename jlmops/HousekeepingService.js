@@ -782,7 +782,6 @@ function HousekeepingService() {
     const phase3Tasks = [
       { name: 'refreshBundleComposition', fn: () => WebAppBundles_reimportAllBundles() },
       { name: 'refreshBundlePushStatus', fn: () => this.refreshBundlePushStatus() },
-      { name: 'checkBundleHealth', fn: () => this.checkBundleHealth() },
       { name: 'pullMailchimpSubscribers', fn: () => ContactImportService.importFromMailchimpApi() },
       { name: 'pullMailchimpCampaigns', fn: () => CampaignService.pullRecentCampaigns() },
       { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
