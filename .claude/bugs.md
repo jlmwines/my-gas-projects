@@ -32,6 +32,10 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Resolved (recent)
 
+- [x] 2026-09-02: Bundle deficiency count on view-load was stale (nightly/post-sync auto-refresh only) — automation removed, review now manual-only. jlmops @574.
+- [x] 2026-09-01: "Newsletter" content stage produced a task invisible to `PublishingView`'s task filter, redundant with Print & Distribute anyway — removed. jlmops @573.
+- [x] 2026-09-01: Sync widget Generate button reappeared mid-export, could double-submit — fixed, verified live. `jlmops/plans/SYNC_HARDENING_PLAN.md` Bug 2. jlmops @572.
+- [x] 2026-09-01: Sync widget skip-log showed literal "skipped" instead of the real reason — fixed. jlmops @571.
 - [x] 2026-08-21: Welcome-outreach recency + dedup gap — fixed, deployed @568. `jlmops/plans/CONTACT_MANAGER_PLAN.md`.
 
 _One line each; full root-cause analysis lives in the git commit._

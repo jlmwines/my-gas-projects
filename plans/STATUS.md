@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-08-31. jlmops @570 live: `SYNC_HARDENING_PLAN.md`'s Bug 5 sequence is now fully built and deployed — Stages A/B/C/E plus D1-D4 all live, leaving only the 24h+ live-observation window (in progress, first clean data point recorded today: a real `purgeOldJobs` run and a real `performFrequentMaintenance` cycle overlapped with each other with no errors and no lock-contention, though no actual sync-widget collision has been exercised yet). Test-suite Tier 4 remains the only other open item in that plan family (Tiers 1-3 done), plus the `JLMops_Logs` workbook cleanup queued after it. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
+**Updated:** 2026-09-02. jlmops @574 live: `SYNC_HARDENING_PLAN.md`'s Bug 5 sequence (Stages A/B/C/E + D1-D4) and Bug 2 (Generate-button double-submit) are built, deployed, and verified live on real syncs — including a genuine sync-vs-housekeeping collision that resolved cleanly. Also fixed this session: a content-task-creation stage invisible to `PublishingView`'s task list (removed), and automated bundle-deficiency checks (nightly + post-sync) removed in favor of manual-only review, since the cached count was routinely stale by the time it was seen. Test-suite Tier 4 remains the only other open item in the sync plan family (Tiers 1-3 done), plus the `JLMops_Logs` workbook cleanup queued after it. Website: new-visitor offer popup live and confirmed working (theme v1.2.32) — see `website/EXIT_INTENT_POPUP_PLAN.md`.
 
 ## At a glance
 
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-08-31 |
+| Last Active | 2026-09-02 |
 | Revenue | Steady |
-| Deploy Version | jlmops @570 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-08-31 · theme 2026-08-20 |
+| Deploy Version | jlmops @574 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-09-02 · theme 2026-08-20 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |

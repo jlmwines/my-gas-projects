@@ -4,6 +4,19 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-09-01/02 — Sync widget skip-log + double-submit fixes verified live (@571/@572); newsletter task-stage bug found+fixed (@573); bundle-health automation removed (@574)
+
+- **Sync widget skip-log** (@571): skip reasons (e.g. "No inventory changes detected") were being discarded in favor of a literal "skipped" — fixed, one-line change.
+- **Sync widget double-submit** (@572, `SYNC_HARDENING_PLAN.md` Bug 2): `generateWebExportBackend` never wrote an intermediate processing stage, so `WAITING_WEB_EXPORT`'s Generate button stayed guard-passing and clickable for the whole export — a real double-submit had happened before. Added `GENERATING_WEB_EXPORT`, mirroring the two sibling actions that already do this correctly. Verified 9/2 on a real sync: single export call, button confirmed not reappearing.
+- **Bug 5 Stages C/E** (from 8/31): 5+ days live, zero errors, including a first genuine sync-vs-housekeeping collision (9/2, caught cleanly by D2's guard). Stage E's own narrower inside-lock re-check still formally unexercised.
+- **Newsletter task-creation bug**: user tried to attach a newsletter Doc via a "Newsletter" content-creation stage; that stage's task type (`task.newsletter.distribute`) was invisible to `PublishingView`'s task filter and redundant with "Print & Distribute" anyway — removed from `CONTENT_STAGES` (@573). Correct stages for doc-attach are "Assemble EN/HE Newsletter."
+- **Bundle-health automation removed** (@574, user judgment call): the Bundles view's "needs attention" count only ever showed a cached snapshot from nightly/post-sync auto-checks, routinely stale by the time anyone looked. Both automated triggers removed; review is manual-only now.
+- **Docs graduated/corrected**: `ARCHITECTURE.md` §2.5.4.2 (D2 guard), `WORKFLOWS.md` §11 (Bug 6/Bug 2/D4), `jlmops/CLAUDE.md` state diagram, and a stale `purgeOldJobs`-is-unlocked line, all fixed to match current code.
+- Calendar's Holidays toggle now defaults to Hide (user preference).
+- Next: Bugs 1/3 still need a live repro; Test Suite Tier 4 and `JLMops_Logs` cleanup still queued.
+
+---
+
 ## 2026-08-31 — Sync hardening Bug 5 Stages C/E built + deployed live (@570); queue.failed_job_sweep root-caused and cleared; wdm_IsSoldIndividually dead-field gap found (jlmops)
 
 - **Bug 5 Stages C/E** built and deployed live @570. Stage C (`purgeOldJobs`): read-clear-rewrite now runs inside `withScriptLock`, re-reading `SysJobQueue` fresh inside the lock. Stage E (`performFrequentMaintenance`): the plan's original anchor (`WebAppSync.js`) was stale — `pullOrders` now lives in `WooOrderPullService.js` with no state-set of its own — so the fix re-checks `isSyncActive()` a second time, fresh, inside a lock, immediately before calling `pullOrders()`, rather than locking the whole ~60s+ pull. First live data point recorded same day: a real `purgeOldJobs` run overlapped with a full `performFrequentMaintenance` cycle, no errors, no lock-contention — but no actual sync-widget collision has been exercised yet, so the 24h+ observation window isn't closed out.
