@@ -32,6 +32,7 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Resolved (recent)
 
+- [x] 2026-09-03: Welcome task fired for repeat customers with an archived first order — fixed, not yet live-verified. `CONTACT_MANAGER_PLAN.md`. jlmops @575.
 - [x] 2026-09-02: Bundle deficiency count on view-load was stale (nightly/post-sync auto-refresh only) — automation removed, review now manual-only. jlmops @574.
 - [x] 2026-09-01: "Newsletter" content stage produced a task invisible to `PublishingView`'s task filter, redundant with Print & Distribute anyway — removed. jlmops @573.
 - [x] 2026-09-01: Sync widget Generate button reappeared mid-export, could double-submit — fixed, verified live. `jlmops/plans/SYNC_HARDENING_PLAN.md` Bug 2. jlmops @572.
@@ -121,7 +122,8 @@ _One line each; full root-cause analysis lives in the git commit._
 
 ### Resolved
 
-- [x] 2026-08-28: 50NEW first-purchase coupon reusable by repeat guest-checkout customers — check only matched a registered WP account, not billing email. Fixed, live. `inc/coupons.php`.
+- [x] 2026-09-03: 50NEW first-purchase check hooked to a nonexistent WC filter, never ran at all. Fixed, live, not yet order-tested. `inc/coupons.php`.
+- [x] 2026-08-28: 50NEW reusable by repeat guest-checkout customers — turned out incomplete, see 2026-09-03 entry above. `inc/coupons.php`.
 - [x] 2026-08-20: `deploy-theme.ps1` truncated live files to 0 bytes mid-deploy — restored via SiteGround backup, hardened (byte-verify+atomic rename), curl transport. See session-log 2026-08-20.
 - [x] 2026-07-01: Homepage tracked as two separate URLs in GSC — investigated, redirect confirmed correct; residual index history, not a live bug.
 - [x] 2026-05-11: Mixed-content HTTP images on EN+HE homepages — fixed 2026-07-01 (9 images across both pages).

@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-09-03 — Two "customer treated as new" bugs found and fixed (welcome-outreach archive-blindness, 50NEW coupon dead hook); SYNC_HARDENING_PLAN step 9 finalized to a firm decision
+
+- User reported repeat customers getting welcome-outreach tasks and using the first-purchase-only coupon. Root-caused both: `createWelcomeOutreachTasks` only scans live `WebOrdM`, missing first orders archived out after 365 days (`archiveCompletedOrders`) — fixed via a `sc_FirstCompletedDate` floor check (no new reads, reuses an existing lookup), jlmops @575. `inc/coupons.php`'s "First-purchase only" check was hooked to `woocommerce_coupon_is_valid_for_user`, which doesn't exist in WooCommerce core (verified against 3 core files) — so it never ran at all, before or after the 2026-08-28 "fix." Rehooked to the real `woocommerce_coupon_is_valid` filter, live.
+- Neither fix is live-verified yet — user is monitoring for a real repeat-customer order and a real repeat coupon-use attempt, will advise.
+- `SYNC_HARDENING_PLAN.md` step 9 (JLMops_Logs workbook cleanup) turned from "resolve one of two ways" into a firm decision: remove `SysSyncSession`/`SysSyncStatus`/`SysLog_Archive` outright, no repurposing. Still queued behind Test Suite Tier 4, not started.
+- Next: watch for user confirmation on both fixes; then close the bugs.md entries properly (currently marked resolved-but-unverified).
+
+---
+
 ## 2026-09-01/02 — Sync widget skip-log + double-submit fixes verified live (@571/@572); newsletter task-stage bug found+fixed (@573); bundle-health automation removed (@574)
 
 - **Sync widget skip-log** (@571): skip reasons (e.g. "No inventory changes detected") were being discarded in favor of a literal "skipped" — fixed, one-line change.

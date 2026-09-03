@@ -128,7 +128,8 @@
       "WebFetch(domain:web.archive.org)",
       "WebFetch(domain:sanfranciscowineschool.com)",
       "Bash(echo \"exit: $?\")",
-      "Bash(echo \"exit code: $?\")"
+      "Bash(echo \"exit code: $?\")",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [
       "Bash(git -C:*)",

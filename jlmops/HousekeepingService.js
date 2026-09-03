@@ -1157,6 +1157,22 @@ function HousekeepingService() {
       eligibleEmails.forEach(email => {
         const fcd = earliestCompletedByEmail[email];
         const contact = ContactService.getContactByEmail(email);
+
+        // Archive-blindness guard: earliestCompletedByEmail only sees the
+        // live WebOrdM sheet, so a repeat customer whose true first order
+        // has aged out to WebOrdM_Archive (archiveCompletedOrders, 365-day
+        // threshold) would otherwise have a later, non-first order
+        // misread as their first. sc_FirstCompletedDate is cumulative
+        // (ContactImportService._aggregateOrdersByEmail only ever moves it
+        // earlier, never later) so it still holds the true date even after
+        // the underlying order is archived. Found 2026-09-02/03.
+        if (contact && contact.sc_FirstCompletedDate) {
+          const contactFcd = new Date(contact.sc_FirstCompletedDate);
+          if (!isNaN(contactFcd.getTime()) && contactFcd < fcd && contactFcd < sevenDaysAgo) {
+            return; // not really a first order -- skip
+          }
+        }
+
         const name = (contact && contact.sc_Name) || email;
         const language = (contact && contact.sc_Language) || 'en';
 

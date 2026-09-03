@@ -46,8 +46,16 @@ add_action('woocommerce_coupon_options_save', function ($post_id) {
  * linked account) and by account (catches an old order placed under a
  * different email while logged in). If neither turns up a past order,
  * the coupon passes.
+ *
+ * Fixed 2026-09-03: was hooked to 'woocommerce_coupon_is_valid_for_user',
+ * which is not a real WooCommerce filter (verified against WC core
+ * class-wc-discounts.php / class-wc-coupon.php / class-wc-cart.php) --
+ * so this check never ran, for anyone, since the file was created. The
+ * real filter is 'woocommerce_coupon_is_valid', which does not pass a
+ * user email, so it's resolved here instead (logged-in account email,
+ * else the guest email WooCommerce has captured so far in the session).
  */
-add_filter('woocommerce_coupon_is_valid_for_user', function ($valid, $coupon, $user_email) {
+add_filter('woocommerce_coupon_is_valid', function ($valid, $coupon) {
     if (!$valid) {
         return $valid;
     }
@@ -57,11 +65,15 @@ add_filter('woocommerce_coupon_is_valid_for_user', function ($valid, $coupon, $u
 
     $statuses = ['wc-completed', 'wc-processing', 'wc-on-hold'];
 
-    // Resolve the customer's email: prefer the value passed in (covers
-    // guest checkout) and fall back to the logged-in user's account email.
-    $email = $user_email;
-    if (!$email && is_user_logged_in()) {
+    // Resolve the customer's email: logged-in account email first, else
+    // whatever guest email WC()->customer has captured so far this
+    // session (populated as the checkout form is filled in via the
+    // standard update_order_review AJAX flow).
+    $email = '';
+    if (is_user_logged_in()) {
         $email = wp_get_current_user()->user_email;
+    } elseif (function_exists('WC') && WC()->customer) {
+        $email = WC()->customer->get_billing_email();
     }
 
     // Primary check: any past order billed to this email, guest or
@@ -98,4 +110,4 @@ add_filter('woocommerce_coupon_is_valid_for_user', function ($valid, $coupon, $u
     }
 
     return $valid;
-}, 10, 3);
+}, 10, 2);
