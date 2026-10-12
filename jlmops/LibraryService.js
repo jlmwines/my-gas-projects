@@ -627,7 +627,8 @@ const LibraryService = (function() {
 
     /**
      * Attaches a Drive file as the entity's new current version (Decision 7,
-     * Plan B — attach-to-replace). Moves the file into the canonical folder,
+     * Plan B — attach-to-replace). Moves the file into the canonical folder (or,
+     * when the clicker doesn't own it, attaches a copy and leaves the original),
      * names it `<slug> <ts>`, repoints slb_DocUrl, and supersedes the previously
      * current file (stamp "Superseded by →" + move to _archive). Drive file ID is
      * stable through move/rename so external links keep working.
@@ -654,22 +655,29 @@ const LibraryService = (function() {
         const concept = _deriveConcept(entityId);
         const canonicalFolder = _getCanonicalFolder(type, concept);
 
-        const file = DriveApp.getFileById(fileId);
-        // Ownership-transfer fix generalized from createTranslationDraft (which
-        // already does this after forking a Doc) — whoever pasted this URL may
-        // not be the admin, and only the admin can reliably reopen it later.
-        // Skip the transfer when the admin already owns it (e.g. they created the
-        // Doc themselves) — setOwner() was previously called unconditionally.
+        let file = DriveApp.getFileById(fileId);
+        // Ownership: only the admin can reliably reopen library files later, but
+        // Drive only lets the current owner transfer ownership. So:
+        //   - admin owns it            → attach as-is (move + rename)
+        //   - the clicker owns it      → transfer to admin, then move + rename
+        //   - anyone else / unknown    → attach a copy (owned by the clicker,
+        //     transferred to admin if needed); the original is left in place.
         const adminEmail = TaskService.getUserByRole('admin');
-        if (adminEmail) {
-            let currentOwnerEmail = '';
-            try {
-                currentOwnerEmail = file.getOwner().getEmail();
-            } catch (ownerErr) {
-                // Owner not resolvable (e.g. shared-drive file) — fall back to
-                // attempting the transfer, matching the prior unconditional behavior.
+        let currentOwnerEmail = '';
+        try {
+            currentOwnerEmail = file.getOwner().getEmail();
+        } catch (ownerErr) {
+            // Owner not resolvable (e.g. shared-drive file) — treated as not-ours → copy.
+        }
+        let copied = false;
+        if (adminEmail && currentOwnerEmail !== adminEmail) {
+            if (currentOwnerEmail && currentOwnerEmail === _getActor()) {
+                file.setOwner(adminEmail);
+            } else {
+                file = file.makeCopy(_versionedFileName(entityId), canonicalFolder);
+                copied = true;
+                if (_getActor() !== adminEmail) file.setOwner(adminEmail);
             }
-            if (currentOwnerEmail !== adminEmail) file.setOwner(adminEmail);
         }
         // Move if not already in canonical folder.
         const parents = file.getParents();
@@ -700,7 +708,7 @@ const LibraryService = (function() {
         // active folder returns to one current file per slug. Skip when there was
         // no prior file or the same file was re-attached.
         let superseded = false;
-        if (oldFileId && oldFileId !== fileId) {
+        if (oldFileId && oldFileId !== file.getId()) {
             _supersedeFile(oldFileId, newUrl);
             superseded = true;
             logEntityActivity({
@@ -710,7 +718,7 @@ const LibraryService = (function() {
             });
         }
 
-        return { entity: updated, docUrl: newUrl, superseded: superseded };
+        return { entity: updated, docUrl: newUrl, superseded: superseded, copied: copied };
     }
 
     /**

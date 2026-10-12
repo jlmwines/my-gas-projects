@@ -325,7 +325,8 @@ function WebAppLibrary_attachExistingDoc(params) {
       ok: true,
       updated: { entity: shaped },
       docUrl: result.docUrl,
-      superseded: !!result.superseded
+      superseded: !!result.superseded,
+      copied: !!result.copied
     };
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);

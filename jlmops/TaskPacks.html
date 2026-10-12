@@ -312,7 +312,7 @@
             return;
           }
           ModalOverlay.close('lvAttachModal');
-          TaskWidgets.toast(result.superseded ? 'New version attached, previous archived' : 'Doc attached');
+          TaskWidgets.toast((result.copied ? 'Copy attached' : 'Doc attached') + (result.superseded ? ', previous archived' : ''));
           ctx.reload();
         })
         .withFailureHandler(function(err) {
