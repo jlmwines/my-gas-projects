@@ -42,9 +42,9 @@ Colors/fonts mirror the site's brand — source of truth is the theme CSS `:root
 
 ## File Structure
 
-- `marketing/newsletter/issues/2026-06/2026-06-handling-en.html` — English email (full HTML for reference)
-- `marketing/newsletter/issues/2026-06/2026-06-handling-he.html` — Hebrew email (RTL, full HTML for reference)
-- Per-issue image assets live alongside each issue's HTML under `marketing/newsletter/issues/<month>/`
+- `content/newsletter/2026-06/2026-06-handling-en.html` — English email (full HTML for reference)
+- `content/newsletter/2026-06/2026-06-handling-he.html` — Hebrew email (RTL, full HTML for reference)
+- Per-issue files and image assets live under `content/newsletter/<YYYY-MM>/`; shared assets in `content/newsletter/images/`
 
 ## Hebrew Version Checklist
 

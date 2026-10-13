@@ -14,6 +14,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 ### Open
 
+- [ ] 2026-10-13: Welcome-outreach tasks fire for first-time gift purchasers — they have no own-use experience to follow up on; exclude gift orders. `CONTACT_MANAGER_PLAN.md`.
 - [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`).
 - [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization.
 - [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects — low priority, revisit only if it causes real confusion.
