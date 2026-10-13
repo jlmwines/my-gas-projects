@@ -108,7 +108,7 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 - Execution-time trends invisible; we know runs are getting longer only by anecdote.
 - Quota usage invisible.
 - OAuth scope revocations require a pre-emptive warning (memory exists) but no automated detector.
-- **No concurrency control between scheduled triggers and user-initiated workflows. (Tier 1.3 — NOT built; highest-risk remaining session.)** Housekeeping running while a user mid-syncs (or two triggers stepping on the same `SysJobQueue` row) is undefended; the zombie killer is not a concurrency control. Confirmed greenfield: `ScriptApp.newTrigger` appears once and `LockService` appears nowhere in code.
+- ~~No concurrency control between scheduled triggers and user-initiated workflows (Tier 1.3).~~ **Built** via `SYNC_HARDENING_PLAN.md` (Bug 5 Stages A-E + D1, `LockHelpers.js#withScriptLock`), live by @570; facts in `../docs/ARCHITECTURE.md` §2.5.4.1. §1.3 below is kept as the original spec only.
 
 ### 3.4 Integrations
 

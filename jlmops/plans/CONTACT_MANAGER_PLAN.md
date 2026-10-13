@@ -135,7 +135,7 @@ Future triggers (cooling 91–180d, VIP recognition, win-back) ship as new topic
 
 **Files touched:** `HousekeepingService.js#createWelcomeOutreachTasks` (both fixes + migration seed), `jlmops/generate-config.js` (new `RUNTIME_KEYS` entry). **Not building:** no change to `TaskService.createTask` itself, no change to the floor-date lower-bound mechanism (still correct as the "don't backfill pre-feature customers" guard), no UI change.
 
-### Follow-on bug — archive-blindness (found 2026-09-02, fixed 2026-09-03, deployed jlmops @575, not yet live-verified)
+### Follow-on bug — archive-blindness (found 2026-09-02, fixed 2026-09-03, deployed jlmops @575, verified live 2026-10-10)
 
 User reported repeat customers getting a fresh "Welcome — first order" task on a recent, non-first order. Root cause, confirmed by reading `createWelcomeOutreachTasks`: `earliestCompletedByEmail` is built by scanning the live `WebOrdM` sheet only (`:1052-1079`), which never sees `WebOrdM_Archive` — and `archiveCompletedOrders` moves completed orders older than 365 days out of `WebOrdM` into that archive (`ORDER_ARCHIVE_THRESHOLD_DAYS`, `:1776`). So a customer whose true first order is over a year old has it invisible to this sweep; their next (non-first) order becomes the earliest one the sweep can see, and gets misread as "first." Pre-existing gap, not introduced by the 2026-08-27 recency/dedup fix above.
 

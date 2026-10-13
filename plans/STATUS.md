@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-09-03. jlmops @575 live: two "customer treated as new when they aren't" bugs found and fixed today, both awaiting live verification — the welcome-outreach sweep misreading a repeat customer's non-first order as their first (true first order aged into `WebOrdM_Archive`, invisible to the live-sheet scan; fixed via a `sc_FirstCompletedDate` floor check, `CONTACT_MANAGER_PLAN.md`), and the 50NEW first-purchase coupon check (`inc/coupons.php`, theme, deployed same day) which turned out to have never actually run at all — hooked to a WooCommerce filter name that doesn't exist in core, so the 2026-08-28 "fix" corrected logic that was never being called. Real hook (`woocommerce_coupon_is_valid`) now wired in. `SYNC_HARDENING_PLAN.md` step 9 (JLMops_Logs workbook tab cleanup) revised to a firm decision: remove `SysSyncSession`/`SysSyncStatus`/`SysLog_Archive` outright, still queued behind Test Suite Tier 4.
+**Updated:** 2026-10-13. jlmops @576 live and stable; Next Action items 1-5 and 8-10 date from July-August and still need a user status check (newsletters, flyer round 2, ads, region posts, cartons/tastings), with content publishing chronically gated on the manager.
 
 ## At a glance
 
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-09-03 |
+| Last Active | 2026-10-13 |
 | Revenue | Steady |
-| Deploy Version | jlmops @575 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-09-03 · theme 2026-08-20 |
+| Deploy Version | jlmops @576 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-10-12 · theme 2026-09-03 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -50,7 +50,6 @@ The live "what now" — daily review reads these first.
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E, G, and J (product-editor load time + manager submit/verify hang, plus the follow-on product-detail load-performance work) resolved and smoke-tested clean. Session F folded into `jlmops/plans/SYNC_HARDENING_PLAN.md`, now the single home for all sync-pipeline work: Bug 5 Stages A/B, D1 (job-queue locking), Bug 6, D2/D3/D4, and now Bug 5 Stages C/E (`purgeOldJobs`/`pullOrders` locking) all built and deployed live (@570) 2026-08-31. D2 also caught and fixed a third, previously-undocumented broken sync-guard (`WooProductPullService.pullProducts`, same `.currentStage`-vs-`.stage` defect as an already-known one). Bug 2 (Generate button visually reappears mid-export, confirmed capable of a real double-submit) is fixed, live @572, and verified 2026-09-02 on a real sync (single export call, new stage fired correctly, button confirmed not reappearing); Bugs 1 and 3 still need a live repro. **Stages C/E: 5+ days live (8/27-9/2), zero errors**, including a genuine sync-vs-housekeeping collision on 9/2 that resolved cleanly — though that specific case was caught by D2's guard, not Stage E's own narrower inside-lock re-check, which remains formally unexercised. H (timestamps + date-format audit), I (count-task creation audit) still pending, unrelated to sync.
-- **Welcome-outreach recency + dedup fix** (`jlmops/plans/CONTACT_MANAGER_PLAN.md`) — 7-day recency window + `welcomed_emails` dedup deployed live @568, migration seed confirmed firing correctly on real data (11 existing recipients seeded, zero errors) same day. Companion efficiency fix (skip order-driven housekeeping when `pullOrders` confirms zero order changes) deployed @569, confirmed live 2026-08-31 (`performFrequentMaintenance` skipped welcome-outreach/pending-payment subtasks on two zero-order-change cycles). Follow-on archive-blindness fix (repeat customer's true first order aged out of live `WebOrdM` into `WebOrdM_Archive`, misread as a fresh first order) deployed @575, confirmed working as expected in live use (user, 2026-10-10).
 - **Test suite extension** (`jlmops/plans/TEST_SUITE_EXTENSION_PLAN.md`) — Tiers 1-3 built, deployed (@566), and run live 2026-08-27: 54/54 passing (Tier 1 caught a real bug on first run, `evaluateCondition`'s boolean/zero coercion, fixed; Tier 2 caught and corrected a wrong plan claim — `_executeSchemaComparison` isn't I/O-free like its four siblings, it calls `ConfigService.getAllConfig()`, so only its guard path is tested). Only Tier 4 remains (I/O-heavy code, explicitly deferred, needs a mocking-layer decision).
 - **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.

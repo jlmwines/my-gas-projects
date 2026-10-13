@@ -3,7 +3,10 @@
 Known bugs across all projects. Use `/bug [project] description` to add.
 Projects: jlmops, web, marketing, content
 
-One line per item: date + symptom + pointer to the plan doc holding the analysis, where one exists. The analysis itself lives in the plan doc or a git commit — not here, and not in `.claude/session-log.md` (that file's own rule bans root-cause essays and commit hashes; see portfolio kernel, "Claude session documents").
+One line per item: date + symptom + pointer to the plan doc or git commit holding the analysis.
+Analysis never lives here or in `.claude/session-log.md` (portfolio kernel, "Claude session documents").
+
+Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 ---
 
@@ -11,125 +14,52 @@ One line per item: date + symptom + pointer to the plan doc holding the analysis
 
 ### Open
 
-- [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`). No plan doc yet.
-- [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization. Not yet scheduled into `CODE_AUDIT_FIX_SEQUENCE.md`.
-- [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects, not just ACTIVE/PLANNING — low priority, revisit only if it causes real confusion.
-- [ ] 2026-07-23: **`doGet`'s role check is a login gate, not an authorization boundary** — no server-side re-check on mutating endpoints. See `CODE_AUDIT_FIX_SEQUENCE.md` Session R.
-- [ ] 2026-07-22: Woo API push's `attributes` array doesn't prune Region/Grape/Harmonize/Contrast on existing products — WooCommerce PUT doesn't full-replace `attributes` as assumed. Not urgent, owner OK'd leaving as-is. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
-- [ ] 2026-07-20: Admin Products "Correct Product Name" action (SKU Management) applies with no confirmation step first — risk of accidental edit. `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
-- [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh when re-run from Admin Dev — only a nightly/manual housekeeping run updates the dashboard's cached status.
-- [ ] 2026-07-16: "System Health Status" task's displayed date is frozen at original creation, not last-run — any view surfacing its Created Date misrepresents last-check time.
-- [ ] 2026-07-16: Woo Orders integration heartbeat shows red every morning before ~08:00 IL — the staleness threshold isn't business-hours-aware like the pull cadence it's checking.
-- [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates" or "Create Content Tasks" — no defect found in code, needs a live repro. `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
-- [ ] 2026-07-02: `ConfigService.loadConfig` silently drops the second (P03/P04) key-value pair for any non-schema setting — worked around for `ga4_audience_report`; systemic fix not done, other two-param entries unaudited.
-- [ ] 2026-06-16: Product Replacement reads dead WebProdM columns (`wpm_WebIdEn`/`wpm_WebIdHe`) — not yet traced whether this breaks the reassign step or is cosmetic.
-- [ ] 2026-06-14: Web inventory export sync-state race (concurrency, not the silent-loss leg — that's fixed). `jlmops/plans/RELIABILITY_AUDIT.md` §1.3.
-- [ ] 2026-05-28: Mailchimp campaign sends not written to per-contact activity log — `pullRecentCampaigns` doesn't write `comm.campaign` rows to `SysContactActivity`.
+- [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`).
+- [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization.
+- [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects — low priority, revisit only if it causes real confusion.
+- [ ] 2026-07-23: `doGet`'s role check is a login gate, not an authorization boundary. `CODE_AUDIT_FIX_SEQUENCE.md` Session R.
+- [ ] 2026-07-20: Admin Products "Correct Product Name" applies with no confirmation step. `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
+- [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh when re-run from Admin Dev — only housekeeping updates its cached status.
+- [ ] 2026-07-16: "System Health Status" task's displayed date is frozen at original creation, not last-run.
+- [ ] 2026-07-16: Woo Orders heartbeat shows red every morning before ~08:00 IL — staleness threshold isn't business-hours-aware.
+- [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates"/"Create Content Tasks". `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
+- [ ] 2026-07-02: `ConfigService.loadConfig` drops the second (P03/P04) key-value pair for non-schema settings — worked around for `ga4_audience_report` only.
+- [ ] 2026-06-16: Product Replacement reads dead WebProdM columns (`wpm_WebIdEn`/`wpm_WebIdHe`) — not yet traced whether it breaks the reassign step.
+- [ ] 2026-05-28: Mailchimp campaign sends not written to `SysContactActivity` (`pullRecentCampaigns` writes no `comm.campaign` rows).
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
-- [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop only detects failures that *throw* — most catch internally, unchecked. Needs return-value checks.
-- [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead — no UI, no push, empty for known sold-individually SKUs. Needs UI field + push payload addition. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
+- [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop only detects failures that *throw* — most catch internally, unchecked.
+- [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead — no UI, no push. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
 
 ### Resolved (recent)
 
-- [x] 2026-09-03: Welcome task fired for repeat customers with an archived first order — fixed, not yet live-verified. `CONTACT_MANAGER_PLAN.md`. jlmops @575.
-- [x] 2026-09-02: Bundle deficiency count on view-load was stale (nightly/post-sync auto-refresh only) — automation removed, review now manual-only. jlmops @574.
-- [x] 2026-09-01: "Newsletter" content stage produced a task invisible to `PublishingView`'s task filter, redundant with Print & Distribute anyway — removed. jlmops @573.
-- [x] 2026-09-01: Sync widget Generate button reappeared mid-export, could double-submit — fixed, verified live. `jlmops/plans/SYNC_HARDENING_PLAN.md` Bug 2. jlmops @572.
-- [x] 2026-09-01: Sync widget skip-log showed literal "skipped" instead of the real reason — fixed. jlmops @571.
-- [x] 2026-08-21: Welcome-outreach recency + dedup gap — fixed, deployed @568. `jlmops/plans/CONTACT_MANAGER_PLAN.md`.
-
 _One line each; full root-cause analysis lives in the git commit._
 
-- [x] 2026-08-21: `JLMops_Logs` hit Sheets' 10M-cell limit (33,000+ row SysLog), blocking all writes — `cleanOldLogs` now deletes rows >7 days. jlmops @547.
-- [x] 2026-08-21: Two log-volume sources fixed — `BundleService._parseWoosbJson` unconditional log; `exportWebInventory` wrong-field warn. jlmops @547.
-- [x] 2026-08-21: Real error messages from failed jobs got overwritten with a generic relay error across 3 layers — fixed. jlmops @547-@548.
-
-- [x] 2026-08-17: Vendor SKU Update couldn't find a product via its stale Web SKU once Comax had already synced to the vendor's new SKU, so Step 2 falsely rejected the real target SKU as a conflict — fixed and smoke-tested confirmed working, jlmops @546. `jlmops/plans/VENDOR_SKU_UPDATE_FIX_PLAN.md`.
-
-- [x] 2026-07-26: `WebXltM` found empty, blocking every sync — root cause + fix in commit `27bd2cd`, deployed @544. Related gaps tracked in `jlmops/plans/RELIABILITY_AUDIT.md` §1.5/§1.6.
-- [x] 2026-07-24: Code-audit fix sequence — ~21 findings fixed/deployed (jlmops @530-@543); full list in `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md`. Deferred: server-side authorization (see Open list above), two dashboard-panel redesigns.
-- [x] 2026-07-16: Publishing view Calendar tab crashed on load for both roles ("slug.slice is not a function") — `renderCalendar()`'s task loop had no content-type filter, so non-content tasks with numeric entityIds (exposed by the 2026-07-10 `_deriveEntityId` priority fix) reached `.slice()` unguarded. Fixed @509: loop now filters to `task.content.*` (matching `renderTasks()`); Calendar-tab error routing also fixed (was writing failures only to the Campaigns tab's container). Confirmed working live, both roles.
-- [x] 2026-07-16: Admin Inventory failed to load live (Comax Sync card's file-link buttons) — reverted to pre-@489 state @507; root mechanism never found.
-- [x] 2026-07-15: Manager product-editor slow load (15-18s) + submit/verify modal race — fixed @479-@482. `jlmops/docs/WORKFLOWS.md` §16.
-- [x] 2026-07-15: New products triggered spurious `status_mismatch`/`translation_missing` warnings — fixed @490 (publish-status source filter).
-- [x] 2026-07-15: Admin Tasks view showed SKU instead of product name for entity-linked tasks — fixed @491.
-- [x] 2026-07-15: Product-editor still slow (10s) after Session J cache fix — new regression, uncached full `SysTasks` scan — fixed @495.
-- [x] 2026-07-15: `WebAppTasks.getOpenTasks`'s "60-second cache" never worked (module-level var, cold every call) — fixed @496 (real `CacheService`).
-- [x] 2026-07-15: `getManagerWidgetData` computed category-stock health live on every load (~13-15s) — moved to housekeeping cadence + cache @498.
-- [x] 2026-07-14: Admin "Accept Suggestion" had no loading feedback on submit — fixed @484.
-- [x] 2026-07-14: Admin/Manager Dashboard task-detail modal always showed assignee as unassigned — fixed @477.
-- [x] 2026-07-10: "Failed jobs" health metric only reported oldest failure's age — fixed @476.
-- [x] 2026-07-10: Admin Tasks/Publishing/Library task lists showed no/wrong SKU for product-topic validation tasks — fixed @468.
-- [x] 2026-07-10: Admin Dashboard task-detail "Done" button appeared to do nothing — fixed @463 (missing `TaskWidgets.html` include).
-- [x] 2026-07-06: `attachExistingDoc` never transferred Drive ownership to admin — resolved 2026-07-08.
-- [x] 2026-07-06: Admin Bundles message strip never closed — fixed @441.
-- [x] 2026-07-06: `createTranslationDraft`'s HE Doc copy unopenable by admin — fixed @442.
-- [x] 2026-07-03: Unit-test suites' expected failures were logged into production SysLog, looking like real sync errors — fixed @440 (`LoggerService.setTestSuppression`).
-- [x] 2026-06-24: Draft products flagged as unexpected by ops validation — fixed @368/@370/@371.
-- [x] 2026-06-08: Admin Products view "Failed to load" (timeout) — fixed @273 (lazy-load redesign).
-- [x] 2026-06-08: Admin Products no loading state on mount — fixed @271 (superseded by @273).
-- [x] 2026-06-08: Accepted blank-`st_Status` tasks invisible — not reproducible, no action taken.
-- [x] 2026-06-07: `task.order.packing_available` orphaned at 0 Ready — fixed @274.
-- [x] 2026-06-04: Bundle price calc counted qty=0 as qty=1 — fixed @227/@230.
-- [x] 2026-06-04: Sync view rendered literal include tag — fixed @223.
-- [x] 2026-06-02: `task.order.packing_available` reads as overdue — demoted to no-due nudge.
-- [x] 2026-06-01: Accepted tasks reappear as "New" after admin close — fixed @191.
-- [x] 2026-06-01: Bundles view N+1 sheet reads (100s+ load) — fixed @228/@229.
-- [x] 2026-05-29: Contact reconciliation false-positive on immaterial drift — fixed @201.
-- [x] 2026-05-29: Brurya autocomplete "Argument too large" — fixed @169.
-- [x] 2026-05-28: Contact summary aggregates ≠ order list — fixed @151/@152.
-- [x] 2026-05-27: `validateDeployment` false positives / un-closeable — resolved 2026-06-03 (pinned-ID wrapper).
-- [x] 2026-05-27: SKU Replacement leaves web-side orphans — fixed @148 (`Fix Orphan SKU` action; `webProductReassign` gap remains, tracked as an open item above).
-- [x] 2026-05-17: No admin UI for lookup values — fixed @121.
-- [x] 2026-05-15: `backfillOrderTotals` destructive — removed (no callers).
-- [x] 2026-05-15: ManagerContactView search latency — fixed @165.
-- [x] 2026-05-15: Admin Projects task delete leaves records — fixed @149.
-- [x] 2026-05-12: Project task creation broken — fixed @90/@91/@92.
-- [x] 2026-05-04: Comax export includes bundle parent SKU — verified already fixed; entry was stale.
-- [x] 2026-05-04: CRM cleanup (bundle) — fixed @150.
-- [x] 2026-03-10: Decanting field treats 0 as empty — manager can now pick "0".
-
-### Resolved
-
-- [x] 2026-05-04: 2026-02-09 manager orders view requires refresh to reload — verified in code, self-executing load + manual refresh button both present.
-- [x] 2026-05-04: 2026-01-28 inventory count task — manager date / admin SKU+name — resolved (c1af348).
-- [x] 2026-05-04: 2026-01-20 accepted inventory counts not appearing in Comax sync — resolved per user.
-- [x] 2026-05-04: 2025-12-29 changed Woo coupon plugin auto-apply URL pattern — WON'T FIX.
-- [x] 2026-05-04: 2025-12-29 new coupon plugin accepts comma-separated emails — N/A, plugin removed.
-- [x] 2026-05-04: Gift detection keyword logic — WON'T FIX, simpler rule adopted.
-- [x] 2026-05-04: War-support detection wrong field — N/A, feature retired.
-- [x] 2026-01-26: Bundle export to Comax (inventory) — fixed (bundleSkus filter).
-- [x] 2026-01-20: Brurya days showing 999 — resolved 2026-01-23.
-- [x] 2026-05-12: Brurya days showing 999 recurred — structural fix @93 (SysConfig rebuild no longer wipes runtime-mutable keys). `jlmops/plans/TECH_DEBT_AUDIT.md` §5.2.
-- [x] 2025-12-29: Packing slips bundle count — verified, PrintService excludes bundle products.
-- [x] 2025-12-23: Sync confirmation button not appearing after order export.
-- [x] 2025-12-23: Need confirmation dialog before confirming sync steps.
-- [x] 2025-12-23: Sync importing full order history (832 orders).
-- [x] 2025-12-23: Missing task type `task.data.review`.
-- [x] 2025-12-23: ActivityBackfillService exceeds maximum execution time.
-- [x] 2025-12-18: Manager order view missing billing/shipping names.
-- [x] 2025-12-17: Sync step 4 shows validation status briefly.
-- [x] 2025-12-17: Sync lacks final confirmation completion update.
-- [x] 2025-12-15: Bundle products incorrectly flagged for Comax comparison.
+- [x] 2026-10-12: Admin attach of a manager-owned Doc failed at `setOwner` — now attaches a copy. Verified live, jlmops @576. `jlmops/docs/DATA_MODEL.md`.
+- [x] 2026-09-03: Welcome task fired for repeat customers with an archived first order — fixed @575, verified live 2026-10-10. `CONTACT_MANAGER_PLAN.md`.
+- [x] 2026-09-02: Bundle deficiency count on view-load was stale — automation removed, review now manual-only. jlmops @574.
+- [x] 2026-09-01: "Newsletter" content stage produced a task invisible to `PublishingView` — stage removed. jlmops @573.
+- [x] 2026-09-01: Sync widget Generate button reappeared mid-export, could double-submit — fixed, verified live. `SYNC_HARDENING_PLAN.md` Bug 2. @572.
+- [x] 2026-09-01: Sync widget skip-log showed literal "skipped" instead of the real reason — fixed. jlmops @571.
+- [x] 2026-08-21: Welcome-outreach recency + dedup gap — fixed, deployed @568. `jlmops/plans/CONTACT_MANAGER_PLAN.md`.
+- [x] 2026-08-21: `JLMops_Logs` hit Sheets' 10M-cell limit, blocking all writes — `cleanOldLogs` now deletes rows >7 days. jlmops @547.
+- [x] 2026-08-21: Two log-volume sources fixed (`BundleService._parseWoosbJson`, `exportWebInventory` warn). jlmops @547.
+- [x] 2026-08-21: Real error messages from failed jobs overwritten by a generic relay error across 3 layers — fixed. jlmops @547-@548.
+- [x] 2026-08-17: Vendor SKU Update rejected the real target SKU as a conflict once Comax had synced to the new SKU — fixed, smoke-tested, @546.
+- [x] 2026-06-14: Web inventory export sync-state race — closed by `SYNC_HARDENING_PLAN.md` Bug 5 Stages A-E (script lock), live by @570.
 
 ## web
 
 ### Open
 
-- [ ] 2026-06-16: Gift + accessory descriptions blanked on jlmwines.com — restored text must land in WebDetM `wdm_DescriptionEn/He`, not just the live site, or the next overlay re-blanks it.
-- [ ] 2026-05-11: Auto-push short URL redirects to RankMath (deferred) — manual paste acceptable at current volume (5-10/month); build trigger noted.
+- [ ] 2026-06-16: Gift + accessory descriptions blanked on the site — restored text must land in WebDetM `wdm_DescriptionEn/He` or the next overlay re-blanks it.
+- [ ] 2026-05-11: Auto-push short URL redirects to RankMath (deferred) — manual paste acceptable at current volume (5-10/month).
 
 ### Resolved
 
 - [x] 2026-09-03: 50NEW first-purchase check hooked to a nonexistent WC filter, never ran at all. Fixed, live, not yet order-tested. `inc/coupons.php`.
 - [x] 2026-08-28: 50NEW reusable by repeat guest-checkout customers — turned out incomplete, see 2026-09-03 entry above. `inc/coupons.php`.
-- [x] 2026-08-20: `deploy-theme.ps1` truncated live files to 0 bytes mid-deploy — restored via SiteGround backup, hardened (byte-verify+atomic rename), curl transport. See session-log 2026-08-20.
-- [x] 2026-07-01: Homepage tracked as two separate URLs in GSC — investigated, redirect confirmed correct; residual index history, not a live bug.
-- [x] 2026-05-11: Mixed-content HTTP images on EN+HE homepages — fixed 2026-07-01 (9 images across both pages).
-- [x] 2026-05-08: Removed "Magnums" product category — shipped 2026-05-18.
-- [x] 2026-05-11: WC admin SKU display + search gone — resolved in theme v1.2.20 (hide-SKU filter gated to `!is_admin()`).
-- [x] 2026-05-03: deploy-theme.ps1 didn't delete orphan files — fixed (orphan detection + delete).
+- [x] 2026-08-20: `deploy-theme.ps1` truncated live files to 0 bytes mid-deploy — restored from backup, hardened (byte-verify + atomic rename, curl).
 
 ## marketing
 
@@ -137,16 +67,12 @@ _One line each; full root-cause analysis lives in the git commit._
 
 (none)
 
-### Resolved
-
-- [x] 2026-06-22: PublishingView Calendar showed library entities as holiday-style rows — resolved via `CALENDAR_LIBRARY_LOOP_PLAN`.
-
 ## content
 
 ### Open
 
-- [ ] 2026-08-17: `push-posts.js` MANIFEST paths stale for 9 basics posts — point at old flat path, not `content/basics/<topic>/`. Fixed for negev/galilee only.
+- [ ] 2026-08-17: `push-posts.js` MANIFEST paths stale for 9 basics posts (old flat path, not `content/basics/<topic>/`). Fixed for negev/galilee only.
 
 ### Resolved
 
-- [x] 2026-08-17: `negev` MANIFEST entry pointed at `regions/negev-en.post.md` instead of the actual `regions/negev/negev-en.post.md` — fixed alongside adding the `galilee` entry.
+- [x] 2026-08-17: `negev` MANIFEST entry pointed at the wrong path — fixed alongside adding the `galilee` entry.
