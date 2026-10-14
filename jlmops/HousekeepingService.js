@@ -2070,6 +2070,7 @@ function HousekeepingService() {
       const headers = taskSchema.headers.split(',');
       const statusCol = headers.indexOf('st_Status');
       const createdDateCol = headers.indexOf('st_CreatedDate');
+      const doneDateCol = headers.indexOf('st_DoneDate');
 
       if (statusCol === -1 || createdDateCol === -1) {
         logger.error('HousekeepingService', 'archiveCompletedTasks', `Required columns not found in schema. st_Status: ${statusCol}, st_CreatedDate: ${createdDateCol}`);
@@ -2081,8 +2082,12 @@ function HousekeepingService() {
 
       const filterTasks = (row) => {
         const status = row[statusCol];
-        const createdDate = new Date(row[createdDateCol]);
-        return (status === 'Done' || status === 'Cancelled') && createdDate < thresholdDate;
+        // Retention counts from completion (st_DoneDate); fall back to creation
+        // date when no done date was stamped. Otherwise a task finished late is
+        // archived on the next run.
+        const doneDate = doneDateCol !== -1 && row[doneDateCol] ? new Date(row[doneDateCol]) : null;
+        const ageDate = doneDate && !isNaN(doneDate) ? doneDate : new Date(row[createdDateCol]);
+        return (status === 'Done' || status === 'Cancelled') && ageDate < thresholdDate;
       };
 
       movedCount = _moveRowsToArchive(taskSheet, taskArchiveSheet, filterTasks);
