@@ -15,8 +15,8 @@ if (!defined('ABSPATH')) {
 get_header();
 
 $is_he   = is_rtl();
-$eyebrow = $is_he ? 'עם אביתר' : 'with Evyatar';
-$heading = $is_he ? 'שיחת יין'  : 'Wine Talk';
+$heading    = $is_he ? 'שיחת יין'  : 'Wine Talk';
+$subheading = $is_he ? 'עם אביתר' : 'with Evyatar';
 ?>
 
 <main id="content" class="site-main">
@@ -24,8 +24,8 @@ $heading = $is_he ? 'שיחת יין'  : 'Wine Talk';
         <?php
         if (function_exists('jlmwines_render_blog_roll')) {
             jlmwines_render_blog_roll([
-                'eyebrow'  => $eyebrow,
-                'heading'  => $heading,
+                'heading'    => $heading,
+                'subheading' => $subheading,
                 'limit'    => 30,
                 'columns'  => 3,
                 'category' => 'basics',

@@ -129,6 +129,7 @@ function jlmwines_render_blog_roll($args = []) {
         'columns'  => 3,
         'heading'  => is_rtl() ? 'שיחות יין' : 'Wine talk',
         'eyebrow'  => '',
+        'subheading' => '',   // small label rendered BELOW the heading (eyebrow style)
         'cta_url'  => get_permalink(get_option('page_for_posts')) ?: home_url('/blog/'),
         'cta_text' => is_rtl() ? 'כל הפוסטים' : 'All posts',
         'category' => '',
@@ -151,13 +152,16 @@ function jlmwines_render_blog_roll($args = []) {
     }
     ?>
     <section class="section section-blog">
-        <?php if ($args['heading'] || $args['eyebrow']) : ?>
+        <?php if ($args['heading'] || $args['eyebrow'] || $args['subheading']) : ?>
             <header class="section-header">
                 <?php if ($args['eyebrow']) : ?>
                     <p class="section-eyebrow"><?php echo esc_html($args['eyebrow']); ?></p>
                 <?php endif; ?>
                 <?php if ($args['heading']) : ?>
                     <h2 class="section-heading"><?php echo esc_html($args['heading']); ?></h2>
+                <?php endif; ?>
+                <?php if ($args['subheading']) : ?>
+                    <p class="section-eyebrow" style="margin: var(--s-2) 0 0"><?php echo esc_html($args['subheading']); ?></p>
                 <?php endif; ?>
             </header>
         <?php endif; ?>

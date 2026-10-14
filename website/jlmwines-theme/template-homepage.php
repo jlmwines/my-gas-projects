@@ -215,8 +215,8 @@ get_header();
         // ─── 7. Blog roll — Wine Talk ─────────────────────────────────
         if (function_exists('jlmwines_render_blog_roll')) {
             jlmwines_render_blog_roll([
-                'eyebrow'  => is_rtl() ? 'מאת אביתר' : 'from Evyatar',
-                'heading'  => is_rtl() ? 'שיחת יין' : 'Wine Talk',
+                'heading'    => is_rtl() ? 'שיחת יין' : 'Wine Talk',
+                'subheading' => is_rtl() ? 'עם אביתר' : 'with Evyatar',
                 'limit'    => 3,
                 'columns'  => 3,
                 'category' => 'basics',
