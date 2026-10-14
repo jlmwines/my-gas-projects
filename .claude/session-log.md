@@ -4,9 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
-## 2026-10-13 — Cleanup pass (all areas)
+## 2026-10-13/14 — Cleanup pass; September AYIW email built + scheduled (all areas)
 
 - Bugs/session-log/STATUS/RELIABILITY_AUDIT groomed; details in `.claude/last-cleanup.md`.
+- September AYIW HTML built from the canonical Library Docs (`content/newsletter/2026-09/`), rebuilt after manager edits, scheduled in Mailchimp. Newsletter files live in `content/newsletter/`, not `marketing/newsletter/issues/` (doc paths fixed).
+- Logged bug: welcome-outreach should skip first-time gift buyers. Inventory push "Unexpected token '<'" (HTML from host) was transient; Retry cleared it.
+- Suggested to user: permanently delete bot sign-ups in Mailchimp, check double opt-in; footer-form honeypot check offered, not done.
 - Next: user to answer the stale Next Action questions (newsletters, flyer round 2, Google Ads, region posts, cartons/tastings, 50NEW repeat test), then rewrite those STATUS items.
 - Context: user confirmed content slippage is a manager-attention problem they handle in person; don't propose process redesigns for it unless asked.
 

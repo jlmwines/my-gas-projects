@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-13. jlmops @576 live and stable; Next Action items 1-5 and 8-10 date from July-August and still need a user status check (newsletters, flyer round 2, ads, region posts, cartons/tastings), with content publishing chronically gated on the manager.
+**Updated:** 2026-10-14. jlmops @576 live and stable, September AYIW email sent; Next Action items 2-5 and 8-10 date from July-August and still need a user status check (newsletters, flyer round 2, ads, region posts, cartons/tastings), with content publishing chronically gated on the manager.
 
 ## At a glance
 
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-10-13 |
+| Last Active | 2026-10-14 |
 | Revenue | Steady |
 | Deploy Version | jlmops @576 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-12 · theme 2026-09-03 |
