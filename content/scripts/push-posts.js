@@ -108,6 +108,14 @@ const MANIFEST = [
     enFile: 'regions/galilee/galilee-en.post.md',
     heFile: 'regions/galilee/galilee-he.post.md',
     enCategoryId: 1272, heCategoryId: 1273   // Regions / אזורים (WPML-translated terms)
+  },
+  {
+    name: 'central-mountains',
+    enSlug: 'central-mountains-wine', enId: 67855,
+    heSlug: 'central-mountains-wine', heId: 67857,   // WPML translation stub, created by user in wp-admin
+    enFile: 'regions/central-mountains/central-mountains-en.post.md',
+    heFile: 'regions/central-mountains/central-mountains-he.post.md'
+    // No category IDs: drafts already carry Regions + Wine Basics; a push would replace them with one.
   }
 ];
 
