@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-14 — Central Mountains published; jlmops @577/@578; Wine Talk heading (all areas)
+
+- jlmops @577: task archive ages from `st_DoneDate` (late-finished library tasks were archived immediately). @578: order activity amount includes tax. Both untested until the next nightly housekeeping.
+- Central Mountains region post published EN+HE ("The Wine Backbone: Central Mountains"); companion email HTML EN+HE built; Hebrew Mailchimp footer text recorded in `NEWSLETTER_REFERENCE.md`.
+- Theme: Wine Talk heading now above "with Evyatar" on /articles/ and homepage.
+- Preview text ≤150 now a counted (not estimated) drafting step in `content/CLAUDE.md`.
+- Gotcha: publishing from a wp-admin editor tab opened before a push overwrites the pushed content.
+- Next: user answers the stale Next Action questions; Coastal Plain (Slot D, 2026-10-19) awaits manager lock.
+
+---
+
 ## 2026-10-13/14 — Cleanup pass; September AYIW email built + scheduled (all areas)
 
 - Bugs/session-log/STATUS/RELIABILITY_AUDIT groomed; details in `.claude/last-cleanup.md`.

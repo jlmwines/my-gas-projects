@@ -131,7 +131,7 @@ Every other `## `-headed section — including `## BODY` itself — is a human-f
 3a. **Session stops here.** Hand off Title + Body only — nothing else — and wait. Do not draft steps 4–10 (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image prompts) until the manager returns the body locked/edited. This holds even within a single long session: finishing the body is not license to keep going into the derivatives in the same pass. The derivative pass (steps 4–10) is a separate pass, gated on the returned lock — the same session picking back up later, or a different one.
 4. **Title** confirmed
 5. **WP Excerpt** — derived from locked body
-6. **Email fields** (Subject/Preview/Body/CTA) — derived from the locked body, in the post's derivative pass (step 6, after the gate at step 3a) — never bundled into the same pass as the body draft
+6. **Email fields** (Subject/Preview/Body/CTA) — derived from the locked body, in the post's derivative pass (step 6, after the gate at step 3a) — never bundled into the same pass as the body draft. **Email Preview Text must be ≤ 150 characters, verified by an actual tool count before hand-off** (e.g. `node -e "console.log([...'<text>'].length)"`), never estimated by eye. Real incident 2026-10-14: the Central Mountains preview text was drafted at 155 and only caught while the email was being built.
 7. **Newsletter Excerpt (web)** — derived from locked body
 8. **Print Newsletter Body** — derived from locked body, fuller treatment
 9. **CTA**

@@ -36,7 +36,7 @@ Colors/fonts mirror the site's brand — source of truth is the theme CSS `:root
 1. **New campaign → New Builder**
 2. Add **Image block** at top — upload hero image
 3. Add **Code block** below — paste inner HTML only (the `<h1>` through closing `<p>`, not the full document)
-4. Mailchimp handles outer wrapper, background, unsubscribe footer
+4. Mailchimp handles outer wrapper, background, unsubscribe footer. **Exception: HE sends** need a Hebrew footer (Mailchimp's default is English); wording and merge tags in `NEWSLETTER_REFERENCE.md` → Companion Email Campaign → Structure, item 4.
 5. **Two separate sends** — EN and HE to language-segmented lists
 6. Send timing: Tuesday evenings (established pattern)
 

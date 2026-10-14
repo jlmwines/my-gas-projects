@@ -288,7 +288,7 @@ Newsletter assembly itself (both print and email) is largely a manual product, n
 1. **Hero:** blog post featured image (referenced by the post's Mailchimp-side upload).
 2. **Body:** the post's own `## EMAIL BODY` section — drafted by the session during that post's derivative pass (work order step 6, after the body is locked), not freshly drafted for the newsletter. Manager edits the English, then translates to Hebrew.
 3. **Sign-off:** `— Evyatar`.
-4. **No footer:** no `jlmwines.com` URL band; no boilerplate. The Mailchimp footer handles compliance.
+4. **No footer:** no `jlmwines.com` URL band; no boilerplate. The Mailchimp footer handles compliance for **EN** emails. **HE emails need the builder's footer text block replaced with Hebrew** (Mailchimp's default footer block is English). Paste this as text into the footer block, then link the last two phrases (link URL `*|UPDATE_PROFILE|*` and `*|UNSUB|*`): `© *|CURRENT_YEAR|* JLM Wines` / `כתובת הדואר שלנו היא: *|HTML:LIST_ADDRESS_HTML|*` / `עדכן את ההעדפות שלך | הסרה`. Not part of the email HTML.
 
 ### No signup CTA inside the email
 

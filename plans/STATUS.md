@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-14. jlmops @576 live and stable, September AYIW email sent; Next Action items 2-5 and 8-10 date from July-August and still need a user status check (newsletters, flyer round 2, ads, region posts, cartons/tastings), with content publishing chronically gated on the manager.
+**Updated:** 2026-10-14. jlmops @578 live, Central Mountains region post published EN+HE with companion emails built; Next Action items 2-5 and 10 date from July-August and still need a user status check.
 
 ## At a glance
 
@@ -8,7 +8,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 - **jlmops** (GAS backend) — live (current version in Metrics below); sync/calendar/coupons all recently hardened (`jlmops/docs/ARCHITECTURE.md`).
 - **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup and expanded Wine Talk categories both live, tab UI pending first region post.
-- **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
+- **content** — 12 editorial posts live (EN+HE), 3 of 6 region posts published; remaining regions and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer active; Meta Ads ended 2026-08-31; Thursday in-shop tastings resuming with organic social announcements (manager-led); newsletter cadence needs a check after the month away.
 - **business** — strategy/brand docs current.
 
@@ -18,10 +18,10 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @576 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-10-12 · theme 2026-09-03 |
+| Deploy Version | jlmops @578 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-10-14 · theme 2026-10-14 |
 | CRM Contacts | 548 enriched |
-| Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
+| Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
 | Open Bugs | See `.claude/bugs.md` + `jlmops/plans/BUG_FIX_SEQUENCE.md`. Open sessions: F, H, I. Code-audit fix sequence (Sessions K–U) done 2026-07-24; only server-side authorization remains, tracked separately. |
 | Mobile PageSpeed | FCP ~3.5 / LCP ~4.2 (at baseline). Remaining lever: render-blocking pile (main.css critical-CSS + jQuery defer). |
@@ -40,7 +40,7 @@ The live "what now" — daily review reads these first.
 6. **Server-side authorization program** — the code audit's one unresolved finding: `doGet` is a login gate, not an authorization boundary; the role-switcher is client-side only and no mutating endpoint re-checks caller role. Needs a dedicated `AUTHORIZATION_PLAN.md` (sketch in `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md` Session R) — a program, not a quick session.
 7. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 8. **Galilee region post (Slot B) — done.** Published live both languages 2026-08-17 (`jlmwines.com/galilee-wine/` + `/he/galilee-wine/`, matching slugs, WPML-linked). Companion emails built and scheduled in Mailchimp for 2026-08-18. Found and fixed along the way: `push-posts.js` manifest paths were stale for 9 other posts (logged in `.claude/bugs.md`), WPML translation stubs can't be created via the API (must be created in wp-admin first, now documented in `content/_resources/PUBLISHING.md`), and the blog-post pipeline docs were ambiguous about who translates Hebrew — tightened across `content/CLAUDE.md`, `jlmops/plans/CONTENT_CREATION_CHECKLIST.md`, and this plan's checklist (manager translates the full locked EN set, session never originates Hebrew).
-9. **Central Mountains region post (Slot C) — extended pass rebuilt and superseded live in the library, 2026-08-27**, from the manager's edited Drive body (retitled, watershed paragraph added, elevation anecdote 1,000m→800m, geographic extent widened; see `content/plans/REGION_POSTS_PLAN.md` for the full diff). `blog-region-central-mountains-en`'s library entity now points at the new Doc; old Doc superseded/archived. Originally body drafted through Image Prompts 2026-07-09. Real target is now 2026-09-22 (blog) per the user's own working editorial calendar, confirmed 2026-08-25 — the live `JLMops_Publishing` row still carries the old 2026-08-25 placeholder date and was deliberately left un-touched (user: existing rows aren't altered, only new ones added); an admin needs to correct it directly. Drive doc placed at the canonical library path (`blog-region-central-mountains-en 26-07-09-12-05`); git source at `content/regions/central-mountains/central-mountains-en.post.md`. Remaining: winery verification (Gvaot/Tura not yet confirmed against JLM's carried wineries), Canva images, HE translation, library registration, WP push. Full slot table → `content/plans/REGION_POSTS_PLAN.md`.
+9. **Central Mountains region post (Slot C) — published live EN+HE.** Companion email HTML built EN+HE (`content/regions/central-mountains/`); user sending via Mailchimp with the Hebrew footer block. Slot table → `content/plans/REGION_POSTS_PLAN.md`.
 10. **Coastal Plain (Slot D), Golan Heights (Slot E), and Judea/Foothills (Slot F, newly confirmed) region posts.** Coastal Plain and Golan Heights bodies drafted 2026-08-18 from manager-provided seed content, per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md` archetypes; session stopped at the Title+Body gate, awaiting the manager's lock. Sources: `content/regions/coastal plains/coastal-plain-en.post.md`, `content/regions/golan heights/golan-heights-en.post.md` (folder names use spaces, matching the folders the manager created). Judea has no body drafted yet but its slot/dates are now confirmed (2026-08-25) per the working editorial calendar. All three regions' near-future calendar rows (blog/email/newsletter) staged 2026-08-25, pending an admin "Apply Pending Updates." Full slot table → `content/plans/REGION_POSTS_PLAN.md`.
 11. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
 12. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
