@@ -202,17 +202,22 @@ const ActivityBackfillService = (function () {
         // Get totals from calculated map
         const totals = orderTotals.get(orderId) || { itemCount: 0, total: 0 };
 
+        // Use the order's own total (Woo includes tax + shipping); Woo line-item
+        // totals exclude tax, so the item sum is only a fallback when it's missing.
+        const orderTotalNum = parseFloat(row[colMap[prefix + 'OrderTotal']]);
+        const orderTotal = !isNaN(orderTotalNum) && orderTotalNum > 0 ? orderTotalNum : totals.total;
+
         // Create activity
         ContactService.createActivity({
           sca_ActivityId: activityId,
           sca_Email: email.toLowerCase().trim(),
           sca_Timestamp: orderDate || new Date(),
           sca_Type: 'order.placed',
-          sca_Summary: `Order #${orderNumber}: ${totals.itemCount} items, ₪${Math.round(totals.total)}`,
+          sca_Summary: `Order #${orderNumber}: ${totals.itemCount} items, ₪${Math.round(orderTotal)}`,
           sca_Details: JSON.stringify({
             orderId: orderId,
             orderNumber: orderNumber,
-            total: totals.total,
+            total: orderTotal,
             itemCount: totals.itemCount
           }),
           sca_CreatedBy: 'import'
