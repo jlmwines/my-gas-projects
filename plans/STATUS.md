@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-14. jlmops @578 live, Central Mountains region post published EN+HE with companion emails built; Next Action items 2-5 and 10 date from July-August and still need a user status check.
+**Updated:** 2026-10-15. jlmops @579 live (calendar status counts archived tasks), Central Mountains EN+HE published and HE resynced to the manager's revised Doc; Next Action items 2-5 and 10 date from July-August and still need a user status check.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @578 · theme v1.2.32 |
+| Deploy Version | jlmops @579 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-14 · theme 2026-10-14 |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
