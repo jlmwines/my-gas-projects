@@ -47,6 +47,9 @@ function WebAppLibrary_getData() {
       timestamp: new Date().toISOString(),
       tasks: _getQueueTasks(allTasks, allConfig),
       library: _getLibraryEntities(libraryRows),
+      // Separate from `tasks` so the task queue (AdminTasksView shares this
+      // feed) never shows archived rows; PublishingView uses them for status only.
+      archivedTasks: _getArchivedContentTasks(allConfig, null),
       deficiencyWindowDays: parseInt((allConfig['system.content'] || {}).deficiency_window_days, 10) || 56
     };
 
@@ -93,6 +96,40 @@ function _getQueueTasks(allTasks, allConfig) {
         packForm: taskTypeConfig.pack_form || 'skeleton'
       };
     });
+}
+
+/**
+ * Content tasks that housekeeping moved to SysTasks_Archive, in the queue API
+ * shape plus `archived: true`. Without these, a calendar row whose whole chain
+ * was archived looks like "no tasks yet". Archive rows are copied positionally
+ * from SysTasks (archiveCompletedTasks), so they're keyed by the SysTasks schema
+ * headers, not the archive sheet's own sta_ header row.
+ * @param {Object} allConfig
+ * @param {string|null} entityId - one slug (entity drawer), or null for all content tasks
+ * @private
+ */
+function _getArchivedContentTasks(allConfig, entityId) {
+  const sheet = SheetAccessor.getDataSheet(allConfig['system.sheet_names'].SysTasks_Archive, false);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const headers = allConfig['schema.data.SysTasks'].headers.split(',');
+  const width = Math.min(headers.length, sheet.getLastColumn());
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues();
+  const typeIdx = headers.indexOf('st_TaskTypeId');
+  const entityIdx = headers.indexOf('st_EntityId');
+  const rows = [];
+  values.forEach(v => {
+    const slug = v[entityIdx];
+    if (!slug) return;
+    if (entityId ? slug !== entityId : String(v[typeIdx]).indexOf('task.content.') !== 0) return;
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = i < width ? v[i] : ''; });
+    rows.push(obj);
+  });
+  return _getQueueTasks(rows, allConfig).map(t => {
+    t.notes = '';
+    t.archived = true;
+    return t;
+  });
 }
 
 /**
@@ -401,7 +438,8 @@ function WebAppLibrary_getEntityDetail(params) {
     const raw = LibraryService.getEntityDetail(params || {});
 
     const entity = _getLibraryEntities([raw.entity])[0];
-    const attachedTasks = _getQueueTasks(raw.attached_tasks, allConfig);
+    const attachedTasks = _getQueueTasks(raw.attached_tasks, allConfig)
+      .concat(_getArchivedContentTasks(allConfig, raw.entity.slb_Slug));
     const referencesIn = _getLibraryEntities(raw.references_in);
     const activityLog = raw.activity_log.map(row => ({
       activityId: row.slba_ActivityId,

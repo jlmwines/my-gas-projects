@@ -558,6 +558,7 @@
         return;
       }
       state.tasks = res.data.tasks || [];
+      state.archivedTasks = res.data.archivedTasks || [];
       state.library = res.data.library || [];
       state.deficiencyWindowDays = res.data.deficiencyWindowDays || 56;
       // Calendar isn't rendered here — state.holidays isn't loaded yet
@@ -648,7 +649,9 @@
       // show nothing for freshly-spawned content with no Doc yet — found live
       // 2026-07-08 ("some have status, some don't").
       var tasksByBase = {};
-      (state.tasks || []).forEach(function(t) {
+      // Archived (Done) tasks count too — otherwise a row whose whole chain was
+      // archived by housekeeping falls back to 'none' ("no tasks yet").
+      (state.tasks || []).concat(state.archivedTasks || []).forEach(function(t) {
         // Content tasks only — same filter renderTasks() uses. Non-content
         // tasks (product/order/sync/etc.) can carry a non-string entityId
         // (e.g. a bare numeric SKU), which .slice() below can't handle and
@@ -1471,7 +1474,9 @@
       });
       el.innerHTML = sorted.map(function(t) {
         var dueChip = t.dueDate ? '<span class="tw-due-chip ' + TaskWidgets.dueClass(t.dueDate, t.status) + '">' + TaskWidgets.formatDate(t.dueDate) + '</span>' : '';
-        return '<div class="pv-drawer-task-row" style="cursor:pointer;" onclick="TaskDetail.open(\'' + TaskWidgets.escape(t.id) + '\')">' +
+        // Archived tasks aren't in state.tasks, so TaskDetail can't open them — history only.
+        var rowAttrs = t.archived ? '' : ' style="cursor:pointer;" onclick="TaskDetail.open(\'' + TaskWidgets.escape(t.id) + '\')"';
+        return '<div class="pv-drawer-task-row"' + rowAttrs + '>' +
           '<span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span>' +
           '<span class="pv-drawer-task-title">' + TaskWidgets.escape(t.name || t.typeId) + '</span>' +
           (t.assignedTo ? '<span class="detail-meta">' + TaskWidgets.escape(t.assignedTo) + '</span>' : '') +
