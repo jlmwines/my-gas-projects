@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-15 — Central Mountains HE resync
+
+- Manager revised the HE Library Doc; HE post 67857 re-pushed and HE email HTML + preview text updated (user replaced both in Mailchimp).
+- Next: unchanged (Coastal Plain awaits manager lock).
+
+---
+
 ## 2026-10-14 — Central Mountains published; jlmops @577/@578; Wine Talk heading (all areas)
 
 - jlmops @577: task archive ages from `st_DoneDate` (late-finished library tasks were archived immediately). @578: order activity amount includes tax. Both untested until the next nightly housekeeping.
