@@ -9,7 +9,7 @@ One current-state line per business area. The umbrella has no single phase label
 - **jlmops** (GAS backend) — live (current version in Metrics below); sync/calendar/coupons all recently hardened (`jlmops/docs/ARCHITECTURE.md`).
 - **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup and expanded Wine Talk categories both live, tab UI pending first region post.
 - **content** — 12 editorial posts live (EN+HE), 3 of 6 region posts published; remaining regions and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
-- **marketing** — flyer Round 2 likely cancelled (site popup + discount carrying acquisition); Meta Ads concluded, not continuing; Thursday in-shop tastings resuming with organic social announcements (manager-led); newsletter cadence needs a check after the month away.
+- **marketing** — flyer Round 2 likely cancelled (site popup + discount carrying acquisition); Meta Ads concluded, not continuing (lessons → `marketing/_resources/PAID_ADS_REFERENCE.md`); Thursday in-shop tastings resuming with organic social announcements (manager-led); newsletter cadence needs a check after the month away.
 - **business** — strategy/brand docs current.
 
 ## Metrics

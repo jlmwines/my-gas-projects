@@ -1,5 +1,7 @@
 # Meta Ads Plan — Jerusalem Test Campaign (Bulk Edit Workflow)
 
+> **Archived 2026-10-15.** Test concluded 2026-08-31, not continuing. Durable lessons graduated to `marketing/_resources/PAID_ADS_REFERENCE.md`; this file is kept for the creative library and round history only.
+
 **Purpose.** Explore paid Facebook/Instagram advertising in Jerusalem, to be run by your partner directly in Meta Ads Manager if pursued. No custom API/MCP integration exists (see tooling note below) — this doc is a working guide for using Ads Manager's built-in **Bulk Edit** spreadsheet tool (download → edit → upload) to control and iterate a test over time, alongside a library of candidate creative ideas. Nothing here is a locked plan.
 
 **Working mode (2026-08-09).** This doc is a record for continuity, not a compliance gate. Dated notes and "supersedes" markers exist so context survives between sessions — they are not constraints a new idea has to clear. If a new idea conflicts with an earlier note or decision here, a one-line mention is fine — then default to the new idea and let the user decide, rather than treating the old note as binding. Reserve an actual objection (not just a mention) for a firm brand-voice rule (`business/CONTENT_STRATEGY.md`) or a real hard fact (Meta ad policy, a genuine technical/production limitation). Execution constraints are real but surface during production, not during ideation — help finish reels, don't gate ideas on agreement with everything already written.
