@@ -132,6 +132,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(php *)"
     ],
+    "ask": [
+      "Edit(//c/Users/B/projects/jlmwines/jlmops/**)"
+    ],
     "deny": [
       "Bash(git -C:*)",
       "Bash(rm -rf:*)",

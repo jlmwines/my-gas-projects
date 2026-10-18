@@ -47,7 +47,7 @@
   .panel-state-3 .task-col-wide-only { display: flex !important; align-items: center; }
   .panel-state-3 .task-col-check { width: 2%; min-width: 25px; }
   .panel-state-3 .task-col-session { width: 7%; max-width: 100px; overflow: hidden; }
-  .panel-state-3 .task-col-title { width: 17%; }
+  .panel-state-3 .task-col-title { width: 23%; }
   .panel-state-3 .task-col-entity { width: 12%; }
   .panel-state-3 .task-col-entity-id { width: 4%; }
   .panel-state-3 .task-col-assignee { width: 8%; }
@@ -56,7 +56,7 @@
   .panel-state-3 .task-col-start { width: 8%; }
   .panel-state-3 .task-col-due { width: 8%; }
   .panel-state-3 .task-col-done { width: 8%; }
-  .panel-state-3 .task-col-created { width: 8%; }
+  .panel-state-3 .task-col-created { width: 5%; }
   .panel-state-3 .task-col-toggle { display: none !important; }
 
   .panel-state-3 .scope-links { display: inline; }
@@ -85,15 +85,15 @@
             <button id="btn-home" class="btn btn-sm btn-light mr-1" title="Home">⌂</button>
             <button id="btn-back" class="btn btn-sm btn-light mr-2" title="Back" style="display:none;">←</button>
             <span id="breadcrumb" class="font-weight-bold mr-3">Tasks</span>
-            <span class="scope-links small mr-2" style="white-space:nowrap;">
-              <a href="#" class="scope-link" data-scope="open">Open</a> |
-              <a href="#" class="scope-link" data-scope="started">Started</a> |
-              <a href="#" class="scope-link" data-scope="future">Future</a> |
-              <a href="#" class="scope-link" data-scope="all">All</a>
-            </span>
-            <select id="filter-task-project" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;width:auto;max-width:200px;" title="Filter by project">
+            <select id="filter-task-project" class="form-control form-control-sm py-0 mr-2" style="height:24px;font-size:11px;width:auto;max-width:200px;" title="Filter by project">
               <option value="all">All projects</option>
             </select>
+            <span class="scope-links small mr-2" style="white-space:nowrap;">
+              <a href="#" class="scope-link" data-scope="unscheduled">Unscheduled</a> |
+              <a href="#" class="scope-link" data-scope="open">Open</a> |
+              <a href="#" class="scope-link" data-scope="done">Done</a> |
+              <a href="#" class="scope-link" data-scope="all">All</a>
+            </span>
           </div>
           <div>
             <button id="btn-content-stream" class="btn btn-sm btn-light mr-1 hide-compact" title="Create content task stream">+ Content</button>
@@ -518,12 +518,12 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     taskSessionFilter: '',
     taskProjectFilter: 'all',
     selectedTaskIds: [],  // For bulk operations
-    taskScopeFilter: 'open',  // 'open', 'started', 'future', 'all'
-    sortField: 'due',
+    taskScopeFilter: 'open',  // TaskWidgets scope: 'unscheduled', 'open', 'done', 'all'
+    sortField: 'start',
     sortDir: 'asc',
     pendingSelectTaskId: null,
     pendingSelectProjectId: null,
-    panelState: 2  // 1=list 1/3, 2=list 2/3 (default), 3=list full
+    panelState: 3  // 1=list 1/3, 2=list 2/3, 3=list full (default; detail opens via row control / double click)
   };
 
   var confirmCallback = null;
@@ -554,10 +554,9 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         var task = state.tasks.find(function(t) { return t.id === id; });
         var taskType = task ? (task.typeId || '') : '';
         var isContent = taskType.indexOf('task.content') === 0 || taskType === 'task.newsletter.distribute';
-        var allowsDateEdit = isContent ||
-          taskType === 'task.deficiency.category_stock' ||
-          taskType === 'task.deficiency.bundle_stock';
-        if (allowsDateEdit || isContent) {
+        // Mirrors TaskDetail: dates (and assignee) editable on any non-system task.
+        var isSystem = taskType.indexOf('task.system') === 0 || taskType.indexOf('task.sync') === 0;
+        if (!isSystem) {
           var updates = {
             status:     fields.status,
             assignedTo: fields.assignedTo || null,
@@ -735,7 +734,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       state.selectedProjectId = taskProjectId;
       state.mode = 'tasks';
     }
+    // Deep link: make sure the task is visible and its detail is shown.
+    if (!TaskWidgets.matchesScope(task, state.taskScopeFilter)) state.taskScopeFilter = 'all';
     state.selectedTaskId = taskId;
+    if (state.panelState === 3) setPanelState(2);
     render();
   }
 
@@ -985,15 +987,29 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     render();
   }
 
+  // Single click selects (toggle). Highlight is updated in place, not by
+  // re-rendering the list, so a double click on the same row still registers.
   function selectTask(taskId) {
-    // Toggle selection: clicking same row deselects it
-    if (state.selectedTaskId === taskId) {
-      state.selectedTaskId = null;
-    } else {
-      state.selectedTaskId = taskId;
-    }
-    renderList();  // Re-render to update highlighting
+    state.selectedTaskId = (state.selectedTaskId === taskId) ? null : taskId;
+    _highlightSelectedRow();
     renderDetailPanel();
+  }
+
+  // Row control / double click: select and show the detail panel, switching
+  // from full width to list + detail if needed.
+  function openTaskDetail(taskId) {
+    state.selectedTaskId = taskId;
+    if (state.panelState === 3) setPanelState(2);
+    _highlightSelectedRow();
+    renderDetailPanel();
+  }
+
+  function _highlightSelectedRow() {
+    document.querySelectorAll('#list-container .task-row[data-id]').forEach(function(row) {
+      var on = row.dataset.id === state.selectedTaskId;
+      row.classList.toggle('bg-info', on);
+      row.classList.toggle('text-white', on);
+    });
   }
 
   function handleNew() {
@@ -1260,7 +1276,9 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       return '<div class="border-bottom py-1 px-2 task-row' + (isSelected ? ' bg-info text-white' : '') + rowClass + '" data-id="' + id + '">' +
         '<div class="task-col-check"><input type="checkbox" class="task-checkbox" data-id="' + id + '"' + (isChecked ? ' checked' : '') + '></div>' +
         '<div class="task-col-wide-only task-col-session text-truncate" title="' + TaskWidgets.escape(t.projectId || '') + '">' + TaskWidgets.escape(t.projectId || '') + '</div>' +
-        '<div class="task-col-title text-truncate" style="cursor:pointer;" title="' + TaskWidgets.escape(titleWithEntity) + '">' + TaskWidgets.escape(titleWithEntity) + '</div>' +
+        '<div class="task-col-title text-truncate" style="cursor:pointer;" title="' + TaskWidgets.escape(titleWithEntity) + '">' +
+          '<a href="#" class="task-open-detail mr-1" data-id="' + id + '" title="Open detail">&#9656;</a>' +
+          TaskWidgets.escape(titleWithEntity) + '</div>' +
         '<div class="task-col-hideable task-col-entity text-truncate">' + entityHtml + '</div>' +
         '<div class="task-col-wide-only task-col-entity-id text-truncate">' + entityIdHtml + '</div>' +
         '<div class="task-col-hideable task-col-assignee">' + assigneeSelect + '</div>' +
@@ -1280,6 +1298,19 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         // Don't select when clicking on checkbox, select, input, or link
         if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
         selectTask(this.dataset.id);
+      });
+      el.addEventListener('dblclick', function(e) {
+        if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
+        openTaskDetail(this.dataset.id);
+      });
+    });
+
+    // Row control: open the detail panel
+    container.querySelectorAll('.task-open-detail').forEach(function(a) {
+      a.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openTaskDetail(this.dataset.id);
       });
     });
 
@@ -1535,30 +1566,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         if (entityName.indexOf(state.taskEntityFilter) === -1 && entityId.indexOf(state.taskEntityFilter) === -1) return false;
       }
 
-      // Scope filter: open, started, future, all.
-      // The feed (WebAppLibrary_getData) returns open + recently-completed tasks,
-      // so the Open/Started/Future scopes must exclude done tasks client-side
-      // (the old server split getAllOpenTasks/getAllTasks used to do this). 'all' shows everything.
-      var isClosed = (t.status === 'Done' || t.status === 'Closed' || t.status === 'Cancelled');
-      if (state.taskScopeFilter !== 'all' && isClosed) return false;
-      if (state.taskScopeFilter === 'started' || state.taskScopeFilter === 'future') {
-        var startDate = null;
-        try {
-          if (t.startDate) {
-            startDate = new Date(t.startDate);
-            if (isNaN(startDate.getTime())) startDate = null;
-            else startDate.setHours(0, 0, 0, 0);
-          }
-        } catch (e) {
-          startDate = null;
-        }
-        var isStarted = startDate && startDate <= today;
-        var isFuture = !startDate || startDate > today;
-
-        if (state.taskScopeFilter === 'started' && !isStarted) return false;
-        if (state.taskScopeFilter === 'future' && !isFuture) return false;
-      }
-      // 'open' and 'all' pass all tasks through (no date filtering)
+      // Scope: Unscheduled | Open | Done | All, shared definition (due date
+      // releases a task; TaskWidgets.taskState). The feed holds open +
+      // recently-completed tasks, so Done shows recent history.
+      if (!TaskWidgets.matchesScope(t, state.taskScopeFilter)) return false;
 
       return true;
     });
@@ -1719,10 +1730,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     if (!topic) { TaskWidgets.toast('Pick a topic', 'warning'); return; }
     var startDate = document.getElementById('new-task-start-date').value;
     var dueDate = document.getElementById('new-task-due-date').value;
-    if ((startDate && !dueDate) || (dueDate && !startDate)) {
-      TaskWidgets.toast('Provide both start date and due date, or neither.', 'warning');
-      return;
-    }
 
     // Disable + relabel before the round-trip so a second click can't submit a
     // duplicate task; re-enable in both handlers. (No spinner/guard previously →

@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-18 — Woo non-JSON logging, content task dialog, task states keyed on due date (@580-@584)
+
+- @580 logs Woo 2xx HTML bodies (suspect SiteGround anti-bot); next failure gives the page for a SiteGround ticket.
+- @581 Create Content Tasks dialog pruned (Extracts/Review Extracts stages, type-filtered core chain, A/M labels). @582-@584 due date = Open/visibility, Unscheduled/Open/Done/All everywhere, manager view-only admin tasks, AdminTasksView full width, start-date sort.
+- Coastal Plain Title+Body in the Library Doc, awaiting manager lock.
+- Next: user tests @581-@584, then WORKFLOWS.md §12/§13 doc updates and plan archives. Backward chain scheduling is required but deferred (STATUS Next Action 12). Translate still admin_direct (user wants Manager; not done).
+- Process: user stating a sequence is not authorization. clasp push and jlmops edits now prompt (hook + ask rule). An unauthorized memory file (`feedback_sequence_is_not_go_ahead.md`) still awaits the user's call on removal.
+
+---
+
 ## 2026-10-15 — Central Mountains HE resync
 
 - Manager revised the HE Library Doc; HE post 67857 re-pushed and HE email HTML + preview text updated (user replaced both in Mailchimp).

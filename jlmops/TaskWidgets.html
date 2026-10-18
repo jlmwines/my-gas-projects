@@ -18,7 +18,8 @@
   }
   .tw-status-pill.new { background: #e3f2fd; color: #1565c0; }
   .tw-status-pill.assigned { background: #fff3cd; color: #856404; }
-  .tw-status-pill.in-progress { background: #d1ecf1; color: #0c5460; }
+  .tw-status-pill.in-progress,
+  .tw-status-pill.open { background: #d1ecf1; color: #0c5460; }
   .tw-status-pill.review { background: #f8d7da; color: #721c24; }
   .tw-status-pill.done { background: #d4edda; color: #155724; }
 
@@ -245,20 +246,47 @@
 
   // Task-derived three-tier status (CALENDAR_LIBRARY_LOOP_PLAN Phase 5) — replaces
   // slb_State everywhere (Library rows, entity drawer, Calendar rows). Computed
-  // live from task status, never persisted: "not started" (open tasks exist, all
-  // still New), "in progress" (an open task is Assigned/Review), "done" (every
-  // task Done/Cancelled, or no tasks at all — vacuously done). Feed statusClass()
-  // the result for a pill CSS class ("in progress" -> .in-progress, etc). Takes
+  // live from task due dates, never persisted (TASK_STATES_AND_FILTERS_PLAN):
+  // "open" (a non-closed task has a due date), "unscheduled" (non-closed tasks
+  // exist, none has a due date), "done" (every task Done/Cancelled, or no tasks
+  // at all — vacuously done). Feed statusClass() the result for a pill CSS
+  // class ("open" -> .open, etc). Takes
   // a task array already scoped to the entity/entities in question — callers
   // filter by entityId themselves (some already have a pre-scoped list, e.g.
   // the drawer's attached_tasks; others filter a flat state.tasks by slug).
   TaskWidgets.deriveStatus = function(tasksForEntity) {
-    var open = (tasksForEntity || []).filter(function(t) {
-      return t.status !== 'Done' && t.status !== 'Cancelled';
-    });
+    var open = (tasksForEntity || []).filter(function(t) { return !TaskWidgets.isClosed(t); });
     if (!open.length) return 'done';
-    var active = open.some(function(t) { return t.status === 'Assigned' || t.status === 'Review'; });
-    return active ? 'in progress' : 'not started';
+    var scheduled = open.some(function(t) { return !!t.dueDate; });
+    return scheduled ? 'open' : 'unscheduled';
+  };
+
+  // ── Shared task state + scope filter (TASK_STATES_AND_FILTERS_PLAN) ──
+  // One definition for every task view. The due date releases a task: no due
+  // date = 'unscheduled', due date = 'open' (future included), closed = 'done'.
+  // The start date is planning only and never decides state.
+  TaskWidgets.isClosed = function(t) {
+    return t.status === 'Done' || t.status === 'Cancelled' || t.status === 'Closed';
+  };
+  TaskWidgets.taskState = function(t) {
+    if (TaskWidgets.isClosed(t)) return 'done';
+    return t.dueDate ? 'open' : 'unscheduled';
+  };
+  // scope: 'unscheduled' | 'open' | 'done' | 'all'
+  TaskWidgets.matchesScope = function(t, scope) {
+    return scope === 'all' || TaskWidgets.taskState(t) === scope;
+  };
+  // Link row "Unscheduled | Open | Done | All". includeUnscheduled is false for
+  // assignee views (unscheduled tasks are hidden from assignees). Hosts wire
+  // clicks on .tw-scope-link (data-scope) themselves.
+  TaskWidgets.scopeLinksHtml = function(active, includeUnscheduled) {
+    var scopes = [['unscheduled', 'Unscheduled'], ['open', 'Open'], ['done', 'Done'], ['all', 'All']];
+    if (!includeUnscheduled) scopes = scopes.slice(1);
+    return '<span class="tw-scope-links small" style="white-space:nowrap;">' + scopes.map(function(s) {
+      var on = s[0] === active;
+      return '<a href="#" class="tw-scope-link" data-scope="' + s[0] + '" style="' +
+        (on ? 'font-weight:bold;color:#212529;' : '') + '">' + s[1] + '</a>';
+    }).join(' | ') + '</span>';
   };
 
   TaskWidgets.priorityClass = function(priority) {

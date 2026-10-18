@@ -249,8 +249,8 @@
           <input type="search" id="pv-cal-search" placeholder="Search title / slug..." />
           <select id="pv-cal-status-filter">
             <option value="all">Status</option>
-            <option value="not started">Not started</option>
-            <option value="in progress">In progress</option>
+            <option value="unscheduled">Unscheduled</option>
+            <option value="open">Open</option>
             <option value="done">Done</option>
             <option value="none">No tasks yet</option>
           </select>
@@ -278,6 +278,7 @@
         <h6>Tasks</h6>
         <button class="btn btn-sm" id="pv-btn-open-content-stream-tasks" data-roles="admin">Create Content Tasks</button>
       </div>
+      <div id="pv-tasks-filters" class="d-flex align-items-center flex-wrap mb-2"></div>
       <div id="pv-tasks-content">
         <div class="pv-empty">Loading…</div>
       </div>
@@ -693,7 +694,8 @@
         var open = (tasksByBase[base] || []).filter(function(t) {
           return t.status !== 'Done' && t.status !== 'Cancelled';
         });
-        if (isManager) open = open.filter(function(t) { return t.assignedTo === 'Manager'; });
+        // Manager is routed only to their own released (due-dated) tasks.
+        if (isManager) open = open.filter(function(t) { return t.assignedTo === 'Manager' && !!t.dueDate; });
         if (!open.length) return null;
         open.sort(function(a, b) { return (a.createdDate || '').localeCompare(b.createdDate || ''); });
         return { kind: 'task', id: open[0].id };
@@ -1099,6 +1101,7 @@
       { label: 'Entity',   key: 'entity' },
       { label: 'Assignee', key: 'assignee' },
       { label: 'Status',   key: 'status' },
+      { label: 'Start',    key: 'start' },
       { label: 'Due',      key: 'due' },
       { label: '',         key: 'doc' }
     ];
@@ -1110,10 +1113,54 @@
         case 'entity':   return '<td data-label="Entity"><span class="detail-meta">' + esc(entity ? (entity.title || entity.slug) : (t.entityName || t.entityId || '—')) + '</span></td>';
         case 'assignee': return '<td data-label="Assignee"><span class="detail-meta">' + esc(t.assignedTo || '—') + '</span></td>';
         case 'status':   return '<td data-label="Status"><span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + esc(t.status || '—') + '</span></td>';
+        case 'start':    return '<td data-label="Start">' + (t.startDate ? TaskWidgets.formatDate(t.startDate) : '—') + '</td>';
         case 'due':      return '<td data-label="Due">' + due + '</td>';
         case 'doc':      return '<td data-label="" onclick="event.stopPropagation()">' + docBtn + '</td>';
         default:         return '<td></td>';
       }
+    }
+
+    // Shared task filter row (TASK_STATES_AND_FILTERS_PLAN): assignee, text,
+    // then Unscheduled | Open | Done | All. Built once so the text box keeps
+    // focus; renderTasks() only redraws the table. Manager defaults to own
+    // tasks and never sees Unscheduled (hidden from assignees).
+    var _pvTaskFilter = null;
+
+    function _buildTaskFilterRow(isManager, allContentTasks) {
+      var bar = document.getElementById('pv-tasks-filters');
+      if (!_pvTaskFilter) {
+        _pvTaskFilter = { assignee: isManager ? 'Manager' : '', text: '', scope: 'open' };
+      }
+      var assignees = [];
+      allContentTasks.forEach(function(t) {
+        if (t.assignedTo && assignees.indexOf(t.assignedTo) === -1) assignees.push(t.assignedTo);
+      });
+      if (isManager && assignees.indexOf('Manager') === -1) assignees.push('Manager');
+      assignees.sort();
+      var opts = '<option value="">All assignees</option>' + assignees.map(function(a) {
+        return '<option value="' + TaskWidgets.escape(a) + '"' + (a === _pvTaskFilter.assignee ? ' selected' : '') + '>' + TaskWidgets.escape(a) + '</option>';
+      }).join('');
+
+      var sel = document.getElementById('pv-tasks-assignee-filter');
+      if (sel) { sel.innerHTML = opts; return; }  // row already built; refresh options only
+      bar.innerHTML =
+        '<select id="pv-tasks-assignee-filter" class="form-control form-control-sm mr-2" style="max-width:160px">' + opts + '</select>' +
+        '<input type="text" id="pv-tasks-text-filter" class="form-control form-control-sm mr-2" style="max-width:200px" placeholder="filter">' +
+        '<span id="pv-tasks-scope">' + TaskWidgets.scopeLinksHtml(_pvTaskFilter.scope, !isManager) + '</span>';
+      document.getElementById('pv-tasks-assignee-filter').addEventListener('change', function() {
+        _pvTaskFilter.assignee = this.value; renderTasks();
+      });
+      document.getElementById('pv-tasks-text-filter').addEventListener('input', function() {
+        _pvTaskFilter.text = this.value.trim().toLowerCase(); renderTasks();
+      });
+      document.getElementById('pv-tasks-scope').addEventListener('click', function(e) {
+        var a = e.target.closest('.tw-scope-link');
+        if (!a) return;
+        e.preventDefault();
+        _pvTaskFilter.scope = a.dataset.scope;
+        this.innerHTML = TaskWidgets.scopeLinksHtml(_pvTaskFilter.scope, !isManager);
+        renderTasks();
+      });
     }
 
     function renderTasks() {
@@ -1121,40 +1168,34 @@
       var isManager = document.body.classList.contains('role-manager');
       var allContentTasks = (state.tasks || []).filter(function(t) {
         if (!t.typeId || t.typeId.indexOf('task.content.') !== 0) return false;
-        if (t.status === 'Done' || t.status === 'Cancelled') return false;
-        if (isManager && t.assignedTo !== 'Manager') return false;
+        // Unscheduled tasks are hidden from assignees (manager); admin sees all.
+        if (isManager && TaskWidgets.taskState(t) === 'unscheduled') return false;
         return true;
       });
-      if (!allContentTasks.length) {
-        container.innerHTML = '<div class="pv-empty">No open content tasks.</div>';
+      _buildTaskFilterRow(isManager, allContentTasks);
+
+      var f = _pvTaskFilter;
+      var contentTasks = allContentTasks.filter(function(t) {
+        if (f.assignee && t.assignedTo !== f.assignee) return false;
+        if (!TaskWidgets.matchesScope(t, f.scope)) return false;
+        if (f.text && String(t.name || t.typeId || '').toLowerCase().indexOf(f.text) === -1 &&
+            String(t.entityId || '').toLowerCase().indexOf(f.text) === -1) return false;
+        return true;
+      });
+      if (!contentTasks.length) {
+        container.innerHTML = '<div class="pv-empty">No matching content tasks.</div>';
         return;
       }
-
-      // Build assignee filter (admin only — manager already sees only their tasks).
-      var filterSel = document.getElementById('pv-tasks-assignee-filter');
-      var selectedAssignee = filterSel ? filterSel.value : '';
-      var contentTasks = selectedAssignee
-        ? allContentTasks.filter(function(t) { return t.assignedTo === selectedAssignee; })
-        : allContentTasks;
+      // Default order shared by all task views: start date (none last), then due.
+      contentTasks.sort(function(a, b) {
+        return (a.startDate || '9999').localeCompare(b.startDate || '9999') ||
+               (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
+      });
 
       var libBySlug = {};
       (state.library || []).forEach(function(e) { libBySlug[e.slug] = e; });
 
-      var filterBar = '';
-      if (!isManager) {
-        var assignees = [];
-        allContentTasks.forEach(function(t) {
-          if (t.assignedTo && assignees.indexOf(t.assignedTo) === -1) assignees.push(t.assignedTo);
-        });
-        assignees.sort();
-        var opts = '<option value="">All assignees</option>' +
-          assignees.map(function(a) {
-            return '<option value="' + TaskWidgets.escape(a) + '"' + (a === selectedAssignee ? ' selected' : '') + '>' + TaskWidgets.escape(a) + '</option>';
-          }).join('');
-        filterBar = '<div class="mb-2"><select id="pv-tasks-assignee-filter" class="form-control form-control-sm" style="max-width:200px" onchange="PublishingView.renderTasks()">' + opts + '</select></div>';
-      }
-
-      var html = filterBar + '<table class="pv-cal-table"><thead><tr>' +
+      var html = '<table class="pv-cal-table"><thead><tr>' +
         TASK_COLUMNS.map(function(col) { return '<th>' + col.label + '</th>'; }).join('') +
         '</tr></thead><tbody>';
       contentTasks.forEach(function(t) {

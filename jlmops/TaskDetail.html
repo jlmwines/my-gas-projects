@@ -121,9 +121,12 @@ window.TaskDetail = (function() {
     var isData    = isSystem;
     var isManager = document.body.classList.contains('role-manager');
     var isDone    = task.status === 'Done' || task.status === 'Closed' || task.status === 'Cancelled';
-    var allowsDateEdit = isContent ||
-      typeId === 'task.deficiency.category_stock' ||
-      typeId === 'task.deficiency.bundle_stock';
+    // Manager may view tasks assigned to others but not act on them: no pack,
+    // no action buttons, fields and notes read-only.
+    var viewOnly  = isManager && task.assignedTo !== 'Manager';
+    // Admin sets start and due independently on any non-system task; the due
+    // date is what releases a task to its assignee (TASK_STATES_AND_FILTERS_PLAN).
+    var allowsDateEdit = !isSystem;
 
     // ── Pack (primary DO action) ───────────────────────────────────────
     var packHtml = TaskPacks.packBody(task);
@@ -186,7 +189,7 @@ window.TaskDetail = (function() {
     // ── Notes (always visible) ─────────────────────────────────────────
     var notesArea =
       '<textarea class="form-control form-control-sm td-f-notes mb-2" rows="2"' +
-        (isData ? ' readonly' : '') +
+        (isData || viewOnly ? ' readonly' : '') +
         ' placeholder="Notes…" style="font-size:11px;">' +
         esc(task.notes || '') +
       '</textarea>';
@@ -240,11 +243,10 @@ window.TaskDetail = (function() {
              '<button type="button" class="btn btn-sm btn-light td-close-btn" style="font-size:11px;">✕</button>' +
            '</div>' +
            entitySubtitle +
-           packSection +
-           fieldsRow +
-           actionRow +
-           notesArea +
-           moreSection;
+           (viewOnly
+             ? '<div class="text-muted small mb-2">View only (assigned to ' + esc(task.assignedTo || '-') + ')</div>' +
+               fieldsRow + notesArea
+             : packSection + fieldsRow + actionRow + notesArea + moreSection);
   }
 
   // ── Event binding ───────────────────────────────────────────────────

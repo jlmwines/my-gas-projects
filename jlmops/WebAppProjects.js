@@ -164,35 +164,43 @@ function WebAppProjects_getOptions() {
 
 /**
  * Content stage definitions with display order.
+ * `core` lists the entity types whose standard chain pre-checks this stage in
+ * the Create Content Tasks dialog (CONTENT_TASK_CREATION_PLAN.md).
+ * Extracts / Review Extracts reuse the admin_review / print_newsletter_body
+ * task types (repurposed, IDs kept because st_TaskTypeId stores them).
  */
 const CONTENT_STAGES = [
-  { id: 'create_wp_stubs', typeId: 'task.content.create_wp_stubs', label: 'Create WP Stubs', title: 'Create WP Stubs: ', target_sibling: 'en' },
-  { id: 'draft', typeId: 'task.content.draft', label: 'Draft', title: 'Draft: ', target_sibling: 'en' },
-  { id: 'admin_review', typeId: 'task.content.admin_review', label: 'Admin Review', title: 'Admin Review: ', target_sibling: 'en' },
-  { id: 'edit', typeId: 'task.content.edit', label: 'Edit', title: 'Edit: ', target_sibling: 'en' },
-  { id: 'translate', typeId: 'task.content.translate', label: 'Translate', title: 'Translate: ', target_sibling: 'he' },
-  { id: 'translate_edit', typeId: 'task.content.translate_edit', label: 'Edit Translation', title: 'Edit Translation: ', target_sibling: 'he' },
-  { id: 'images', typeId: 'task.content.images', label: 'Images', title: 'Images: ', target_sibling: 'en' },
-  { id: 'blog_publish', typeId: 'task.content.blog_publish', label: 'Blog Publish', title: 'Publish: ', target_sibling: 'en' },
-  { id: 'video_create', typeId: 'task.content.video_create', label: 'Video Create', title: 'Create Video: ', target_sibling: 'en' },
-  { id: 'video_publish', typeId: 'task.content.video_publish', label: 'Video Publish', title: 'Publish Video: ', target_sibling: 'en' },
-  { id: 'email', typeId: 'task.content.email', label: 'Email', title: 'Email: ', target_sibling: 'en' },
-  { id: 'social', typeId: 'task.content.social', label: 'Social', title: 'Social: ', target_sibling: 'en' },
-  { id: 'whatsapp', typeId: 'task.content.whatsapp', label: 'WhatsApp', title: 'WhatsApp: ', target_sibling: 'en' },
-  { id: 'print_create_en', typeId: 'task.content.print.create-en', label: 'Assemble EN Newsletter', title: 'Assemble EN: ', target_sibling: 'en' },
-  { id: 'print_create_he', typeId: 'task.content.print.create-he', label: 'Assemble HE Newsletter', title: 'Assemble HE: ', target_sibling: 'he' },
-  { id: 'print_distribute', typeId: 'task.content.print.distribute', label: 'Print & Distribute', title: 'Print & Distribute: ', target_sibling: 'en' },
-  { id: 'email_create_en', typeId: 'task.content.email.create-en', label: 'Draft EN Email', title: 'Draft EN Email: ', target_sibling: 'en' },
-  { id: 'email_create_he', typeId: 'task.content.email.create-he', label: 'Draft HE Email', title: 'Draft HE Email: ', target_sibling: 'he' },
-  { id: 'email_send', typeId: 'task.content.email.send', label: 'Send Email', title: 'Send: ', target_sibling: 'en' }
+  { id: 'draft', typeId: 'task.content.draft', label: 'Draft', title: 'Draft: ', target_sibling: 'en', core: ['blog'] },
+  { id: 'edit', typeId: 'task.content.edit', label: 'Edit', title: 'Edit: ', target_sibling: 'en', core: ['blog'] },
+  { id: 'extracts', typeId: 'task.content.admin_review', label: 'Extracts', title: 'Extracts: ', target_sibling: 'en', core: ['blog'] },
+  { id: 'review_extracts', typeId: 'task.content.print_newsletter_body', label: 'Review Extracts', title: 'Review Extracts: ', target_sibling: 'en', core: ['blog'] },
+  { id: 'translate', typeId: 'task.content.translate', label: 'Translate', title: 'Translate: ', target_sibling: 'he', core: ['blog'] },
+  { id: 'translate_edit', typeId: 'task.content.translate_edit', label: 'Edit Translation', title: 'Edit Translation: ', target_sibling: 'he', core: ['blog'] },
+  { id: 'blog_publish', typeId: 'task.content.blog_publish', label: 'Blog Publish', title: 'Publish: ', target_sibling: 'en', core: ['blog'] },
+  { id: 'email_create_en', typeId: 'task.content.email.create-en', label: 'Draft EN Email', title: 'Draft EN Email: ', target_sibling: 'en', core: ['email'] },
+  { id: 'email_create_he', typeId: 'task.content.email.create-he', label: 'Draft HE Email', title: 'Draft HE Email: ', target_sibling: 'he', core: ['email'] },
+  { id: 'email_send', typeId: 'task.content.email.send', label: 'Send Email', title: 'Send: ', target_sibling: 'en', core: ['email'] },
+  { id: 'print_create_en', typeId: 'task.content.print.create-en', label: 'Assemble Newsletter', title: 'Assemble Newsletter: ', target_sibling: 'en', core: ['news'] },
+  { id: 'print_distribute', typeId: 'task.content.print.distribute', label: 'Print & Distribute', title: 'Print & Distribute: ', target_sibling: 'en', core: ['news'] },
+  { id: 'video_create', typeId: 'task.content.video_create', label: 'Video Create', title: 'Create Video: ', target_sibling: 'en', core: [] },
+  { id: 'video_publish', typeId: 'task.content.video_publish', label: 'Video Publish', title: 'Publish Video: ', target_sibling: 'en', core: [] },
+  { id: 'email', typeId: 'task.content.email', label: 'Create Email', title: 'Create Email: ', target_sibling: 'en', core: [] },
+  { id: 'social', typeId: 'task.content.social', label: 'Social', title: 'Social: ', target_sibling: 'en', core: [] },
+  { id: 'whatsapp', typeId: 'task.content.whatsapp', label: 'WhatsApp', title: 'WhatsApp: ', target_sibling: 'en', core: [] }
 ];
 
 /**
- * Gets available content stages for UI.
- * @returns {Array} Stage definitions.
+ * Gets available content stages for UI, with each stage's assignee ('A'/'M')
+ * derived from its task type's flow_pattern in config.
+ * @returns {Array} Stage definitions { id, label, assignee, core }.
  */
 function WebAppProjects_getContentStages() {
-  return CONTENT_STAGES.map(s => ({ id: s.id, label: s.label }));
+  return CONTENT_STAGES.map(s => {
+    const typeConfig = ConfigService.getConfig(s.typeId);
+    const flow = typeConfig ? typeConfig.flow_pattern : '';
+    const assignee = flow === 'admin_direct' ? 'A' : (flow === 'manager_direct' ? 'M' : '');
+    return { id: s.id, label: s.label, assignee: assignee, core: s.core || [] };
+  });
 }
 
 /**

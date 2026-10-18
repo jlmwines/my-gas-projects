@@ -203,7 +203,10 @@ const LibraryService = (function() {
      * logic (first 3 letters uppercase + random suffix), or accepts a user-supplied
      * streamId.
      *
-     * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId? }
+     * setDueDate === false creates the tasks Unscheduled (assignee, no dates);
+     * omitted keeps auto-dating.
+     *
+     * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId?, setDueDate? }
      * @returns {Object} { tasks, streamCode }
      */
     function spawnContentChain(params) {
@@ -211,6 +214,7 @@ const LibraryService = (function() {
         const contentName = params.contentName;
         const stages = params.stages || [];
         const streamId = params.streamId;
+        const noAutoDates = params.setDueDate === false;
 
         if (!entityType) throw new Error('entityType is required');
         if (!contentName || !contentName.trim()) throw new Error('contentName is required');
@@ -254,7 +258,7 @@ const LibraryService = (function() {
                 stageDef.title + contentName,
                 '',
                 streamCode,
-                { entityType: entityType, entityId: resolvedSlug }
+                { entityType: entityType, entityId: resolvedSlug, noAutoDates: noAutoDates }
             );
             if (task) tasks.push(task);
         }

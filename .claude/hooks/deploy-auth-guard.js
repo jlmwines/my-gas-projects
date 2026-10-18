@@ -30,12 +30,17 @@ process.stdin.on('end', () => {
     // pwsh process), so this only ever catches Claude calling clasp deploy
     // directly, bypassing the wrapper.
     const bareClaspDeploy = /\bclasp\s+deploy\b/i.test(command);
+    // `clasp push` overwrites the Apps Script HEAD the editor runs from
+    // (rebuildSysConfigFromSource etc.). Gap found 2026-10-18: a session ran an
+    // unauthorized config push because only deploy was gated.
+    const claspPush = /\bclasp\s+push\b/i.test(command);
     const deployScript = /\bdeploy(-theme)?\.ps1\b/i.test(command);
 
-    if (bareClaspDeploy || deployScript) {
+    if (bareClaspDeploy || claspPush || deployScript) {
       const reason = bareClaspDeploy
         ? 'bare `clasp deploy`'
-        : 'a live-deploy wrapper script (deploy.ps1 / deploy-theme.ps1)';
+        : (claspPush ? '`clasp push` (overwrites the live Apps Script HEAD)'
+          : 'a live-deploy wrapper script (deploy.ps1 / deploy-theme.ps1)');
       process.stdout.write(JSON.stringify({
         hookSpecificOutput: {
           hookEventName: 'PreToolUse',

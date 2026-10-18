@@ -53,18 +53,18 @@
           <option value="other">Other</option>
         </select>
       </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="text" class="form-control form-control-sm" id="cs-stream-id" placeholder="e.g., INT, ABOUT">
-        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
-      </div>
       <div class="form-group mb-0">
-        <label class="small font-weight-bold">Stages</label>
-        <div id="cs-stages-checkboxes" class="d-flex flex-wrap">
+        <label class="small font-weight-bold">Stages <small class="text-muted font-weight-normal">(A = Admin, M = Manager)</small></label>
+        <a href="#" id="cs-clear-stages" class="small ml-2">Clear all</a>
+        <div id="cs-stages-checkboxes">
           <!-- Populated by JS -->
         </div>
       </div>
-      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog/email) + tasks created together. Picking a row that already has an entity just adds the checked stages to it.</p>
+      <div class="form-group mb-0 mt-2">
+        <label class="small mb-0"><input type="checkbox" id="cs-set-due-date" class="mr-1">Set due date now</label>
+        <small class="text-muted d-block">Off: tasks are created Unscheduled (assignee set, no dates) and stay hidden from the assignee until you set a due date.</small>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Creates tasks only. A library entry appears when a Doc is first attached to a task. Picking a row that already has tasks just adds the checked stages.</p>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
       <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('contentStreamModal')">Cancel</button>
@@ -80,6 +80,10 @@
     };
     var data = { calendarRows: [], stages: [] };
 
+    // Calendar cal_Type -> dialog Type value (vocabularies differ: calendar
+    // rows say 'newsletter', the entity type is 'news').
+    var CAL_TYPE_TO_ENTITY = { blog: 'blog', email: 'email', newsletter: 'news', news: 'news', print: 'print' };
+
     function configure(opts) {
       if (!opts) return;
       if (opts.reload) cfg.reload = opts.reload;
@@ -89,8 +93,9 @@
     // when spawning more stages onto an already-existing entity. Both optional.
     function open(opts) {
       opts = opts || {};
-      document.getElementById('cs-stream-id').value = '';
+      data.explicitType = !!opts.entityType;
       document.getElementById('cs-entity-type').value = opts.entityType || 'blog';
+      document.getElementById('cs-set-due-date').checked = false;
       ModalOverlay.open('contentStreamModal');
       _loadPickerData(opts.baseSlug || '');
     }
@@ -108,6 +113,9 @@
             return h.slug && ['holiday', 'blackout', 'note'].indexOf(h.type) === -1;
           });
           _populateCalendarPicker(preselectSlug);
+          // A pre-selected row (Calendar tab) sets the Type too, unless the
+          // caller passed an explicit entityType (entity drawer).
+          if (!data.explicitType && calSel.value) _onCalendarRowChange();
         })
         .withFailureHandler(function(err) {
           calSel.innerHTML = '<option value="">Failed to load calendar rows</option>';
@@ -141,12 +149,42 @@
       }
     }
 
+    // Picking a calendar row defaults the Type from its cal_Type, then
+    // re-renders stages so that type's standard chain is pre-checked.
+    function _onCalendarRowChange() {
+      var calSlug = document.getElementById('cs-calendar-row').value;
+      var row = data.calendarRows.filter(function(h) { return h.slug === calSlug; })[0];
+      var mapped = row ? CAL_TYPE_TO_ENTITY[row.type] : null;
+      if (mapped) document.getElementById('cs-entity-type').value = mapped;
+      _populateStagesCheckboxes();
+    }
+
+    function _stageLabel(s) {
+      var html = '<label class="mr-3 mb-1 small"><input type="checkbox" class="cs-stage-cb mr-1" value="' +
+        TaskWidgets.escape(s.id) + '"' + (s._checked ? ' checked' : '') + '>' + TaskWidgets.escape(s.label);
+      if (s.assignee) html += ' <span class="text-muted">(' + TaskWidgets.escape(s.assignee) + ')</span>';
+      return html + '</label>';
+    }
+
+    // Core chain for the selected Type first (pre-checked), every other stage
+    // below it unchecked. Types with no core chain (e.g. print) show all stages
+    // unchecked.
     function _populateStagesCheckboxes() {
       var container = document.getElementById('cs-stages-checkboxes');
-      container.innerHTML = data.stages.map(function(s) {
-        return '<label class="mr-3 mb-1 small"><input type="checkbox" class="cs-stage-cb mr-1" value="' +
-          TaskWidgets.escape(s.id) + '">' + TaskWidgets.escape(s.label) + '</label>';
-      }).join('');
+      var type = document.getElementById('cs-entity-type').value;
+      var core = [], other = [];
+      data.stages.forEach(function(s) {
+        var isCore = (s.core || []).indexOf(type) > -1;
+        var item = { id: s.id, label: s.label, assignee: s.assignee, _checked: isCore };
+        (isCore ? core : other).push(item);
+      });
+      var html = '';
+      if (core.length) {
+        html += '<div class="d-flex flex-wrap">' + core.map(_stageLabel).join('') + '</div>';
+        html += '<div class="small text-muted mt-1 mb-1">Optional</div>';
+      }
+      html += '<div class="d-flex flex-wrap">' + other.map(_stageLabel).join('') + '</div>';
+      container.innerHTML = html;
     }
 
     function _submit() {
@@ -156,7 +194,6 @@
       if (!row) { TaskWidgets.toast('Calendar row not found — reopen and try again', 'error'); return; }
 
       var entityType = document.getElementById('cs-entity-type').value;
-      var streamId = document.getElementById('cs-stream-id').value.trim().toUpperCase();
       var stages = [];
       document.querySelectorAll('.cs-stage-cb:checked').forEach(function(cb) { stages.push(cb.value); });
       if (stages.length === 0) { TaskWidgets.toast('Please select at least one stage', 'warning'); return; }
@@ -169,9 +206,8 @@
         btn.disabled = false;
         btn.textContent = 'Create Tasks';
         ModalOverlay.close('contentStreamModal');
-        var entityCount = (result.updated && result.updated.entities) ? result.updated.entities.length : 0;
         var taskCount = (result.updated && result.updated.tasks) ? result.updated.tasks.length : 0;
-        TaskWidgets.toast('Created ' + entityCount + ' entity(ies) + ' + taskCount + ' task(s). Stream: ' + result.streamCode, 'success');
+        TaskWidgets.toast('Created ' + taskCount + ' task(s)', 'success');
         cfg.reload();
       }
 
@@ -196,13 +232,23 @@
           contentName: row.name,
           targetDate: row.date,
           stages: stages,
-          streamId: streamId || null
+          streamId: null,
+          setDueDate: document.getElementById('cs-set-due-date').checked
         });
     }
 
     function _wire() {
       var btn = document.getElementById('cs-btn-submit');
       if (btn) btn.addEventListener('click', _submit);
+      var calSel = document.getElementById('cs-calendar-row');
+      if (calSel) calSel.addEventListener('change', _onCalendarRowChange);
+      var typeSel = document.getElementById('cs-entity-type');
+      if (typeSel) typeSel.addEventListener('change', _populateStagesCheckboxes);
+      var clearLink = document.getElementById('cs-clear-stages');
+      if (clearLink) clearLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.cs-stage-cb').forEach(function(cb) { cb.checked = false; });
+      });
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', _wire);

@@ -19,6 +19,7 @@
   .task-col-title { flex: 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .task-col-status { flex: 1; }
   .task-col-priority { flex: 1; text-align: center; }
+  .task-col-start { flex: 1; text-align: center; }
   .task-col-due { flex: 1; text-align: center; }
   .task-col-created { flex: 1; text-align: center; }
   .task-col-link { flex: 0.5; text-align: center; }
@@ -89,6 +90,7 @@
     }
     .task-col-status::before { content: 'Status: '; color: #6c757d; font-size: 12px; font-weight: 600; }
     .task-col-priority::before { content: 'Priority: '; color: #6c757d; font-size: 12px; font-weight: 600; }
+    .task-col-start::before { content: 'Start: '; color: #6c757d; font-size: 12px; font-weight: 600; }
     .task-col-due::before { content: 'Due: '; color: #6c757d; font-size: 12px; font-weight: 600; }
     .task-col-created::before { content: 'Created: '; color: #6c757d; font-size: 12px; font-weight: 600; }
     .task-col-link { padding-top: 8px !important; }
@@ -155,19 +157,20 @@
         </div>
         <div class="card-body">
           <!-- Filters -->
+          <!-- Shared filter row order (TASK_STATES_AND_FILTERS_PLAN): assignee,
+               topic, text, then Open | Done | All. No Unscheduled for assignees. -->
           <div class="tw-filter-bar">
+            <select id="filter-assignee" class="form-control form-control-sm" style="width: 120px;">
+              <option value="Manager" selected>Manager</option>
+            </select>
             <select id="filter-topic" class="form-control form-control-sm" style="width: 110px;">
               <option value="all">All Topics</option>
               <option value="Content">Content</option>
               <option value="Inventory">Inventory</option>
               <option value="Products">Products</option>
             </select>
-            <select id="filter-status" class="form-control form-control-sm" style="width: 100px;">
-              <option value="all_unstarted" selected>All Open</option>
-              <option value="open">Started</option>
-              <option value="done">Done</option>
-            </select>
             <input type="text" id="filter-search" class="form-control form-control-sm" placeholder="Search..." style="width: 150px;">
+            <span id="filter-scope"></span>
           </div>
 
           <!-- List View -->
@@ -178,6 +181,7 @@
               <div class="task-col-title">Title</div>
               <div class="task-col-status">Status</div>
               <div class="task-col-priority">Priority</div>
+              <div class="task-col-start">Start</div>
               <div class="task-col-due">Due</div>
               <div class="task-col-created">Created</div>
               <div class="task-col-link">Link</div>
@@ -229,20 +233,20 @@
     filteredTasks: [],
     libraryBySlug: {},
     currentWeekStart: getWeekStart(new Date()),
-    view: 'list'
+    view: 'list',
+    scope: 'open'  // TaskWidgets scope: 'open' | 'done' | 'all'
   };
 
   // Wire TaskDetail (which owns TaskPacks internally) to this view's data + callbacks.
   // getEntity sources Doc links + version/state for content packs; closures read live
-  // state so each load's data is picked up automatically. assignedTo is always
-  // 'Manager' for manager-dashboard tasks — injected here so TaskDetail can render it.
+  // state so each load's data is picked up automatically. assignedTo comes from
+  // the server; TaskDetail renders tasks assigned to anyone else view-only.
   TaskDetail.configure({
     getTask: function(id) {
       var t = state.tasks.find(function(t) { return t.id === id; });
       if (!t) return null;
       var copy = {};
       for (var k in t) { if (t.hasOwnProperty(k)) copy[k] = t[k]; }
-      copy.assignedTo = 'Manager';
       return copy;
     },
     getEntity: function(slug) { return state.libraryBySlug[slug] || null; },
@@ -304,6 +308,7 @@
       renderOrdersCard(data.orders);
       renderInventoryCard(data.inventory);
       renderProductsCard(data.products);
+      populateAssigneeFilter();
       applyFilters();
 
       // Deep-link from the Library entity drawer: open TaskDetail modal for the
@@ -409,24 +414,34 @@
 
   // === Task List ===
 
+  // Assignee options from the loaded tasks (server already hides Unscheduled
+  // tasks). Keeps the current choice; default is the manager's own tasks.
+  function populateAssigneeFilter() {
+    var sel = document.getElementById('filter-assignee');
+    var current = sel.value || 'Manager';
+    var names = ['Manager'];
+    state.tasks.forEach(function(t) {
+      if (t.assignedTo && names.indexOf(t.assignedTo) === -1) names.push(t.assignedTo);
+    });
+    names.sort();
+    sel.innerHTML = '<option value="">All assignees</option>' + names.map(function(n) {
+      return '<option value="' + TaskWidgets.escape(n) + '"' + (n === current ? ' selected' : '') + '>' + TaskWidgets.escape(n) + '</option>';
+    }).join('');
+  }
+
+  function renderScopeLinks() {
+    document.getElementById('filter-scope').innerHTML = TaskWidgets.scopeLinksHtml(state.scope, false);
+  }
+
   function applyFilters() {
+    var assignee = document.getElementById('filter-assignee').value;
     var topic = document.getElementById('filter-topic').value;
-    var status = document.getElementById('filter-status').value;
     var search = document.getElementById('filter-search').value.toLowerCase();
 
     state.filteredTasks = state.tasks.filter(function(task) {
+      if (assignee && task.assignedTo !== assignee) return false;
       if (topic !== 'all' && task.topic !== topic) return false;
-
-      // Status filtering
-      // "all_unstarted" = All Open (not Done, regardless of start date)
-      // "open" = Started (has start date, not Done)
-      // "done" = Done tasks only
-      if (status === 'all_unstarted' && task.status === 'Done') return false;
-      if (status === 'open') {
-        var hasStartDate = task.startDate && task.startDate !== '';
-        if (!hasStartDate || task.status === 'Done') return false;
-      }
-      if (status === 'done' && task.status !== 'Done') return false;
+      if (!TaskWidgets.matchesScope(task, state.scope)) return false;
 
       if (search && task.name.toLowerCase().indexOf(search) === -1 &&
           task.entityName.toLowerCase().indexOf(search) === -1) return false;
@@ -461,9 +476,12 @@
       html += '<div class="task-row' + overdueClass + '" data-id="' + task.id + '">';
       html += '<div class="task-col-topic"><span class="badge badge-secondary">' + task.topic + '</span></div>';
       html += '<div class="task-col-entity" title="' + TaskWidgets.escape(task.entityName) + '">' + TaskWidgets.escape(entityDisplay) + '</div>';
-      html += '<div class="task-col-title" title="' + TaskWidgets.escape(task.name) + '">' + TaskWidgets.escape(task.name) + '</div>';
+      var otherAssignee = task.assignedTo && task.assignedTo !== 'Manager'
+        ? ' <span class="text-muted small">(' + TaskWidgets.escape(task.assignedTo) + ', view only)</span>' : '';
+      html += '<div class="task-col-title" title="' + TaskWidgets.escape(task.name) + '">' + TaskWidgets.escape(task.name) + otherAssignee + '</div>';
       html += '<div class="task-col-status">' + task.status + '</div>';
       html += '<div class="task-col-priority">' + (task.priority || '-') + '</div>';
+      html += '<div class="task-col-start">' + TaskWidgets.formatDateShort(task.startDate) + '</div>';
       html += '<div class="task-col-due">' + TaskWidgets.formatDateShort(task.dueDate) + '</div>';
       html += '<div class="task-col-created">' + TaskWidgets.formatDateShort(task.createdDate) + '</div>';
       html += '<div class="task-col-link">' + linkHtml + '</div>';
@@ -564,7 +582,16 @@
   // === Event Listeners ===
 
   document.getElementById('filter-topic').addEventListener('change', applyFilters);
-  document.getElementById('filter-status').addEventListener('change', applyFilters);
+  document.getElementById('filter-assignee').addEventListener('change', applyFilters);
+  document.getElementById('filter-scope').addEventListener('click', function(e) {
+    var a = e.target.closest('.tw-scope-link');
+    if (!a) return;
+    e.preventDefault();
+    state.scope = a.dataset.scope;
+    renderScopeLinks();
+    applyFilters();
+  });
+  renderScopeLinks();
   document.getElementById('filter-search').addEventListener('input', applyFilters);
 
   document.getElementById('btn-list-view').addEventListener('click', function() { toggleView('list'); });

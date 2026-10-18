@@ -31846,7 +31846,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print_newsletter_body",
-        "Write the Print Newsletter Body section of a lead blog post (~150-200 words, self-contained, signed off — Evyatar).",
+        "Review Extracts: review and edit the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA) before translation.",
         "stable",
         "topic",
         "Content",
@@ -31867,7 +31867,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print_newsletter_body",
-        "Write the Print Newsletter Body section of a lead blog post (~150-200 words, self-contained, signed off — Evyatar).",
+        "Review Extracts: review and edit the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA) before translation.",
         "stable",
         "default_priority",
         "Normal",
@@ -31888,7 +31888,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print_newsletter_body",
-        "Write the Print Newsletter Body section of a lead blog post (~150-200 words, self-contained, signed off — Evyatar).",
+        "Review Extracts: review and edit the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA) before translation.",
         "stable",
         "initial_status",
         "New",
@@ -31909,7 +31909,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print_newsletter_body",
-        "Write the Print Newsletter Body section of a lead blog post (~150-200 words, self-contained, signed off — Evyatar).",
+        "Review Extracts: review and edit the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA) before translation.",
         "stable",
         "flow_pattern",
         "manager_direct",
@@ -31930,7 +31930,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print_newsletter_body",
-        "Write the Print Newsletter Body section of a lead blog post (~150-200 words, self-contained, signed off — Evyatar).",
+        "Review Extracts: review and edit the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA) before translation.",
         "stable",
         "due_pattern",
         "one_week",
@@ -31951,7 +31951,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print_newsletter_body",
-        "Write the Print Newsletter Body section of a lead blog post (~150-200 words, self-contained, signed off — Evyatar).",
+        "Review Extracts: review and edit the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA) before translation.",
         "stable",
         "pack_form",
         "inline",
@@ -32098,7 +32098,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.admin_review",
-        "Admin gate between Claude EN draft and Evyatar's edit pass.",
+        "Extracts: draft the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) from the manager-locked body.",
         "stable",
         "topic",
         "Content",
@@ -32119,7 +32119,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.admin_review",
-        "Admin gate between Claude EN draft and Evyatar's edit pass.",
+        "Extracts: draft the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) from the manager-locked body.",
         "stable",
         "default_priority",
         "Normal",
@@ -32140,7 +32140,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.admin_review",
-        "Admin gate between Claude EN draft and Evyatar's edit pass.",
+        "Extracts: draft the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) from the manager-locked body.",
         "stable",
         "initial_status",
         "New",
@@ -32161,7 +32161,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.admin_review",
-        "Admin gate between Claude EN draft and Evyatar's edit pass.",
+        "Extracts: draft the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) from the manager-locked body.",
         "stable",
         "flow_pattern",
         "admin_direct",
@@ -32182,7 +32182,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.admin_review",
-        "Admin gate between Claude EN draft and Evyatar's edit pass.",
+        "Extracts: draft the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) from the manager-locked body.",
         "stable",
         "due_pattern",
         "next_business_day",
@@ -32203,10 +32203,10 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.admin_review",
-        "Admin gate between Claude EN draft and Evyatar's edit pass.",
+        "Extracts: draft the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) from the manager-locked body.",
         "stable",
         "pack_form",
-        "skeleton",
+        "inline",
         "",
         "",
         "",
@@ -34492,7 +34492,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print.create-en",
-        "Assemble EN print newsletter doc (blog excerpt + AYIW body + layout).",
+        "Assemble the EN and HE print newsletter docs (blog excerpt + AYIW body + layout).",
         "stable",
         "topic",
         "Content",
@@ -34513,7 +34513,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print.create-en",
-        "Assemble EN print newsletter doc (blog excerpt + AYIW body + layout).",
+        "Assemble the EN and HE print newsletter docs (blog excerpt + AYIW body + layout).",
         "stable",
         "default_priority",
         "Normal",
@@ -34534,7 +34534,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print.create-en",
-        "Assemble EN print newsletter doc (blog excerpt + AYIW body + layout).",
+        "Assemble the EN and HE print newsletter docs (blog excerpt + AYIW body + layout).",
         "stable",
         "initial_status",
         "New",
@@ -34555,7 +34555,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print.create-en",
-        "Assemble EN print newsletter doc (blog excerpt + AYIW body + layout).",
+        "Assemble the EN and HE print newsletter docs (blog excerpt + AYIW body + layout).",
         "stable",
         "flow_pattern",
         "admin_direct",
@@ -34576,7 +34576,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print.create-en",
-        "Assemble EN print newsletter doc (blog excerpt + AYIW body + layout).",
+        "Assemble the EN and HE print newsletter docs (blog excerpt + AYIW body + layout).",
         "stable",
         "due_pattern",
         "one_week",
@@ -34597,7 +34597,7 @@ function getMasterConfiguration() {
     ],
     [
         "task.content.print.create-en",
-        "Assemble EN print newsletter doc (blog excerpt + AYIW body + layout).",
+        "Assemble the EN and HE print newsletter docs (blog excerpt + AYIW body + layout).",
         "stable",
         "pack_form",
         "inline",

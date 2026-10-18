@@ -126,7 +126,10 @@ const TaskService = (function() {
    * @param {Object} [options={}] Additional options:
    *   { projectId, startDate, allowDuplicate,
    *     topic, priority, status, dueDate, assignedTo,
-   *     entityType, entityId }
+   *     entityType, entityId, noAutoDates }
+   *   noAutoDates: skip auto start/due dates (user-created tasks only; the
+   *   task stays Unscheduled until the admin sets a due date). Explicit
+   *   startDate/dueDate are still written. System tasks never pass it.
    *   topic/priority/status/dueDate/assignedTo override the values that would
    *   otherwise be derived from taskTypeConfig — used by user-created custom
    *   tasks (task.project.custom) where the modal supplies the values directly.
@@ -256,8 +259,10 @@ const TaskService = (function() {
       const dueDateIdx = headers.indexOf('st_DueDate');
       const statusIdx = headers.indexOf('st_Status');
 
+      const autoDates = !options.noAutoDates;
+
       // Rule 1: Only immediate tasks get start date on creation
-      if (duePattern === 'immediate' && startDateIdx > -1 && !newRow[startDateIdx]) {
+      if (autoDates && duePattern === 'immediate' && startDateIdx > -1 && !newRow[startDateIdx]) {
         newRow[startDateIdx] = today;
       }
 
@@ -267,7 +272,7 @@ const TaskService = (function() {
       // visible deadline at creation instead of sitting with no dates.
       if (assignedToIdx > -1 && newRow[assignedToIdx]) {
         // Set start date (if not already set by immediate rule or options)
-        if (startDateIdx > -1 && !newRow[startDateIdx]) {
+        if (autoDates && startDateIdx > -1 && !newRow[startDateIdx]) {
           newRow[startDateIdx] = today;
         }
 
@@ -277,7 +282,7 @@ const TaskService = (function() {
         }
 
         // Calculate and set due date (respect any explicit options.dueDate already set)
-        if (dueDateIdx > -1 && duePattern && newRow[startDateIdx] && !newRow[dueDateIdx]) {
+        if (autoDates && dueDateIdx > -1 && duePattern && newRow[startDateIdx] && !newRow[dueDateIdx]) {
           const startDate = newRow[startDateIdx];
           const dueDate = calculateDueDate(startDate, duePattern);
           if (dueDate) {

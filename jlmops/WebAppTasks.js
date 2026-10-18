@@ -712,9 +712,8 @@ function WebAppTasks_createTask(payload) {
     if (!p.projectId) {
       return { error: 'Project is required.' };
     }
-    if ((p.startDate && !p.dueDate) || (p.dueDate && !p.startDate)) {
-      return { error: 'Provide both start date and due date, or neither.' };
-    }
+    // Start and due date are independent; a blank due date leaves the task
+    // Unscheduled (hidden from the assignee until the admin sets one).
 
     const toIsraelDate = function(s) {
       if (!s) return null;
@@ -729,7 +728,8 @@ function WebAppTasks_createTask(payload) {
       assignedTo: p.assignedTo || null,
       startDate: toIsraelDate(p.startDate),
       dueDate: toIsraelDate(p.dueDate),
-      allowDuplicate: true
+      allowDuplicate: true,
+      noAutoDates: true
     };
 
     const result = TaskService.createTask(

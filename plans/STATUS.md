@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-15. jlmops @579 live (calendar status counts archived tasks), Central Mountains EN+HE published and HE resynced to the manager's revised Doc; Next Action items 2 (cartons) and 4 (tastings) still need a user status check.
+**Updated:** 2026-10-18. jlmops @584 live: task states keyed on due date (Unscheduled/Open/Done/All) across task views, awaiting user testing; chain scheduling from the goal date still to do.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @579 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-10-14 · theme 2026-10-14 |
+| Deploy Version | jlmops @584 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-10-18 · theme 2026-10-14 |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -43,7 +43,8 @@ The live "what now" — daily review reads these first.
 9. **Central Mountains region post (Slot C) — published live EN+HE.** Companion email HTML built EN+HE (`content/regions/central-mountains/`); user sending via Mailchimp with the Hebrew footer block. Slot table → `content/plans/REGION_POSTS_PLAN.md`.
 10. **Coastal Plain (Slot D), Golan Heights (Slot E), and Judea/Foothills (Slot F) region posts — planned, not ready yet (user, 2026-10-15); calendar dates will slip.** Coastal Plain and Golan Heights bodies drafted from manager-provided seed content, per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md` archetypes; awaiting the manager's Title+Body lock. Sources: `content/regions/coastal plains/coastal-plain-en.post.md`, `content/regions/golan heights/golan-heights-en.post.md` (folder names use spaces, matching the folders the manager created). Judea has no body drafted yet but its slot/dates are now confirmed (2026-08-25) per the working editorial calendar. All three regions' near-future calendar rows (blog/email/newsletter) staged 2026-08-25, pending an admin "Apply Pending Updates." Full slot table → `content/plans/REGION_POSTS_PLAN.md`.
 11. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
-12. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
+12. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/TASK_STATES_AND_FILTERS_PLAN.md` (deferred section).
+13. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
 
 ## Active Plans
 
@@ -51,6 +52,8 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E, G, and J (product-editor load time + manager submit/verify hang, plus the follow-on product-detail load-performance work) resolved and smoke-tested clean. Session F folded into `jlmops/plans/SYNC_HARDENING_PLAN.md`, now the single home for all sync-pipeline work: Bug 5 Stages A/B, D1 (job-queue locking), Bug 6, D2/D3/D4, and now Bug 5 Stages C/E (`purgeOldJobs`/`pullOrders` locking) all built and deployed live (@570) 2026-08-31. D2 also caught and fixed a third, previously-undocumented broken sync-guard (`WooProductPullService.pullProducts`, same `.currentStage`-vs-`.stage` defect as an already-known one). Bug 2 (Generate button visually reappears mid-export, confirmed capable of a real double-submit) is fixed, live @572, and verified 2026-09-02 on a real sync (single export call, new stage fired correctly, button confirmed not reappearing); Bugs 1 and 3 still need a live repro. **Stages C/E: 5+ days live (8/27-9/2), zero errors**, including a genuine sync-vs-housekeeping collision on 9/2 that resolved cleanly — though that specific case was caught by D2's guard, not Stage E's own narrower inside-lock re-check, which remains formally unexercised. H (timestamps + date-format audit), I (count-task creation audit) still pending, unrelated to sync.
 - **Test suite extension** (`jlmops/plans/TEST_SUITE_EXTENSION_PLAN.md`) — Tiers 1-3 built, deployed (@566), and run live 2026-08-27: 54/54 passing (Tier 1 caught a real bug on first run, `evaluateCondition`'s boolean/zero coercion, fixed; Tier 2 caught and corrected a wrong plan claim — `_executeSchemaComparison` isn't I/O-free like its four siblings, it calls `ConfigService.getAllConfig()`, so only its guard path is tested). Only Tier 4 remains (I/O-heavy code, explicitly deferred, needs a mocking-layer decision).
+- **Task states and filters** (`jlmops/plans/TASK_STATES_AND_FILTERS_PLAN.md`) — live @582/@583, awaiting user testing; then the `WORKFLOWS.md` §12 rewrite. Backward chain scheduling deferred (Next Action 12).
+- **Content task creation dialog** (`jlmops/plans/CONTENT_TASK_CREATION_PLAN.md`) — live @581, awaiting user testing; then doc updates and archive.
 - **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — only Phase 1 still open: refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks", investigated, root cause not found, needs a live repro. Phases 2-4 shipped and documented in `jlmops/docs/WORKFLOWS.md` §13.1.

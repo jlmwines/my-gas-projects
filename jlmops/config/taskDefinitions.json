@@ -722,7 +722,7 @@
     [
         "task.template",
         "task.content.print_newsletter_body",
-        "Write the Print Newsletter Body section of a lead blog post (~150-200 words, self-contained, signed off — Evyatar).",
+        "Review Extracts: review and edit the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA) before translation.",
         "stable",
         "topic", "Content",
         "default_priority", "Normal",
@@ -746,14 +746,14 @@
     [
         "task.template",
         "task.content.admin_review",
-        "Admin gate between Claude EN draft and Evyatar's edit pass.",
+        "Extracts: draft the derived fields (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) from the manager-locked body.",
         "stable",
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
         "flow_pattern", "admin_direct",
         "due_pattern", "next_business_day",
-        "pack_form", "skeleton"
+        "pack_form", "inline"
     ],
     [
         "task.template",
@@ -974,7 +974,7 @@
     [
         "task.template",
         "task.content.print.create-en",
-        "Assemble EN print newsletter doc (blog excerpt + AYIW body + layout).",
+        "Assemble the EN and HE print newsletter docs (blog excerpt + AYIW body + layout).",
         "stable",
         "topic", "Content",
         "default_priority", "Normal",

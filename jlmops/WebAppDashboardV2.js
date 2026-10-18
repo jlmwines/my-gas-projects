@@ -632,13 +632,29 @@ function WebAppDashboardV2_getManagerData() {
       }
     }
 
+    // TASK_STATES_AND_FILTERS_PLAN: the manager sees every assignee's released
+    // tasks (admin tasks view-only, client-side), defaulting to own. A task with
+    // no due date is Unscheduled and hidden from assignees. Other assignees'
+    // closed tasks are limited to the last 30 days to keep the payload small.
+    const isClosedStatus = s => s === 'Done' || s === 'Closed' || s === 'Completed';
+    const recentCutoff = new Date();
+    recentCutoff.setDate(recentCutoff.getDate() - 30);
     const managerTasks = allTasksIncludingDone
-      .filter(task => task.st_AssignedTo === 'Manager')
       .filter(task => task.st_Status !== 'Cancelled')
+      .filter(task => {
+        const closed = isClosedStatus(task.st_Status);
+        if (!closed && !task.st_DueDate) return false;
+        if (closed && task.st_AssignedTo !== 'Manager') {
+          const done = task.st_DoneDate ? new Date(task.st_DoneDate) : null;
+          return !!done && !isNaN(done) && done >= recentCutoff;
+        }
+        return true;
+      })
       .map(task => {
         const base = {
           id: task.st_TaskId,
           typeId: task.st_TaskTypeId,
+          assignedTo: task.st_AssignedTo || '',
           // For user-created project tasks the topic is whatever the modal
           // captured into st_Topic; for system-generated types we keep the
           // type-derived label for consistency with the existing dashboard.
@@ -665,7 +681,8 @@ function WebAppDashboardV2_getManagerData() {
         // sees at-a-glance who they're contacting without leaving the dashboard.
         // ContactService.getContactByEmail uses an internal cache so repeated
         // lookups across all outreach tasks are cheap after the first hit.
-        if (typeof base.typeId === 'string' &&
+        if (base.assignedTo === 'Manager' &&
+            typeof base.typeId === 'string' &&
             base.typeId.indexOf('task.contact.') === 0 &&
             base.entityId &&
             typeof ContactService !== 'undefined' &&
@@ -685,14 +702,19 @@ function WebAppDashboardV2_getManagerData() {
         return base;
       })
       .sort((a, b) => {
-        // Sort by due date, then priority
-        if (!a.dueDate && !b.dueDate) return 0;
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        try {
-          const dateDiff = new Date(a.dueDate) - new Date(b.dueDate);
-          if (dateDiff !== 0) return dateDiff;
-        } catch (e) { /* ignore */ }
+        // Sort by start date (no start last), then due date, then priority —
+        // same default order as every task view (TASK_STATES_AND_FILTERS_PLAN).
+        const byDate = (x, y) => {
+          if (!x && !y) return 0;
+          if (!x) return 1;
+          if (!y) return -1;
+          const d = new Date(x) - new Date(y);
+          return isNaN(d) ? 0 : d;
+        };
+        const startDiff = byDate(a.startDate, b.startDate);
+        if (startDiff !== 0) return startDiff;
+        const dueDiff = byDate(a.dueDate, b.dueDate);
+        if (dueDiff !== 0) return dueDiff;
 
         const priorityOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
         return (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
@@ -705,7 +727,8 @@ function WebAppDashboardV2_getManagerData() {
       orders: _getOrdersData_v2(ordLog, webOrdM),
       inventory: _getInventoryData(allOpenTasks, allConfig),
       products: _getProductsData(allOpenTasks),
-      projects: _getProjectSummaries(allOpenTasks),
+      // Counts are the manager's own released (due-dated) open tasks only.
+      projects: _getProjectSummaries(allOpenTasks.filter(t => t.st_AssignedTo === 'Manager' && t.st_DueDate)),
       managerTasks: managerTasks,
       libraryBySlug: libraryBySlug
     };
