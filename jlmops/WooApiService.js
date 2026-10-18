@@ -151,7 +151,17 @@ const WooApiService = (function() {
             throw oversizeErr;
           }
 
-          var data = JSON.parse(response.getContentText());
+          var bodyText = response.getContentText();
+          var data;
+          try {
+            data = JSON.parse(bodyText);
+          } catch (parseErr) {
+            // 2xx with a non-JSON body (e.g. host anti-bot challenge page) — capture status + snippet, retry
+            var snippet = bodyText.substring(0, 300).replace(/\s+/g, ' ');
+            lastError = new Error('Non-JSON response (HTTP ' + statusCode + '): ' + snippet);
+            logger.warn(SERVICE_NAME, '_fetch', 'Non-JSON 2xx response on ' + endpoint + ' — will retry', { data: { attempt: attempt + 1, statusCode: statusCode, snippet: snippet } });
+            continue;
+          }
           return {
             data: data,
             headers: respHeaders
