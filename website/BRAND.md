@@ -19,6 +19,7 @@ Full brand voice guidelines: `../business/CONTENT_STRATEGY.md`
 **Typography:** Secular One for display/headings, Rubik for UI/body (both Google Fonts; the old Open Sans was replaced in the cutover).
 
 **Photography/imagery:**
+- Real photographs of our own people and places (e.g. the homepage image) are part of the style
 - Canva AI generated: impressionist oil painting style, warm natural lighting, no text
 - Featured images match this style consistently
 - Not stock photography, not flat design illustrations
