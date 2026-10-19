@@ -49,7 +49,7 @@ Projects: jlmops, web, marketing, content
 - [ ] FAQ/Glossary
 - [ ] YouTube channel
 - [ ] 2026-05-07: Wine tasting / sampling events at restaurants and venues — previously planned by partner, canceled by war; QR-code + discount cards already produced for new-customer acquisition; revisit and execute
-- [ ] 2026-05-15: Bundle duplicate meta (titles/descriptions repeated across the category). Package imagery moved to `website/PACKAGE_IMAGES_PLAN.md`.
+- [ ] 2026-05-15: Bundle duplicate meta (titles/descriptions repeated across the category). Package imagery done (rule in `website/BRAND.md`).
 
 ## content
 

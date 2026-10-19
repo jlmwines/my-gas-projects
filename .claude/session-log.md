@@ -8,7 +8,7 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 - Review found portfolio STATUS 52 days stale; rebuilt it and the portfolio CALENDAR. jlmwines STATUS/CALENDAR drift collapsed; CODE_AUDIT_PLAN archived; clasp-auth memory and two CLAUDE.md contradictions fixed. Details in both `last-cleanup.md` files.
 - Next: user's call on the open items listed in `last-cleanup.md` (wishlist briefs, Reds/Whites status, portfolio memory duplication). Testing @581-@584 still pending from 10-18.
-- Images: value-bundle redesign tried and dropped (user judged it a decline vs. current images); package folk-art set approved, user mid-generation in Canva. Prompts and remaining steps in `website/PACKAGE_IMAGES_PLAN.md`. Lesson: look at the live images before proposing a redesign.
+- Images: value-bundle redesign tried and dropped (user judged it a decline vs. current images). Package folk-art set uploaded and live on all 12 EN/HE products; rule graduated to `website/BRAND.md`, plan archived. HE alt = HE product name until the manager translates. Lesson: look at the live images before proposing a redesign.
 
 ---
 

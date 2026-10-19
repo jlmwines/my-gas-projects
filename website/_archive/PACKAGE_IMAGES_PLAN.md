@@ -1,6 +1,6 @@
 # Package Images Plan
 
-Replacing the six Occasion Packages product images with a consistent naïve Israeli folk-art set. In progress: the user is generating images in Canva from the prompts below (several done, approved); upload to WooCommerce not started.
+Archived: shipped 2026-10-19. All six folk-art package images are live on the EN and HE products (EN media 67878-67888 even, HE copies odd). The style rule and upload method graduated to `website/BRAND.md`. HE alt text is currently the HE product name, until the manager's translation replaces it.
 
 ## Decisions
 
@@ -28,9 +28,9 @@ Every prompt = shared style block + scene line. Generate Cheese Please first, lo
 
 ## Remaining steps
 
-1. Finish generating all six in Canva (user).
-2. Replace each package's product image in WooCommerce (EN; confirm the HE product picks it up via WPML).
-3. Update `website/BRAND.md` imagery rule: it currently says all imagery is impressionist oil, "not flat design illustrations" — add the folk-art package exception.
-4. Then archive this plan.
+1. ~~Finish generating all six in Canva (user).~~ Done. Small skyline landmarks (a minaret in Shabbat, domes) reviewed and accepted by the user as fine.
+2. ~~Replace each package's product image in WooCommerce.~~ Done, both languages verified on the live pages.
+3. ~~Update `website/BRAND.md` imagery rule.~~ Done.
+4. ~~Archive this plan.~~ Done.
 
 Out of scope here, noted for later: Israel Discovery and Seasonal bundle images (2022) not yet checked against the value-bundle family; bundle duplicate meta titles/descriptions.

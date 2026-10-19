@@ -25,7 +25,7 @@ Authoritative source is the live [`JLMops_Publishing` calendar sheet](https://do
 | — | jlmops | Year in Wine PDF research | PDF generation options. |
 | — | Marketing | Tuesday evening test send | After segments ready. |
 | — | jlmops | Bundle composite-weight tuning | Bundles implemented (`jlmops/docs/WORKFLOWS.md` §15); `GENERATOR_WEIGHTS` in `BundleService.js` is still one global tunable, not per-slot/per-bundle overrides. |
-| — | Website | Package product images (folk-art set) | In progress, user generating in Canva. Value bundle images stay. Plan: `website/PACKAGE_IMAGES_PLAN.md`. |
+| — | Website | Package HE image alt text | Folk-art images live 2026-10-19; HE attachments (odd IDs 67879-67889) still carry the HE product name as alt until manager translates. |
 
 ## Recurring
 
