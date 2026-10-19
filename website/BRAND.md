@@ -24,7 +24,7 @@ Full brand voice guidelines: `../business/CONTENT_STRATEGY.md`
 - Not stock photography, not flat design illustrations
 - **Exception: Occasion Packages** (product category 1035) use a naïve Israeli folk-art set, so each package reads as a place and an occasion. Prompt = this style block + a one-line scene: "Square illustration in naïve Israeli folk-art style, inspired by Reuven Rubin and Nahum Gutman: flat colors, simple unfussy shapes, warm hand-painted feel. Palette: terracotta, ochre, cypress green, Jerusalem stone, deep wine red, pale sky blue. Wine bottles drawn as plain unlabeled shapes. Cheerful and inviting. No people, no text, no logos." Attach an existing package image as a Canva style reference.
 - **Value bundles** keep their side-on bottle-lineup images (they read as "a case of wine" at thumbnail size; label style distinguishes tiers). A flat-lay redesign was tried and rejected.
-- **Uploading product images:** set the image on the EN product only. WPML duplicates the attachment into HE and syncs the HE product's image; then give the HE attachment Hebrew title/alt.
+- **Uploading product images:** set the image on the EN product only. WPML duplicates the attachment into HE and syncs the HE product's image; then give the HE attachment Hebrew title/alt. Category images don't sync: set the EN and HE category separately (they share one attachment).
 
 **Layout patterns:**
 - Product pages: clean WooCommerce
