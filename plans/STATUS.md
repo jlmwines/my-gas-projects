@@ -7,7 +7,7 @@
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
 - **jlmops** (GAS backend) — live (current version in Metrics below); sync/calendar/coupons all recently hardened (`jlmops/docs/ARCHITECTURE.md`).
-- **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup and expanded Wine Talk categories both live; category tab-row UI not yet built (`website/BLOG_CATEGORIES_PLAN.md`).
+- **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup and expanded Wine Talk categories both live; folk-art package images live EN/HE (HE alt text awaits manager translation); category tab-row UI not yet built (`website/BLOG_CATEGORIES_PLAN.md`).
 - **content** — 12 editorial posts live (EN+HE), 3 of 6 region posts published; remaining regions and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — organic traffic rising, subscribers growing slowly; no paid ads running (`marketing/_resources/PAID_ADS_REFERENCE.md`); manager-led Thursday tastings are the current growth push (Next Action 3-4).
 - **business** — strategy/brand docs current.
@@ -19,7 +19,7 @@ One current-state line per business area. The umbrella has no single phase label
 | Last Active | 2026-10-18 |
 | Revenue | Steady |
 | Deploy Version | jlmops @584 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-10-18 · theme 2026-10-14 |
+| Deploy Date | jlmops 2026-10-18 · theme 2026-10-19 (main.css badge fix, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |

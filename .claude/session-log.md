@@ -9,6 +9,8 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Review found portfolio STATUS 52 days stale; rebuilt it and the portfolio CALENDAR. jlmwines STATUS/CALENDAR drift collapsed; CODE_AUDIT_PLAN archived; clasp-auth memory and two CLAUDE.md contradictions fixed. Details in both `last-cleanup.md` files.
 - Next: user's call on the open items listed in `last-cleanup.md` (wishlist briefs, Reds/Whites status, portfolio memory duplication). Testing @581-@584 still pending from 10-18.
 - Images: value-bundle redesign tried and dropped (user judged it a decline vs. current images). Package folk-art set uploaded and live on all 12 EN/HE products; rule graduated to `website/BRAND.md`, plan archived. HE alt = HE product name until the manager translates. Lesson: look at the live images before proposing a redesign.
+- Also: packages category share image (folk-art, shared EN/HE attachment); theme main.css fix keeps sale badges inside grid images (Woo core loop rule outranked ours); "so your always get" typo fixed in 82 EN descriptions (source SysLkp_Texts P2 fixed by user). Bundle descriptions not mirrored in WebProdM logged low in bugs.md.
+- Next: manager translates 6 HE package alt texts. Portfolio repo is local-only now (memory).
 
 ---
 
