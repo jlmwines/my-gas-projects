@@ -1,6 +1,6 @@
 # Code Audit Fix Sequence
 
-Sequences the ~18 findings from `CODE_AUDIT_PLAN.md` §9-10 (first-ever comprehensive jlmops audit, 2026-07-23) into focused implementation sessions, same model as `BUG_FIX_SEQUENCE.md` (continuing its session-letter scheme at K). One additional bug found live 2026-07-24 (not from the original audit) is folded into Session K rather than tracked separately. Ordered by the audit's own Tier 1-4 ranking, then by readiness within each tier (concrete fix shape → decision-needed → larger scope). **Status: planned, nothing implemented yet** — each session still needs explicit user go-ahead before code changes start.
+Sequences the ~18 findings from `_archive/CODE_AUDIT_PLAN.md` §9-10 (first-ever comprehensive jlmops audit, 2026-07-23) into focused implementation sessions, same model as `BUG_FIX_SEQUENCE.md` (continuing its session-letter scheme at K). One additional bug found live 2026-07-24 (not from the original audit) is folded into Session K rather than tracked separately. Ordered by the audit's own Tier 1-4 ranking, then by readiness within each tier (concrete fix shape → decision-needed → larger scope). **Status: Sessions K-Q and S-U done 2026-07-24; only Session R (server-side authorization) remains**, to be spun into its own `AUTHORIZATION_PLAN.md` when picked up. Once that exists, this doc can be archived.
 
 Each session ends with the established cycle: commit → user OK → `clasp push` → user smoke → user OK → `deploy.ps1`.
 
@@ -77,7 +77,7 @@ One session, six mechanical edits, same pattern each time. Smoke: a product/task
 
 ---
 
-### Session P — Quick batch, concrete fix shape (7 items) — all coded 2026-07-24, not yet committed/pushed/deployed
+### Session P — Quick batch, concrete fix shape (7 items) — done 2026-07-24
 
 1. **`ProductImportService.js` `_upsertWebXltData`** — copies `WebXltS`→`WebXltM` by column position instead of field name (unlike every other upsert in the file). Fix to field-name-based copy, matching the file's own convention elsewhere. **Coded 2026-07-24:** remapped by field name via a `webXltMHeaders.map(h => webXltSHeaders.indexOf(h))` lookup instead of a raw positional slice. **Scope note:** tracing the "orphaned duplicate in `ProductService.js`" turned out much bigger than expected — not one function but a complete, unexported ~656-line duplicate of this file's entire import pipeline (`_runComaxImport`/`_upsertComaxData`/`_maintainSysProductAudit`/`_runWebProductsImport`/`_upsertWebProductsData`/`_runWebXltValidationAndUpsert`/`_upsertWebXltData`/`processJob`, `ProductService.js` lines ~236-892). Confirmed dead (`ProductService.js` never exports `processJob`, unlike `ProductImportService.js`, which does and is the live copy). Moved to Session T rather than deleted here — too large for this session's scope.
 2. **`InventoryManagementService.js`: `setBruryaQuantity`, `setInventoryCount`, `updatePhysicalCounts`** — the "create new `SysProductAudit` row" fallback never populates `pa_CmxId` (real PK), looking for nonexistent `cpm_ProdId`/`pa_ProdId` instead. Fix the fallback to populate the real PK. Narrow window (`_maintainSysProductAudit` proactively seeds most rows first) but still a real duplicate-row risk for an unseeded SKU. **Coded 2026-07-24:** `setBruryaQuantity`/`setInventoryCount` — swapped `pa_ProdId`/`cpm_ProdId` for `pa_CmxId`/`cpm_CmxId`. `updatePhysicalCounts` turned out to have no Comax lookup at all in its fallback (not just a wrong field name) — added a `CmxProdM` lookup by SKU, matching the other two functions' pattern. **Not fixed, out of scope:** the same two functions' fallback also writes to `pa_NameHe`, which doesn't exist in the current `SysProductAudit` schema either — same silent-no-op shape, not part of this bug, not touched.
@@ -208,7 +208,7 @@ Findings from the audit that didn't make the Tier 1-4 synthesis list and aren't 
 - (added on review) `CouponService.js`/`CampaignService.js` `importFromCsv` — same per-row full-sheet-read pattern as the `ContactEnrichmentService` finding in Session U, smaller scale.
 - (added on review) `CrmIntelligenceService.js` — hardcoded Gregorian holiday dates; code's own comment already flags annual manual upkeep is required.
 
-**Known gap, not a fix item:** Phase 4 (error-handling consistency) was only checked as an explicit dimension from the Content Library pass onward — Sync/Orders and Products/Inventory weren't systematically checked for catch-coverage/swallow-vs-rethrow patterns. If this audit is ever continued rather than closed out, that's the one legitimate remaining gap (per `CODE_AUDIT_PLAN.md` §10).
+**Known gap, not a fix item:** Phase 4 (error-handling consistency) was only checked as an explicit dimension from the Content Library pass onward — Sync/Orders and Products/Inventory weren't systematically checked for catch-coverage/swallow-vs-rethrow patterns. If this audit is ever continued rather than closed out, that's the one legitimate remaining gap (per `_archive/CODE_AUDIT_PLAN.md` §10).
 
 ---
 

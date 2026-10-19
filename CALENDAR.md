@@ -1,13 +1,14 @@
 # JLM Wines Calendar
 
-**Updated:** 2026-08-12 (verified current, no drift found).
+**Updated:** 2026-10-19.
 
 ## Plan-driven queues (not date-bound)
 
 The bulk of forward work now lives in dated plan documents, not in this calendar:
-- **`jlmops/plans/RELIABILITY_AUDIT.md`** — 8 of 18 sessions shipped; open: 1.3 concurrency, 1.5 empty-master hard-crash (new, from 2026-07-26 incident), 1.6 multi-phase pull atomicity (new, same incident), 3.3 Mailchimp per-recipient activity, 3.4 aggregate check, Tiers 4-6 (DR / capacity / human-process).
-- **`jlmops/plans/UI_AUDIT.md`** — Tiers 1-5 essentially all shipped 2026-05-29; open: T5.2 (btn cleanup), T5.3 (shared-list, conditional), T2.1 (bundles, deprioritized). T2.4 resolved 2026-07-08 (folded into `CALENDAR_LIBRARY_LOOP_PLAN`'s shared `ContentStreamModal.html`).
-- **`jlmops/plans/BUG_FIX_SEQUENCE.md`** — Sessions A-E, G, and J shipped; open: F (sync hardening, needs staging repro), H (timestamp audit), I (count-task audit). validateDeployment resolved at root (Session E, removed not fixed).
+- **`jlmops/plans/RELIABILITY_AUDIT.md`** — open: 1.5 empty-master hard-crash, 1.6 multi-phase pull atomicity, 3.3 Mailchimp per-recipient activity, 3.4 aggregate check, Tiers 4-6 (DR / capacity / human-process). 1.3 concurrency was built via `SYNC_HARDENING_PLAN.md`.
+- **`jlmops/plans/UI_AUDIT.md`** — open: T5.2 (btn cleanup), T5.3 (shared-list, conditional), T2.1 (bundles, deprioritized).
+- **`jlmops/plans/BUG_FIX_SEQUENCE.md`** — open: H (timestamp audit), I (count-task audit). Session F folded into `SYNC_HARDENING_PLAN.md`.
+- **`jlmops/plans/SYNC_HARDENING_PLAN.md`** — open: Bugs 1/3 (need a live repro), step 9 `JLMops_Logs` cleanup (queued behind Test Suite Tier 4).
 
 This calendar tracks only items that are NOT inside one of those plan queues.
 
@@ -33,10 +34,3 @@ Authoritative source is the live [`JLMops_Publishing` calendar sheet](https://do
 | Daily (when active) | Sync workflow runs — monitor for failures |
 | Monthly | Check bundle additions for stale data |
 
-## Completed
-
-| Date | Item |
-|------|------|
-| 2025-12-25 | Import system fixes (CSV filter, validation, quarantine) |
-| 2025-12-22 | CRM Phase 2 dual-language enrichment |
-| 2025-12-22 | Campaign system planning |

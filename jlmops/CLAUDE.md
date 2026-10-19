@@ -18,7 +18,7 @@ If instructions are unclear, ask. Do not substitute your judgment for the user's
 ## Session Workflow
 
 **Git and Deployment:**
-- Sessions NEVER push code. User pushes, tests, then tells session to update docs/git.
+- Sessions push or deploy only with explicit user OK for that step, and only via `deploy.ps1` (see Deployment in `.claude/CLAUDE.md`).
 - When the user asks to close the session, follow the session-end protocol in the portfolio kernel (`projects/.claude/CLAUDE.md`).
 - Wait for user confirmation before any git operations.
 
@@ -169,9 +169,9 @@ During normal work, briefly flag obvious issues in code you're touching:
 
 1. **Wrong field names:** `st_TaskTypeId` not `st_TypeId`
 2. **Editing SetupConfig.js directly:** Always edit config/*.json
-3. **Pushing code:** User handles deployment
+3. **Pushing or deploying without explicit OK** for that step
 4. **Inventing button styles:** NEVER add btn-primary, btn-secondary, etc. unless existing buttons in the same file use them. Copy exactly.
-5. **Using Bootstrap modals:** This project uses `modal-overlay` with `style.display`, NOT `$().modal()`
+5. **Using Bootstrap modals:** This project uses `modal-overlay` opened/closed via `ModalOverlay.open/close`, NOT `$().modal()` or hand-toggled `style.display`
 6. **Repeating plans:** Focus on the question at hand
 7. **Starting implementation in plan mode:** Wait for explicit permission
 8. **Not copying existing patterns:** Before adding ANY UI element, find a working example in the same file and copy it exactly

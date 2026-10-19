@@ -287,7 +287,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 Adversarial inputs fail closed: **(A)** WC response size cap in `WooApiService._fetch` (config `woo.api.response_max_bytes`, default 10 MB; `wooNonRetryable` tag short-circuits the retry loop; `integration.woo.response_oversize` High on exceed). **(B)** outer try around `ComaxAdapter.js:31` `Drive.Files.insert` (FAILED routing via `OrchestratorService.js:1218` preserved). **(C)** `_sanitizeForDoc` in `PrintService.js` strips bidi override/embed/isolate controls from the six shipping fields. The formula-prefix guard was intentionally omitted — a leading `=` is inert in a Google Doc; that defense belongs on a Sheets-export path (none exists). Revisit if a slip→Sheets export is built.
 
-#### 1.3 Concurrency control (LockService — staged: helper + 4 lock applications, 5 deploys)
+#### 1.3 Concurrency control (LockService — staged: helper + 4 lock applications, 5 deploys) — BUILT via `SYNC_HARDENING_PLAN.md`, live-verified (see `../docs/ARCHITECTURE.md` §2.5.4.1)
 
 **Goal.** Eliminate race conditions where two triggers, or a trigger and a user-initiated workflow, step on the same SysJobQueue row or sync-state transition.
 

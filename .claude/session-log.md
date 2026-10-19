@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-19 — /review-claude + portfolio cleanup
+
+- Review found portfolio STATUS 52 days stale; rebuilt it and the portfolio CALENDAR. jlmwines STATUS/CALENDAR drift collapsed; CODE_AUDIT_PLAN archived; clasp-auth memory and two CLAUDE.md contradictions fixed. Details in both `last-cleanup.md` files.
+- Next: user's call on the open items listed in `last-cleanup.md` (wishlist briefs, Reds/Whites status, portfolio memory duplication). Testing @581-@584 still pending from 10-18.
+
+---
+
 ## 2026-10-18 — Woo non-JSON logging, content task dialog, task states keyed on due date (@580-@584)
 
 - @580 logs Woo 2xx HTML bodies (suspect SiteGround anti-bot); next failure gives the page for a SiteGround ticket.
