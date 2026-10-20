@@ -11,9 +11,13 @@ One evergreen, bilingual Wine Talk post collecting the monthly AYIW entries as E
 - **Sticky:** the post is sticky at the top of Wine Talk.
 - **Links in:** the AYIW email CTA lands at the top of the post (button text along the lines of "Read the whole diary"); the About page (`/about-evyatar/`) links to it where it mentions his vineyard and winemaking.
 
+- **Starting point:** the diary opens in spring, March 2026 (bud break). Library entries exist for June to October 2026; March, April and May are backfilled from Evyatar's own notes on that season (a few lines each, shaped into entries). November to February are written live this winter, so the diary reaches a full rolling twelve months next spring. Planting is a one-time event, so it belongs in the intro story rather than a monthly entry.
+- **Intro:** a short opening paragraph framing the post as Evyatar's field diary (new writing).
+
 ## Open
 
-- Who supplies each month's notes (Evyatar's few lines, shaped into the entry), with the master Doc as fallback.
+- Evyatar's notes for March, April and May (needed before publishing), and who collects them each month going forward.
+- Images: whether Evyatar has photos (one exists for June, `content/newsletter/2026-06/fruit set.jpg`).
 - Build: a script that generates the layout from the twelve entries plus the current month, versus hand edits.
 - Check that the theme's Wine Talk listing honors WordPress sticky posts.
 
