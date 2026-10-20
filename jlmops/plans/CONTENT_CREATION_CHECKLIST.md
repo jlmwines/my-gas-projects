@@ -21,7 +21,7 @@ English only, always. Hebrew is never session-originated — not a draft, not "f
 
 ## AYIW source
 
-The monthly AYIW email is not freshly drafted — it's extracted verbatim from the pre-written full-year master Doc "A Year in Wine: From Vine to Glass" (Drive id `1SPPfmN_9Ldz6ACvYw-pYVKRiRjZCB14a`), which has one `## <Month>` section per month plus the exact Subject/Preview/CTA to use (see the doc's own "Email:" section at the bottom). Pull the current month's section as-is — don't invent new prose.
+Canon for AYIW is the individual monthly Docs saved in the Library (`email-ayiw-<yyyy-mm>`), as edited by Evyatar/the manager. The old full-year master Doc "A Year in Wine: From Vine to Glass" (Drive `1SPPfmN_9Ldz6ACvYw-pYVKRiRjZCB14a`, local `content/AYIW/`) is obsolete (user, 2026-10-20): its timing and content no longer match what's actually happening, so don't extract from it. A new month is drafted in the voice of the recent Library months, continuing their real timeline.
 
 ## Sequence for a new piece of content
 

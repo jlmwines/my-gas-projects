@@ -19,4 +19,4 @@ One evergreen, bilingual Wine Talk post collecting the monthly AYIW entries as E
 
 ## Source
 
-The full-year master "A Year in Wine: From Vine to Glass" (Drive `1SPPfmN_9Ldz6ACvYw-pYVKRiRjZCB14a`, local `content/AYIW/A Year in Wine EN.md`) seeds the first year's entries.
+The individual monthly AYIW Docs in the Library (`email-ayiw-<yyyy-mm>`) are canon and seed the first year's entries. The old full-year master Doc is obsolete.
