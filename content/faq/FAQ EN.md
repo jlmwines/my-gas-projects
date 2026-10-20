@@ -16,7 +16,7 @@ Frequently asked questions, organized by what you're trying to do.
 
 Over time, you'll notice patterns in what you enjoy. Maybe you like bolder reds. Maybe you prefer something crisp and refreshing. That's all "knowing about wine" really means—paying attention to what makes you happy.
 
-→ [Read more: What is a Good Wine](/blog/what-is-a-good-wine/)
+→ [Read more: What is a Good Wine](/what-makes-a-wine-good/)
 
 ---
 
@@ -38,7 +38,7 @@ Over time, you'll notice patterns in what you enjoy. Maybe you like bolder reds.
 
 The truth is, guessing isn't that risky. Time of day, season, and occasion give you plenty of clues. And showing up with wine is always appreciated.
 
-→ [Read more: Pairing Wine and Food](/blog/pairing/)
+→ [Read more: Pairing Wine and Food](/pairing-food-and-wine/)
 
 ---
 
@@ -56,7 +56,7 @@ The truth is, guessing isn't that risky. Time of day, season, and occasion give 
 
 If you don't know what you want and can't describe what you've liked before, start with your budget. We'll find something approachable that's hard to go wrong with—a crowd-pleaser for your table of one (or two, or four).
 
-→ [Read more: Pairing Wine and Food](/blog/pairing/)
+→ [Read more: Pairing Wine and Food](/pairing-food-and-wine/)
 
 ---
 
@@ -72,7 +72,7 @@ If you don't know what you want and can't describe what you've liked before, sta
 
 When in doubt, a friendly mid-range wine that isn't too extreme in any direction usually pleases everyone.
 
-→ [Read more: Choosing Wine by Context](/blog/context/)
+→ [Read more: Choosing Wine by Context](/context/)
 
 ---
 
@@ -82,7 +82,7 @@ When in doubt, a friendly mid-range wine that isn't too extreme in any direction
 
 **More:** The best wine gifts are bottles the recipient wouldn't necessarily pick on their own—something that introduces them to a new experience. If you know their preferences (bold reds? crisp whites?), we can suggest something that fits their taste while still being a discovery.
 
-Our gift options include packaging and delivery anywhere in Israel.
+Our gift options include packaging and delivery anywhere in Israel. The recipient gets a packing slip, never an invoice, so prices stay private.
 
 → [Browse wine gifts](/send-wine-gifts-in-israel/)
 
@@ -100,7 +100,7 @@ Our gift options include packaging and delivery anywhere in Israel.
 
 You'll also notice some reds taste like one clear thing (usually fruit), while others have layers—fruit, then spice, then earth. Simple wines are refreshing. Complex wines reward attention. Both are good.
 
-→ [Read more: Red Wine Guide](/blog/reds-guide/)
+→ [Read more: Red Wine Intensity](/red-wine-intensity/)
 
 ---
 
@@ -115,7 +115,7 @@ You'll also notice some reds taste like one clear thing (usually fruit), while o
 
 Serve whites cold. Temperature makes a huge difference—too warm and they taste flat.
 
-→ [Read more: White Wine Guide](/blog/whites-guide/)
+→ [Read more: White and Rosé Wine Acidity](/white-rose-wine-acidity/)
 
 ---
 
@@ -131,7 +131,7 @@ Serve whites cold. Temperature makes a huge difference—too warm and they taste
 
 If you truly have no idea, we'll suggest something approachable with broad appeal—a friendly wine that most people enjoy. Try it. If you want another sip, we're on the right track. If not, tell us what you didn't like and we'll adjust.
 
-→ [Read more: What is a Good Wine](/blog/what-is-a-good-wine/)
+→ [Read more: What is a Good Wine](/what-makes-a-wine-good/)
 
 ---
 
@@ -167,7 +167,7 @@ Tastings happen in the warehouse office, late morning when the palate is freshes
 
 The selection you see has already been carefully considered.
 
-→ [Read more: How We Choose](/blog/your-private-selection/)
+→ [Read more: How We Choose](/how-we-choose-wines/)
 
 ---
 
@@ -181,7 +181,17 @@ For over a decade, he's run the wine shop in Katamon—learning from customers, 
 
 When he's not in the shop, he's in Nokdim growing grapes (Malbec, Cabernet, Syrah, and more), or in the cellar making wine, or at a table enjoying both.
 
-→ [Read more: About Evyatar](/blog/about-evyatar/)
+→ [Read more: About Evyatar](/about-evyatar/)
+
+---
+
+### What do other customers say?
+
+**Short:** Read our Google reviews. Nearly all of them are five stars.
+
+**More:** Our shop and website are one business, so our Google reviews come from both shop visitors and online customers. They're happy to tell you about the wines, the advice, and the service, in their own words.
+
+→ [Read our Google reviews](GOOGLE_REVIEWS_LINK)
 
 ---
 
@@ -195,15 +205,15 @@ Higher prices often buy real things: better grapes, more attention, quality oak 
 
 We evaluate wines at every price point with the same critical eye. A ₪50 bottle has to deliver a ₪50 experience. A ₪150 bottle has to justify that price in the glass—not just on the label.
 
-→ [Read more: Price vs Quality](/blog/price-vs-quality/)
+→ [Read more: Price vs Quality](/does-higher-price-mean-better-wine/)
 
 ---
 
 ### What if I don't like a wine?
 
-**Short:** Let us know. We'll replace it or credit your account.
+**Short:** Let us know. Our Second Sip Guarantee means we'll replace it or credit your account.
 
-**More:** If something's wrong with a bottle—or it's just not what you expected—contact us. We'll make it right, either with a replacement or a credit to your account.
+**More:** If something's wrong with a bottle, your order arrived damaged or incorrect, or a wine just isn't what you expected, contact us. We'll make it right, either with a replacement or a credit to your account.
 
 We put our reputation on every bottle we sell. If you're not happy, we want to know.
 
@@ -219,15 +229,16 @@ We put our reputation on every bottle we sell. If you're not happy, we want to k
 
 ---
 
-### What are Value Bundles?
+### What's the difference between Wine Bundles and Occasion Packages?
 
-**Short:** Our favorite finds at prices that over-deliver. Wines where what's in the glass exceeds what you pay.
+**Short:** Bundles are flexible groups of wines that share a theme. Occasion Packages are themed gift or starter sets, usually discounted.
 
-**More:** Value Bundles are collections built around wines that punch above their weight—bottles where the quality genuinely exceeds what the price suggests.
+**More:** **Wine Bundles** are flexible lists of wines grouped by a common theme. Our Value Bundles are wines chosen for exceptional quality at their price, and they're the place we recommend starting. Our other bundles each follow a different theme. Either way, they're an easy way to pick up several good bottles at once without choosing each one yourself.
 
-These aren't leftovers or wines we're trying to move. They're discoveries we're excited about, offered at prices that feel almost unfair.
+**Occasion Packages** are more involved. Each one is a themed group of wines, sometimes with tasty companions, put together for a gift or as a starting point for someone new to wine. Packages usually come with a discount.
 
-→ [Read more: How We Choose](/blog/your-private-selection/)
+→ [Browse Wine Bundles](/product-category/bundle/)
+→ [Browse Occasion Packages](/product-category/packages/)
 
 ---
 
@@ -247,7 +258,7 @@ These aren't leftovers or wines we're trying to move. They're discoveries we're 
 
 An interior cabinet or closet that feels cool to the touch is usually perfect. Store bottles on their side to keep corks moist.
 
-→ [Read more: Handling and Storage](/blog/handling-and-storage/)
+→ [Read more: Handling and Storage](/how-to-store-open-serve-wine/)
 
 ---
 
@@ -263,7 +274,7 @@ An interior cabinet or closet that feels cool to the touch is usually perfect. S
 
 Too warm and wine tastes flat and boozy. Too cold and you miss the flavors.
 
-→ [Read more: Handling and Storage](/blog/handling-and-storage/)
+→ [Read more: Handling and Storage](/how-to-store-open-serve-wine/)
 
 ---
 
@@ -279,7 +290,7 @@ When decanting helps, we note it on the product page and your packing slip:
 
 No note? Just pour and enjoy.
 
-→ [Read more: Handling and Storage](/blog/handling-and-storage/)
+→ [Read more: Handling and Storage](/how-to-store-open-serve-wine/)
 
 ---
 
@@ -294,7 +305,7 @@ No note? Just pour and enjoy.
 
 Yes, put reds in the fridge too. Just let them warm up a bit before your next pour.
 
-→ [Read more: Handling and Storage](/blog/handling-and-storage/)
+→ [Read more: Handling and Storage](/how-to-store-open-serve-wine/)
 
 ---
 
@@ -308,7 +319,7 @@ Yes, put reds in the fridge too. Just let them warm up a bit before your next po
 
 Hold by the stem to keep your hand from warming the wine—unless it's too cold, in which case, cup away.
 
-→ [Read more: Handling and Storage](/blog/handling-and-storage/)
+→ [Read more: Handling and Storage](/how-to-store-open-serve-wine/)
 
 ---
 
@@ -316,37 +327,45 @@ Hold by the stem to keep your hand from warming the wine—unless it's too cold,
 
 *What can you do here?*
 
-### How do I find wines I've ordered before?
+### How do I find and reorder wines I've bought before?
 
-**Short:** Check Order History in your account. You can reorder from there.
+**Short:** Go to Order History in your account. Every past order is there, ready to reorder.
 
-**More:** Your account keeps a record of everything you've purchased. Go to Order History to see past orders and quickly reorder wines you enjoyed.
-
-→ [View Order History](/my-account/orders/)
-
----
-
-### Can I save wines I want to remember?
-
-**Short:** Yes—add them to Favorites for quick access later.
-
-**More:** Found something interesting but not ready to buy? Add it to your Favorites. You can access your saved wines anytime from your account.
-
-→ [View Favorites](/favorites/)
-
----
-
-### How do I reorder something I liked?
-
-**Short:** Go to Order History, find the wine, click to reorder.
-
-**More:** The fastest way to reorder:
+**More:** Your account keeps a record of everything you've purchased. To reorder:
 
 1. Go to your Order History
 2. Find the order with the wine you want
 3. Click to add it to your cart
 
 → [View Order History](/my-account/orders/)
+
+---
+
+### Can I shop in English or Hebrew?
+
+**Short:** Either. It's the same shop, the same wines, and the same prices in both languages.
+
+**More:** Switch languages anytime from the menu. Your cart, your account, and your orders work the same on both sides of the site.
+
+---
+
+### Which payment methods do you accept?
+
+**Short:** Visa, MasterCard, and the other cards shown at the bottom of every page.
+
+---
+
+### Should I sign up for your emails?
+
+**Short:** If you enjoy learning about wine, yes. We don't email often, and most of what we send is worth reading.
+
+**More:** Our emails are mostly reading, not selling. Most share our latest Wine Talk articles, like plain-language wine basics or guides to Israel's wine regions. Now and then we share news from the vineyard and the cellar. An occasional offer comes too, but that's not the main event.
+
+→ [Browse Wine Talk](/articles/)
+
+Sign up with the form at the bottom of any page. Unsubscribe anytime with one click.
+
+→ [Sign up for our emails](/#footer-contact)
 
 ---
 
@@ -364,9 +383,13 @@ Hold by the stem to keep your hand from warming the wine—unless it's too cold,
 
 ### How long does delivery take?
 
-**Short:** We ship by the next business day. Delivery time varies by destination.
+**Short:** We ship by the next business day. Delivery time depends on where it's going. Need it by a certain date? Ask us on WhatsApp while you order.
 
-**More:** We process and ship orders as quickly as possible—typically by the next business day. Actual delivery time depends on your location and the courier service.
+**More:** We process and ship orders as quickly as possible, typically by the next business day. From there, delivery time depends on your location and the courier's schedule for that area.
+
+If timing matters (a birthday, a holiday, a dinner on a specific night), send us a WhatsApp message while you're placing your order. Tell us the address and the date, and we'll tell you honestly when it can arrive.
+
+→ [Message us on WhatsApp](https://wa.me/972555174805)
 
 ---
 
@@ -400,14 +423,6 @@ Hold by the stem to keep your hand from warming the wine—unless it's too cold,
 
 *The fine print.*
 
-### What if there's a problem with my order?
-
-**Short:** Contact us. We'll replace it or credit your account.
-
-→ [Contact us](/#footer-contact)
-
----
-
 ### What are your terms of service?
 
 **Short:** Standard e-commerce terms. You must be 18+ to purchase.
@@ -420,7 +435,7 @@ Hold by the stem to keep your hand from warming the wine—unless it's too cold,
 
 **Short:** We protect your information and never sell it.
 
-→ [View privacy policy](/terms-conditions/)
+→ [View privacy policy](/privacy-policy/)
 
 ---
 
@@ -429,3 +444,13 @@ Hold by the stem to keep your hand from warming the wine—unless it's too cold,
 **Short:** Email, phone, WhatsApp, or visit the Katamon shop.
 
 → [Contact details](/#footer-contact)
+
+---
+
+### Can I visit the shop?
+
+**Short:** Yes. Our wine shop is in Katamon, Jerusalem. The address is at the bottom of every page.
+
+**More:** The shop is where Evyatar has tasted, chosen, and recommended wines for over a decade. Come by to talk wine in person, or just to pick something for tonight.
+
+→ [Shop address and contact](/#footer-contact)
