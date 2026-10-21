@@ -1,6 +1,6 @@
 # Packing Slip Explainer Insert — Plan
 
-A printed insert that goes in every shipment next to the packing slip: how to choose wines for an occasion using the slip, seasonal occasion examples (switched by Hebrew date), a short glossary, and an Evyatar greeting with a WhatsApp QR. A companion blog post presents the same content to people who haven't ordered yet; the FAQ points to it. Status: **English copy drafted and placed in the library (2026-10-21): `template-packing-insert`, `template-packing-insert-seasons`, `blog-whats-in-the-box` (Title + Body), and the FAQ (`blog-faq`, with the "What's in the Box" section); calendar rows staged. Next: admin applies calendar updates, creates tasks, attaches Docs; Evyatar edits.** The packing slip itself is unchanged.
+A printed insert that goes in every shipment next to the packing slip: how to choose wines for an occasion using the slip, seasonal occasion examples (switched by Hebrew date), a short glossary, and an Evyatar greeting with a WhatsApp QR. A companion blog post presents the same content to people who haven't ordered yet; the FAQ points to it. Status: **English copy drafted and placed in the library (2026-10-21): `template-packing-insert`, `template-packing-insert-seasons`, `blog-whats-in-the-box` (Title + Body), and the FAQ (`blog-faq`, with the "What's in the Box" section); calendar rows and tasks set up by the admin (FAQ carries its email). Next: Evyatar edits, manager translates.** The packing slip itself is unchanged.
 
 ## Why
 

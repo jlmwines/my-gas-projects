@@ -10,6 +10,7 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Israel-only checkout guard deployed (theme) and tested EN+HE; facts in new `website/CHECKOUT.md`, plan archived. @581-@584 tested; WORKFLOWS §12/§13, PRODUCTION_GUIDE, PUBLISHING updated; both plans archived; leftovers in `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md`.
 - Packing slip insert: intro and seasonal format agreed in chat (`website/PACKING_SLIP_EXPLAINER_PLAN.md`). Next: draft the other seasons in chat, then glossary and greeting. Apps Script Hebrew-date conversion verified live.
 - Flyer Round 2 cancelled; cartons will be 6-bottle.
+- Later 10-21: insert copy finished (intro, 8 seasons at 3 red / 2 white, glossary, greeting) and placed in the library with the What's in the Box post (Title+Body) and the full FAQ (+ its email, pasted by user); user adjusted calendar rows/slugs and created tasks. Insert = eight two-sided seasonal print templates; jlmops only picks one by Hebrew date. All pushed.
 - Process: content development happens in chat, plan written once settled (memory widened). jlmops `ask` rule narrowed to code + config, so docs/plans no longer prompt. `git -C` is denied in settings; run plain `git` from the repo root.
 
 ---

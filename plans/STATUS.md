@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-21. Content task creation and due-date task states tested and done; Israel-only checkout guard live and tested EN+HE; chain scheduling from the goal date still to do.
+**Updated:** 2026-10-21. Israel-only checkout guard live; content tasks tested and done; packing slip insert, What's in the Box post and FAQ drafted in the library, tasks created, awaiting Evyatar's edits.
 
 ## At a glance
 
@@ -42,7 +42,8 @@ The live "what now" — daily review reads these first.
 8. **Coastal Plain (post 2026-10-29), Golan Heights (2026-11-16), and Judea/Foothills (2026-12-14) region posts, per JLMops_Publishing.** Coastal Plain and Golan Heights bodies drafted, awaiting the manager's Title+Body lock; Judea not drafted. Negev, Galilee, and Central Mountains are published. Sources, slot table, and calendar-row state → `content/plans/REGION_POSTS_PLAN.md`.
 9. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
 10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager).
-11. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
+11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.
+12. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
 
 ## Active Plans
 
