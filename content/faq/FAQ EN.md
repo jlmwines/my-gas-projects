@@ -369,6 +369,22 @@ Sign up with the form at the bottom of any page. Unsubscribe anytime with one cl
 
 ---
 
+## What's in the Box
+
+*When your order arrives, and after.*
+
+### What comes with my order?
+
+**Short:** Your wines, a packing slip with simple notes on every bottle, and a short printed guide to using them. The guide's suggestions change with the seasons.
+
+**More:** Every wine on your packing slip is marked with a few simple scales (Intensity and Complexity for reds, Complexity and Acidity for whites and rosés) and the types of food it harmonizes or contrasts with. The printed guide in the box explains how to use them to match each bottle to a meal or an occasion.
+
+Part of the guide follows the Jewish calendar: depending on when your box arrives, you'll find suggestions for that season's Shabbat meals, the holiday, an ordinary weeknight, and a gift. There's also a QR code that opens WhatsApp, so you can ask us anything about your wines.
+
+→ [Read more: What's in the Box](WHATS_IN_THE_BOX_LINK)
+
+---
+
 ## Orders & Delivery
 
 *How does buying work?*
