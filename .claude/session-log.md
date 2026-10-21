@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-21 — Calendar tab UX built (@585)
+
+- Shipped all four plan items in one deploy; user confirmed live except date-edit Save (no re-date needed yet).
+- system.json deficiency description fixed; user ran rebuildSysConfigFromSource.
+- Plan trimmed to the open refresh bug; facts graduated to WORKFLOWS §13.1 + DATA_MODEL.
+- Next: first real re-date doubles as the refresh-bug repro.
+
+---
+
 ## 2026-10-21 — Calendar tab plan (date edit, row click, date display)
 
 - Daily review, then planned (not built) four Calendar items in `jlmops/plans/CALENDAR_TAB_UX_PLAN.md`: `formatDate` UTC one-day-early fix (prerequisite), row click as explicit drawer/Task choice with all-language task list, admin-only publishing-date edit, Library/Deficiency on `cal_Date` retiring `slb_TargetDate`. Plan reviewed for holes with the user; one bundled deploy.
