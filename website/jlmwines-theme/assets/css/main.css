@@ -1850,6 +1850,28 @@ body.offer-popup-open { overflow: hidden; }
   .offer-popup-headline { font-size: 22px; }
 }
 
+/* Israel-only checkout guard (inc/woocommerce.php) — reuses the offer
+   popup's overlay/modal/button; only the message color and the
+   two-button row are its own. */
+.ship-guard-text { color: var(--c-ink); }
+.ship-guard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.ship-guard-cancel {
+  background: transparent;
+  color: var(--c-ink);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 22px;
+  border: 1px solid var(--c-muted);
+  cursor: pointer;
+}
+.ship-guard-cancel:hover { border-color: var(--c-ink); }
+
 /* Pojo Accessibility (ea11y) widget positioning is handled in main.js
    because the widget renders inside a Shadow DOM — outer-page CSS can't
    reach in. The JS handler reaches through the open shadow root and

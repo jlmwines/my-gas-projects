@@ -132,7 +132,7 @@ LTV math: if a repeat customer's first-year revenue lands at ₪1,500–₪3,000
 
 1. **Bundles category description copy** — write 1–2 sentences in EN + HE, install via WC category description (pre-print polish item above; confirm done before distribution).
 2. **Post-drop attribution read** — group `50NEW` redemptions by billing postal code to isolate Talbiye response; feeds the decision triggers below. Not yet due (dropped 2026-07-26/27).
-3. **Round 2 (Emek Refaim) execution — on hold, likely cancelled** (site popup + discount appear sufficient; user, 2026-10-15). If revived: Needs: vendor route mapping for Emek Refaim mailboxes, drop-date confirmation within the window, print run (same creative/coupon unless Round 1 data suggests a change).
+3. **Round 2 (Emek Refaim) execution — cancelled** (site popup + discount sufficient; user, 2026-10-21). If revived: Needs: vendor route mapping for Emek Refaim mailboxes, drop-date confirmation within the window, print run (same creative/coupon unless Round 1 data suggests a change).
 
 Done: vendor outreach, design, photo asset, coupon code (`50NEW`), print run, Round 1 drop (Talbiye, 2026-07-26/27), Round 2 neighborhood + timing decision (Emek Refaim, 3rd week August).
 

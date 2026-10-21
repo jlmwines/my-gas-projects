@@ -83,12 +83,8 @@ Campaign-type projects (e.g. Core Content, `PROJ-6878357E`) are created per prog
 
 When `TaskService.createTask()` is called:
 1. Task type config is loaded (includes `flow_pattern`, `due_pattern`)
-2. If `flow_pattern` specifies initial assignee → auto-assign based on role
-3. If auto-assigned, the following fields are set atomically:
-   - `st_AssignedTo` = role name (Manager or Administrator)
-   - `st_StartDate` = now
-   - `st_Status` = 'Assigned'
-   - `st_DueDate` = calculated from `due_pattern`
+2. If `flow_pattern` specifies initial assignee → auto-assign based on role: `st_AssignedTo` = role name (Manager or Administrator), `st_Status` = 'Assigned'
+3. Dates: by default `st_StartDate` = now and `st_DueDate` = calculated from `due_pattern`. Callers passing `options.noAutoDates` get no dates (the task is **Unscheduled**). Only the two user-facing creation paths pass it: the content dialog (`spawnContentChain`, when "Set due date now" is off, its default) and the generic create-task modal (`WebAppTasks_createTask`, when the due date is left blank). System-generated tasks always keep auto dates, or they would vanish from assignees.
 
 ### 12.1.1 Flow Patterns
 
@@ -110,27 +106,24 @@ When `TaskService.createTask()` is called:
 **Business Days (Israel):** Sun (0), Mon (1), Tue (2), Wed (3), Thu (4)
 **Weekend:** Fri (5), Sat (6)
 
-### 12.3 Date Field Rules
+### 12.3 Task State and Dates
 
-**Rule 1: Start Date on Creation**
-- Only `immediate` due_pattern tasks get `st_StartDate` on creation
-- Other tasks get start date when assigned
+State is keyed on the **due date**, never on status or start date. One vocabulary in every task view (shared logic in `TaskWidgets.html`: `isClosed`, `taskState`, `matchesScope`, `scopeLinksHtml`):
 
-**Rule 2: Assignment Atomicity**
-When a task is assigned (manually or automatically), ALL THREE fields must be set:
-- `st_StartDate` = assignment time
-- `st_Status` = 'Assigned'
-- `st_DueDate` = calculated from due_pattern
+- **Closed:** status Done, Cancelled, or legacy `Closed`.
+- **Unscheduled:** no due date, not closed. Hidden from the assignee; only the admin sees it.
+- **Open:** has a due date, not closed (future dates included). The due date is what releases a task to its assignee.
+- **Done:** closed.
 
-**Invariant:** If any of these 3 fields has a value, all 3 must have values.
+The **start date is a planning field** (e.g. the latest start that still meets the deadline). It never decides state or visibility. Start and due are set independently (`TaskService.updateTaskDates`); either can be set alone. Status (`Assigned`, `Review`, ...) does not encode state: a new assigned task is `Assigned` with or without dates.
+
+**Filter row**, same order in every task view (ManagerDashboardView_v2, AdminTasksView, PublishingView Tasks tab): assignee, project where relevant, text, then **Unscheduled | Open | Done | All**, Open by default. Assignee views omit Unscheduled. Default sort everywhere: start date (none last), then due date.
+
+**Visibility:** the manager sees every assignee's due-dated tasks (other assignees' closed tasks limited to the last 30 days); other assignees' tasks render view-only (no pack, no buttons, notes read-only; client-side guard only). Manager project counts use the manager's own Open tasks. AdminTasksView opens full width; single click selects a row, double click or the ▸ control opens the detail panel.
 
 ### 12.4 Manual Assignment
 
-When user assigns task via UI:
-1. Update `st_AssignedTo` to user email
-2. Set `st_StartDate` = now (if not already set)
-3. Set `st_Status` = 'Assigned'
-4. Calculate and set `st_DueDate` based on task type's `due_pattern`
+Assignee is always a role name (`Manager`, `Administrator`), never an email; the create modal's list comes from `AuthService.getAvailableRoles`. Dates and assignee are editable on every non-system task in TaskDetail; changing the assignee does not set dates.
 
 ---
 
@@ -142,7 +135,7 @@ How a piece of editorial content gets produced — stage by stage, by whom, on w
 
 - **Admin** works content tasks in **AdminTasksView** — the task workbench (create / do / manage).
 - **Manager** works content tasks in the **Dashboard queue** — their only task surface; there is no separate manager workbench.
-- **Calendar** (`PublishingView.html`'s Calendar tab, backed by the `JLMops_Publishing` sheet) is the authoritative schedule/demand view — "calendar is king." Every row shows a live task-derived status, with a search box and status filter (not started / in progress / done / no tasks yet) in the title bar. Clicking a row opens the entity drawer (details) whenever an entity exists for that slug — its attached-tasks list is independently clickable to advance into a task from there; rows with no entity but an open task route straight to the earliest open task (role-aware: manager sees only tasks assigned to `'Manager'`). Redesigned 2026-07-09 (jlmops @461) — previously routed straight to a task with no confirmation step. New content is always started by picking an existing calendar row (`ContentStreamModal.html`) — never by typing a free-text name — so a row's `cal_Slug` is the single authority a spawned chain's slug always matches.
+- **Calendar** (`PublishingView.html`'s Calendar tab, backed by the `JLMops_Publishing` sheet) is the authoritative schedule/demand view — "calendar is king." Every row shows a live task-derived status, with a search box and status filter (Unscheduled / Open / Done / No tasks yet) in the title bar. Clicking a row opens the entity drawer (details) whenever an entity exists for that slug — its attached-tasks list is independently clickable to advance into a task from there; rows with no entity but an open task route straight to the earliest open task (role-aware: manager sees only tasks assigned to `'Manager'`). Redesigned 2026-07-09 (jlmops @461) — previously routed straight to a task with no confirmation step. New content is always started by picking an existing calendar row (`ContentStreamModal.html`) — never by typing a free-text name — so a row's `cal_Slug` is the single authority a spawned chain's slug always matches.
   - **A row with neither an entity nor an open task** (truly untouched) is clickable too — clicking selects it (highlighted) as the pre-filled target for the "Create Content Tasks" button above the table; click the row again to deselect. One-shot: the selection is consumed the moment that button is used. This is distinct from a row that already has an entity, whose own drawer carries its own "Create Content Tasks" action (pre-filled from the open entity) — the two mechanisms cover two different row states, not the same one twice (2026-08-25).
   - **Default view is "Open"**: undone rows (any date) plus all future rows (even if already done); a past row that's already done is hidden. An "All" toggle disables that hiding. A separate, independent "Holidays: Show/Hide" toggle hides holiday-type rows entirely regardless of date — past holidays are always hidden in "Open" mode specifically since they carry no task-derived status to judge "done" by (2026-08-25).
 - **Library** (both roles) is the entity catalog, not a task surface and not the schedule view. Its **Deficiency** preset is a due/overdue list (pieces with a target date in the rolling window, or overdue and not yet done). Its **entity drawer** is deliberately minimal — header fields (title/slug/type/language/campaign/status), an actions bar (Open Doc, Attach new version, Create Content Tasks), and **Attached tasks** only. No Family, Files & URLs, References, State history, or Activity log sections — tasks tell the action story, the library just holds entities.
@@ -151,20 +144,25 @@ Every content task renders the same shared **pack** (`TaskPacks`) wherever it ap
 
 ### 13.2 The content chain
 
-Spawning a chain (admin: AdminTasks **+ Content**, Library **Create Content Tasks**, or a Calendar-row **Spawn** shortcut) picks an *existing calendar row* and creates **the task chain only** — every stage task at once, each carrying its stage-resolved slug (`baseSlug-en`/`baseSlug-he` per the stage's target language, or bare `baseSlug` for language-agnostic types) as its entity reference. **No `SysLibrary` entity row is created at spawn time, sibling or otherwise.**
+Spawning a chain (admin: AdminTasks **+ Content**, Library **Create Content Tasks**, or a Calendar-row **Spawn** shortcut) picks an *existing calendar row* and creates **the task chain only** — every checked stage task at once, each carrying its stage-resolved slug (`baseSlug-en`/`baseSlug-he` per the stage's target language, or bare `baseSlug` for language-agnostic types) as its entity reference. **No `SysLibrary` entity row is created at spawn time, sibling or otherwise.** Tasks are created without dates (Unscheduled, §12.3) unless "Set due date now" is ticked.
+
+**The dialog** (`ContentStreamModal.html`) defaults its Type dropdown from the row's `cal_Type` (`newsletter` maps to `news`), then pre-checks that type's core chain (`core` in `CONTENT_STAGES`, `WebAppProjects.js`); other stages are listed below, unchecked. Types with no core set (e.g. `print`) show everything unchecked. Each stage shows its assignee as (A)/(M), derived server-side from the type's `flow_pattern`. EN/HE pairs show side by side. No Stream ID field (auto-generated).
+
+Blog core chain:
 
 | # | Stage | Task type | Lang | Assignee | Pack action |
 |---|---|---|---|---|---|
-| 1 | Create WP Stubs | `content.create_wp_stubs` | EN | Admin | skeleton |
-| 2 | Draft | `content.draft` | EN | Admin (Claude drafts) | Create/Attach Doc → Editing Done |
-| 3 | Admin Review | `content.admin_review` | EN | Admin | skeleton |
-| 4 | **Edit** | `content.edit` | EN | **Manager** | Open Doc → Editing Done |
+| 1 | Draft | `content.draft` | EN | Admin (Claude drafts; includes admin review) | Create/Attach Doc → Editing Done |
+| 2 | **Edit** | `content.edit` | EN | **Manager** (body + title locked) | Open Doc → Editing Done |
+| 3 | Extracts | `content.admin_review` (repurposed) | EN | Admin | Open Doc → Editing Done |
+| 4 | **Review Extracts** | `content.print_newsletter_body` (repurposed) | EN | **Manager** | Open Doc → Editing Done |
 | 5 | Translate | `content.translate` | HE | Admin | **Create translation text** (when the EN peer has a Doc) → Editing Done |
-| 6 | **Translate Edit** | `content.translate_edit` | HE | **Manager** | Open Doc → Editing Done |
-| 7 | Images | `content.images` | EN | Admin | Open Doc → Editing Done |
-| 8 | Blog Publish | `content.blog_publish` | EN | Admin | External URL → Mark Published |
+| 6 | **Edit Translation** | `content.translate_edit` | HE | **Manager** | Open Doc → Editing Done |
+| 7 | Blog Publish | `content.blog_publish` | EN | Admin | External URL → Mark Published |
 
-**An entity comes into being the first time a Doc is attached or created against its slug** (`createBlankDoc`/`attachExistingDoc` in `LibraryService.js`, auto-creating via `_ensureEntity` — type/language/title derived from the slug itself). Concretely: the EN entity appears whenever stage 1–4 work actually starts (whichever task first attaches a Doc); the HE entity appears when stage 5's "Create translation text" runs, which copies the EN Doc, prepends the Gemini prompt, and attaches the copy — the HE entity is a byproduct of that attach, not a separate creation step. This applies uniformly to every sibling-language type (`blog`, `news`, `mention`, `email`, `social`, `template`) — none are batch-provisioned as pairs, ever. The **manager owns the two editorial passes** (Edit EN, Edit Translation HE); admin/Claude owns drafting, translating, images, and publishing. Companion stages (video, email, social, whatsapp, newsletter) can be added to the same chain and are admin-assigned distribution tasks.
+Extracts are the derivatives drafted from the locked body (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts). WP stubs and image upload are steps inside Publish (`content/_resources/PUBLISHING.md`), not tasks; their old types (`create_wp_stubs`, `images`) stay in `taskDefinitions.json` only so legacy tasks still render. Email core chain: Draft EN Email, Draft HE Email, Send Email (EN/HE stay separate tasks so each language gets its own entity/Doc). News core chain: Assemble Newsletter (one task for EN+HE, no HE print entity) and Print & Distribute. Optional extras: Video Create/Publish, Create Email, Social, WhatsApp.
+
+**An entity comes into being the first time a Doc is attached or created against its slug** (`createBlankDoc`/`attachExistingDoc` in `LibraryService.js`, auto-creating via `_ensureEntity` — type/language/title derived from the slug itself). Concretely: the EN entity appears whenever stage 1–4 work actually starts (whichever task first attaches a Doc); the HE entity appears when stage 5's "Create translation text" runs, which copies the EN Doc, prepends the Gemini prompt, and attaches the copy — the HE entity is a byproduct of that attach, not a separate creation step. This applies uniformly to every sibling-language type (`blog`, `news`, `mention`, `email`, `social`, `template`) — none are batch-provisioned as pairs, ever. The **manager owns the editorial passes** (Edit EN, Review Extracts, Edit Translation HE); admin/Claude owns drafting, extracts, translating, and publishing. Companion stages (video, email, social, whatsapp, newsletter) can be added to the same chain and are admin-assigned distribution tasks.
 
 ### 13.3 Manager turnaround (click-path)
 
@@ -175,7 +173,7 @@ Spawning a chain (admin: AdminTasks **+ Content**, Library **Create Content Task
 4. Edit the draft in Google Docs.
 5. Click **Editing Done** → a plain confirm ("Mark editing done for '\<slug>'?"), no peer prompt of any kind.
 
-**Translate Edit (HE):** identical — Open Doc → Editing Done. No "Open EN source" link; the manager already has direct Drive/Library/Task access if they want to look at the English side independently.
+**Review Extracts (EN) and Edit Translation (HE):** identical — Open Doc → Editing Done. No "Open EN source" link; the manager already has direct Drive/Library/Task access if they want to look at the English side independently.
 
 **Translate (HE, usually admin, sometimes manager):** the pack shows **Create translation text** once the EN peer (a deterministic slug flip, `baseSlug-en`) has a Doc — copies it, prepends the Gemini translation prompt (`_getTranslationPrompt()`, Doc-sourced, editable without a deploy), and attaches the result as this entity's Doc, creating the entity if it didn't exist yet. Stays available regardless of whether the EN edit task was finished today or last week — no Done-status gate, so it's always reachable in the normal open-task queue.
 
@@ -185,7 +183,7 @@ Content tasks have **no New/In-Progress/Done dropdown** (that control exists onl
 
 Two different things now answer "how's this going," and they're not the same field:
 
-- **Displayed status** (Library rows, entity drawer, Calendar rows) is computed live from open task status — never read from `slb_State`. Three tiers: **not started** (open tasks exist, all still `New`), **in progress** (an open task is `Assigned`/`Review`), **done** (every task `Done`/`Cancelled`, or none ever spawned). Computed fresh on every render (`TaskWidgets.deriveStatus`), never cached or persisted. Content tasks already moved to `SysTasks_Archive` by housekeeping still count (`WebAppLibrary._getArchivedContentTasks`, returned as `archivedTasks` separate from the task queue), so a Calendar row whose chain is fully archived stays **done** instead of reverting to "no tasks yet"; the entity drawer lists them as non-clickable history rows.
+- **Displayed status** (Library rows, entity drawer, Calendar rows) is computed live from open task status — never read from `slb_State`. Three tiers, keyed on due date like task state (§12.3): **open** (any non-closed task has a due date), **unscheduled** (non-closed tasks exist, none dated), **done** (every task closed); a row with no tasks at all shows **no tasks yet**. Computed fresh on every render (`TaskWidgets.deriveStatus`), never cached or persisted. Content tasks already moved to `SysTasks_Archive` by housekeeping still count (`WebAppLibrary._getArchivedContentTasks`, returned as `archivedTasks` separate from the task queue), so a Calendar row whose chain is fully archived stays **done** instead of reverting to "no tasks yet"; the entity drawer lists them as non-clickable history rows.
 - **`slb_State`** still exists as a column but only two of its values are ever written deliberately, and neither is displayed as "the state" anymore: **`abandoned`** (admin drawer action, terminal) and **`published`** (publish task's **Mark Published** — confirms before firing, then closes the task; + optional external URL, `LibraryService.markPublished`). When a task closes and drops out of the open-task list, its detail panel (`AdminTasksView.html`) shows an explicit "✓ Task closed" message rather than going silently blank (2026-08-25). Both gate specific drawer actions (Request Correction shows only when `published`; Abandon hides once `published`/`abandoned`) but nothing shows the raw value as a status pill. `draft`/`locked` are set at creation and by `lockVersion` respectively but are never read anywhere — dead weight kept only because columns are append-only, never removed.
 - **`lockVersion`** ("Editing Done") no longer sets `slb_State` to `locked` in any way that matters for display — it closes the task and bumps `slb_LastTouched`, full stop. No peer-realignment branch exists (removed with auto-pairing).
 

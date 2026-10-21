@@ -625,6 +625,140 @@ add_action('woocommerce_admin_order_data_after_shipping_address', function ($ord
 });
 
 /**
+ * Israel-only checkout guard.
+ *
+ * Shipping country is forced to IL, so a buyer abroad who enters their
+ * own (foreign) billing address and leaves "ship to a different address"
+ * unticked places an order we can't deliver. The guard fires when billing
+ * country isn't IL and either: the box is unticked; or shipping street +
+ * city repeat billing's; or the recipient phone isn't Israeli. A gift
+ * message never exempts an order.
+ *
+ * Two halves: a popup (main.js, markup below) intercepts Place Order with
+ * Cancel (empty cart → gift page) / Enter Israeli address; the server
+ * check below is the real gate for anything that skips the popup.
+ *
+ * Plan: website/ISRAEL_ONLY_CHECKOUT_PLAN.md
+ */
+function jlmwines_ship_guard_strings($lang) {
+    if ($lang === 'he') {
+        return [
+            'message' => 'הבהרה - אנו שולחים רק לכתובות בישראל. אם אתם מבצעים את ההזמנות מחו"ל, שימו לב שאתם מכניסים את הכתובת הישראלית עם מספר טלפון ישראלי. תודה',
+            'cancel'  => 'לביטול הזמנה',
+            'proceed' => 'הכנס כתובת מקומית',
+            'close'   => 'סגירה',
+        ];
+    }
+    return [
+        'message' => "Sorry, we can only ship to addresses in Israel. If you're sending a gift to someone in Israel, enter their Israeli address and phone number for shipping.",
+        'cancel'  => 'Cancel order',
+        'proceed' => 'Enter Israeli address',
+        'close'   => 'Close',
+    ];
+}
+
+function jlmwines_is_israeli_phone($phone) {
+    $digits = preg_replace('/[\s\-.()]/', '', (string) $phone);
+    return (bool) preg_match('/^(\+?972|0)\d{8,9}$/', $digits);
+}
+
+// Language flag for the server check — the wc-ajax=checkout request
+// doesn't reliably know the page language, so the form carries it.
+// Rendered outside the AJAX-refreshed order-review fragment.
+add_action('woocommerce_after_order_notes', function () {
+    echo '<input type="hidden" name="jlm_checkout_lang" value="' . (is_rtl() ? 'he' : 'en') . '">';
+});
+
+add_action('woocommerce_after_checkout_validation', function ($data, $errors) {
+    $billing_country = isset($data['billing_country']) ? $data['billing_country'] : '';
+    if ($billing_country === '' || $billing_country === 'IL') {
+        return;
+    }
+
+    $norm = function ($s) {
+        return strtolower(trim((string) $s));
+    };
+
+    $blocked = false;
+    if (empty($data['ship_to_different_address'])) {
+        $blocked = true;
+    } elseif ($norm($data['shipping_address_1'] ?? '') === $norm($data['billing_address_1'] ?? '')
+        && $norm($data['shipping_city'] ?? '') === $norm($data['billing_city'] ?? '')) {
+        $blocked = true;
+    } else {
+        // shipping_phone is a custom field, not in $data.
+        $phone   = isset($_POST['shipping_phone']) ? sanitize_text_field(wp_unslash($_POST['shipping_phone'])) : '';
+        $blocked = !jlmwines_is_israeli_phone($phone);
+    }
+
+    if ($blocked) {
+        $lang    = (isset($_POST['jlm_checkout_lang']) && $_POST['jlm_checkout_lang'] === 'he') ? 'he' : 'en';
+        $strings = jlmwines_ship_guard_strings($lang);
+        $errors->add('jlm_israel_only', $strings['message']);
+    }
+}, 10, 2);
+
+// Cancel button target: empty the cart, land on the gift page in the
+// checkout's language.
+add_action('wp_loaded', function () {
+    if (empty($_GET['jlm_empty_cart'])) {
+        return;
+    }
+    // Own param name — `lang` is WPML's query var.
+    $lang = (isset($_GET['jlm_lang']) && $_GET['jlm_lang'] === 'he') ? 'he' : 'en';
+
+    if (isset($_GET['_wpnonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'jlm_empty_cart')
+        && function_exists('WC') && WC()->cart) {
+        WC()->cart->empty_cart();
+    }
+
+    $target = home_url('/');
+    $gift   = get_page_by_path('send-wine-gifts-in-israel');
+    if ($gift) {
+        $gift_id = apply_filters('wpml_object_id', $gift->ID, 'page', true, $lang);
+        $target  = get_permalink($gift_id);
+        if ($lang === 'he') {
+            $target = apply_filters('wpml_permalink', $target, 'he');
+        }
+    }
+    wp_safe_redirect($target);
+    exit;
+}, 20); // after WC has loaded the cart (WC_Form_Handler uses 20 too)
+
+function jlmwines_render_ship_guard_popup() {
+    if (!function_exists('is_checkout') || !is_checkout()) {
+        return;
+    }
+    if (function_exists('is_order_received_page') && is_order_received_page()) {
+        return;
+    }
+
+    $lang       = is_rtl() ? 'he' : 'en';
+    $strings    = jlmwines_ship_guard_strings($lang);
+    $cancel_url = add_query_arg([
+        'jlm_empty_cart' => 1,
+        'jlm_lang'       => $lang,
+        '_wpnonce'       => wp_create_nonce('jlm_empty_cart'),
+    ], home_url('/'));
+    ?>
+    <div class="offer-popup ship-guard" id="ship-guard-popup" data-cancel-url="<?php echo esc_url($cancel_url); ?>" hidden>
+        <div class="offer-popup-overlay" data-ship-guard-close></div>
+        <div class="offer-popup-modal" role="dialog" aria-modal="true" aria-describedby="ship-guard-text">
+            <button type="button" class="offer-popup-close" data-ship-guard-close aria-label="<?php echo esc_attr($strings['close']); ?>">
+                <svg width="20" height="20" aria-hidden="true"><use href="#i-close"/></svg>
+            </button>
+            <p class="offer-popup-detail ship-guard-text" id="ship-guard-text"><?php echo esc_html($strings['message']); ?></p>
+            <div class="ship-guard-actions">
+                <button type="button" class="ship-guard-cancel" data-ship-guard-cancel><?php echo esc_html($strings['cancel']); ?></button>
+                <button type="button" class="offer-popup-shop-btn" data-ship-guard-proceed><?php echo esc_html($strings['proceed']); ?></button>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+add_action('wp_footer', 'jlmwines_render_ship_guard_popup', 6);
+
+/**
  * Default the chosen shipping method to free_shipping when it's
  * available in the package's rates. This hook only fires when WC has
  * nothing in the session yet (or the previous choice has been

@@ -14,18 +14,17 @@
 
 ## The blog chain — who does what
 
-When a blog post is started, the system creates an **English + Hebrew pair** and all the steps below at once. Each step is a task that lands with the right person:
+When a blog post is started, the system creates all the steps below at once. Each step is a task that lands with the right person. A task shows up on your Dashboard once Admin gives it a due date:
 
-1. **Create WP Stubs** — Admin
-2. **Draft (English)** — Admin / Claude writes the first draft
-3. **Admin Review** — Admin checks the draft
-4. **Edit (English)** — **Manager**  ← your job
-5. **Translate (Hebrew)** — Admin / Claude creates the Hebrew
-6. **Translate Edit (Hebrew)** — **Manager**  ← your job
-7. **Images** — Admin
-8. **Publish** — Admin puts it live (both languages)
+1. **Draft (English)** — Admin / Claude writes the first draft and Admin checks it
+2. **Edit (English)** — **Manager**  ← your job (body and title locked)
+3. **Extracts** — Admin / Claude writes the excerpt, email, newsletter text, CTA and image prompts from the locked body
+4. **Review Extracts** — **Manager**  ← your job
+5. **Translate (Hebrew)** — Admin
+6. **Edit Translation (Hebrew)** — **Manager**  ← your job
+7. **Publish** — Admin puts it live (both languages), including WordPress setup and images
 
-**You (manager) own the two editing passes — the English Edit and the Hebrew Translation Edit.** Everything else is Admin.
+**You (manager) own the three review passes: the English Edit, Review Extracts, and the Hebrew Edit Translation.** Everything else is Admin.
 
 ---
 
@@ -43,7 +42,7 @@ When a blog post is started, the system creates an **English + Hebrew pair** and
 
 ---
 
-## How to turn around a **Translation Edit (Hebrew)**
+## How to turn around a **Review Extracts** or **Edit Translation (Hebrew)**
 
 Same as the English Edit, with one extra:
 

@@ -1,6 +1,6 @@
 # Israel-Only Checkout Guard — Plan
 
-Stops foreign buyers from placing orders we can't ship: at "Place order," a popup explains we ship only within Israel and offers Cancel (empty the cart) or Proceed (enter an Israeli shipping address). Status: **reviewed, ready to build once the manager's Hebrew strings arrive. Nothing built.**
+Stops foreign buyers from placing orders we can't ship: at "Place order," a popup explains we ship only within Israel and offers Cancel (empty the cart) or Proceed (enter an Israeli shipping address). Status: **live and tested in EN and HE (2026-10-21). Done;** ready to graduate and archive.
 
 ## Problem
 
@@ -29,7 +29,7 @@ A gift message never exempts an order. A real gift from abroad ticks the box and
 
 ## Behavior
 
-**Language flag.** The server check runs inside WooCommerce's `wc-ajax=checkout` request, where `is_rtl()` isn't reliable. So the checkout form carries a hidden field `jlm_checkout_lang` set at render time from `is_rtl()` (`he`/`en`), added in the existing `woocommerce_checkout_fields` filter. The server check uses it to pick the error message's language.
+**Language flag.** The server check runs inside WooCommerce's `wc-ajax=checkout` request, where `is_rtl()` isn't reliable. So the checkout form carries a hidden field `jlm_checkout_lang` set at render time from `is_rtl()` (`he`/`en`), echoed on `woocommerce_after_order_notes` (inside the form, outside the AJAX-refreshed order-review fragment). The server check uses it to pick the error message's language.
 
 **Modal markup (`inc/woocommerce.php`).** Rendered on `wp_footer` only when `is_checkout()` and not the order-received page, with strings chosen by `is_rtl()` (as the existing checkbox label does). Hidden by default. Built from the offer-popup classes in `main.css`; buttons are `type="button"`. Carries the empty-cart URL (with nonce) as a data attribute.
 
@@ -46,11 +46,17 @@ Ticking the box via JS must also fire a `change` event so WooCommerce reveals th
 
 **Server side (`inc/woocommerce.php`).** The same rule runs in `woocommerce_after_checkout_validation` (using `$data['billing_country']`, `$data['ship_to_different_address']`, the billing/shipping street 1 + city, and `$_POST['shipping_phone']` — not in `$data` since it's a custom field), and adds a checkout error with the modal's message in the language given by the posted `jlm_checkout_lang`. This is the real gate: it catches anything that bypasses the popup (JS failure, script blockers). The popup is the friendly path; the server check is the guarantee.
 
-**Cart emptying.** A small handler for `?jlm_empty_cart=1&_wpnonce=…` on `wp_loaded`: verify the nonce, `WC()->cart->empty_cart()`, redirect to the gift page in the checkout's language (`/send-wine-gifts-in-israel/` for EN; HE URL resolved at build via WPML's translation of that page, not guessed). The language comes from a `lang` param on the URL the modal carries.
+**Cart emptying.** A small handler for `?jlm_empty_cart=1&_wpnonce=…` on `wp_loaded`: verify the nonce, `WC()->cart->empty_cart()`, redirect to the gift page in the checkout's language (`/send-wine-gifts-in-israel/` for EN; HE URL resolved at build via WPML's translation of that page, not guessed). The language comes from a `jlm_lang` param on the URL the modal carries (not `lang`, which is WPML's query var).
 
 ## Text
 
 English text is final as written above (message + "Cancel order" + "Enter Israeli address"). The manager translates the same three strings; the session does not draft Hebrew. Build starts once the Hebrew arrives.
+
+Hebrew message (manager, 2026-10-20, adapted rather than literal):
+
+> הבהרה - אנו שולחים רק לכתובות בישראל. אם אתם מבצעים את ההזמנות מחו"ל, שימו לב שאתם מכניסים את הכתובת הישראלית עם מספר טלפון ישראלי. תודה
+
+Hebrew button labels (manager, 2026-10-20): "Cancel order" = לביטול הזמנה · "Enter Israeli address" = הכנס כתובת מקומית. English stays as written above (user).
 
 ## Open points
 

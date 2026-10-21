@@ -26,6 +26,15 @@ Each post is one entry in the `MANIFEST` array in `push-posts.js`. To register a
 
 Auth comes from `.wp-credentials` at the repo root (`url` / `username` / `app_password`), consumed via the shared client `projects/tools/wp-api.js` (zero-dep REST wrapper: `api`, `upsertPost`, `uploadMedia`). **The `url` currently points at the LIVE site, `jlmwines.com`** — not staging. Pushing therefore writes to live drafts. There is no `/dev` round-trip; a push lands on the real post immediately (as a draft until someone publishes).
 
+## Publish task order
+
+The jlmops Publish task covers the whole publishing pass; there are no separate stub or image tasks:
+
+1. **WP stubs:** create the EN post (slug upsert works) and the HE translation stub in wp-admin via WPML's "+" (see the manifest note above); put both IDs in the manifest.
+2. **Images:** run the post's image-upload script (`upload-images.js <name>`, or the region folder's own script).
+3. **HTML:** convert `## BODY` to the `Paste below into WordPress Code Editor:` block at the end of each file.
+4. **Push** (commands below), then the manual checklist.
+
 ## Commands
 
 ```

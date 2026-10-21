@@ -1,13 +1,13 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-19. jlmops @584 live: task states keyed on due date (Unscheduled/Open/Done/All) across task views, awaiting user testing; chain scheduling from the goal date still to do.
+**Updated:** 2026-10-21. Content task creation and due-date task states tested and done; Israel-only checkout guard live and tested EN+HE; chain scheduling from the goal date still to do.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
 - **jlmops** (GAS backend) — live (current version in Metrics below); sync/calendar/coupons all recently hardened (`jlmops/docs/ARCHITECTURE.md`).
-- **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup and expanded Wine Talk categories both live; folk-art package images live EN/HE (HE alt text awaits manager translation); category tab-row UI not yet built (`website/BLOG_CATEGORIES_PLAN.md`).
+- **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup, expanded Wine Talk categories, and the Israel-only checkout guard live; folk-art package images live EN/HE (HE alt text awaits manager translation); category tab-row UI not yet built (`website/BLOG_CATEGORIES_PLAN.md`).
 - **content** — 12 editorial posts live (EN+HE), 3 of 6 region posts published; remaining regions and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — organic traffic rising, subscribers growing slowly; no paid ads running (`marketing/_resources/PAID_ADS_REFERENCE.md`); manager-led Thursday tastings are the current growth push (Next Action 3-4).
 - **business** — strategy/brand docs current.
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-10-18 |
+| Last Active | 2026-10-21 |
 | Revenue | Steady |
 | Deploy Version | jlmops @584 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-10-18 · theme 2026-10-19 (main.css badge fix, no version bump) |
+| Deploy Date | jlmops 2026-10-18 · theme 2026-10-21 (Israel-only checkout guard, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -32,16 +32,16 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
-1. **Monthly AYIW email** — September issue (`email-ayiw-2026-09`, "Making Wine - Harvest Time") EN+HE scheduled in Mailchimp 2026-10-13; HTML at `content/newsletter/2026-09/`. October EN draft saved in the Library folder `email-ayiw-2026-10` (2026-10-20), awaiting admin attach, lock and HE translation. July/August send status unconfirmed (pending user check). AYIW is becoming a rolling diary post, "Vine, Barrel, Bottle" (`content/plans/VINEYARD_DIARY_PLAN.md`); waiting on whether Evyatar has photos.
-2. **Branded shipping cartons — custom-printed plan canceled (2026-07-30); switched to natural brown cartons + a large logo stamp.** The original vendor's shipping cost for custom-printed cartons ran way over the cartons' own cost; after negotiating, that plan was dropped in favor of plain natural-brown cartons with the JLM mark large-stamped on. Partner-owned. Track only: nudge in daily review; re-flag if the stamped cartons slip. No Claude action.
-3. **Flyer advertising — Round 1 (Talbiye) done; Round 2 (Emek Refaim) likely cancelled.** The website new-visitor popup + `50NEW` discount appear effective enough to make another flyer round unnecessary; final call pending (user, 2026-10-15). Plan → `marketing/plans/FLYER_PLAN.md`.
+1. **Monthly AYIW email** — September issue (`email-ayiw-2026-09`, "Making Wine - Harvest Time") EN+HE scheduled in Mailchimp 2026-10-13; HTML at `content/newsletter/2026-09/`. October EN draft saved in the Library folder `email-ayiw-2026-10` (2026-10-20), awaiting admin attach, lock and HE translation. AYIW is becoming a rolling diary post, "Vine, Barrel, Bottle" (`content/plans/VINEYARD_DIARY_PLAN.md`); waiting on whether Evyatar has photos.
+2. **Branded shipping cartons — custom-printed plan canceled (2026-07-30); switched to natural brown cartons + a large logo stamp.** The original vendor's shipping cost for custom-printed cartons ran way over the cartons' own cost; after negotiating, that plan was dropped in favor of plain natural-brown cartons with the JLM mark large-stamped on. Size: 6-bottle cartons (user, 2026-10-21). Partner-owned. Track only: nudge in daily review; re-flag if the stamped cartons slip. No Claude action.
+3. **Flyer advertising — Round 1 (Talbiye) done; Round 2 cancelled** (user, 2026-10-21): the website new-visitor popup + `50NEW` discount make another round unnecessary. Plan → `marketing/plans/FLYER_PLAN.md`.
 4. **Thursday-evening in-shop tastings — manager-led, replacing Google Search Ads as the current growth push.** Tastings resume after a years-long gap, announced via organic social media (no paid ads). Seen as a boon for both shop and web. No plan doc yet.
 5. **Server-side authorization program** — the code audit's one unresolved finding: `doGet` is a login gate, not an authorization boundary; the role-switcher is client-side only and no mutating endpoint re-checks caller role. Needs a dedicated `AUTHORIZATION_PLAN.md` (sketch in `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md` Session R) — a program, not a quick session.
 6. **Current focus (post-holidays, user 2026-10-15):** publish content (blog pipeline + monthly newsletter); update and verify products (verification flow, `jlmops/docs/WORKFLOWS.md`); add new wines to fill category gaps.
 7. **Physical inventory — due now that the holidays have passed.** Full count sweep via Admin Inventory's count-task creation (full-sweep mode, batched alphabetically across sessions; design archived at `jlmops/plans/_archive/INVENTORY_COUNT_TASK_REDESIGN.md`). Counting is quantity-only.
-8. **Coastal Plain (Slot D), Golan Heights (Slot E), and Judea/Foothills (Slot F) region posts — not ready yet; calendar dates will slip.** Coastal Plain and Golan Heights bodies drafted, awaiting the manager's Title+Body lock; Judea not drafted. Negev, Galilee, and Central Mountains are published. Sources, slot table, and calendar-row state → `content/plans/REGION_POSTS_PLAN.md`.
+8. **Coastal Plain (post 2026-10-29), Golan Heights (2026-11-16), and Judea/Foothills (2026-12-14) region posts, per JLMops_Publishing.** Coastal Plain and Golan Heights bodies drafted, awaiting the manager's Title+Body lock; Judea not drafted. Negev, Galilee, and Central Mountains are published. Sources, slot table, and calendar-row state → `content/plans/REGION_POSTS_PLAN.md`.
 9. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
-10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/TASK_STATES_AND_FILTERS_PLAN.md` (deferred section).
+10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager).
 11. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
 
 ## Active Plans
@@ -51,8 +51,6 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — open: H (timestamps + date-format audit), I (count-task creation audit). Session F folded into the sync hardening plan below.
 - **Sync hardening** (`jlmops/plans/SYNC_HARDENING_PLAN.md`) — single home for sync-pipeline work. All locking stages and Bug 2 are built, live, and running clean; open: Bugs 1 and 3 (need a live repro), Stage E's inside-lock re-check not yet exercised by a real collision, step 9 `JLMops_Logs` cleanup (queued behind Test Suite Tier 4).
 - **Test suite extension** (`jlmops/plans/TEST_SUITE_EXTENSION_PLAN.md`) — Tiers 1-3 built, deployed (@566), and run live 2026-08-27: 54/54 passing (Tier 1 caught a real bug on first run, `evaluateCondition`'s boolean/zero coercion, fixed; Tier 2 caught and corrected a wrong plan claim — `_executeSchemaComparison` isn't I/O-free like its four siblings, it calls `ConfigService.getAllConfig()`, so only its guard path is tested). Only Tier 4 remains (I/O-heavy code, explicitly deferred, needs a mocking-layer decision).
-- **Task states and filters** (`jlmops/plans/TASK_STATES_AND_FILTERS_PLAN.md`) — live @582/@583, awaiting user testing; then the `WORKFLOWS.md` §12 rewrite. Backward chain scheduling deferred (Next Action 10).
-- **Content task creation dialog** (`jlmops/plans/CONTENT_TASK_CREATION_PLAN.md`) — live @581, awaiting user testing; then doc updates and archive.
 - **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — only Phase 1 still open: refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks", investigated, root cause not found, needs a live repro. Phases 2-4 shipped and documented in `jlmops/docs/WORKFLOWS.md` §13.1.

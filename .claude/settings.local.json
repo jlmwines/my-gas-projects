@@ -133,7 +133,9 @@
       "Bash(php *)"
     ],
     "ask": [
-      "Edit(//c/Users/B/projects/jlmwines/jlmops/**)"
+      "Edit(//c/Users/B/projects/jlmwines/jlmops/*.js)",
+      "Edit(//c/Users/B/projects/jlmwines/jlmops/*.html)",
+      "Edit(//c/Users/B/projects/jlmwines/jlmops/config/**)"
     ],
     "deny": [
       "Bash(git -C:*)",

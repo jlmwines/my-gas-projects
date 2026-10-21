@@ -584,3 +584,89 @@
     }
     waitForAgeGate(100); // ~30s cap, matches the ea11y widget's own safety timeout elsewhere in this file
 })();
+
+// Israel-only checkout guard — popup half. Intercepts Place Order when
+// billing is outside Israel and the order would ship to a foreign address
+// (same rule as the server check in inc/woocommerce.php, which is the real
+// gate). Capture-phase listener on document so it runs before
+// WooCommerce's own jQuery submit handler on form.checkout.
+// Plan: website/ISRAEL_ONLY_CHECKOUT_PLAN.md
+(function () {
+    var popup = document.getElementById('ship-guard-popup');
+    if (!popup) return; // not the checkout page — PHP didn't render it
+
+    var IL_PHONE = /^(\+?972|0)\d{8,9}$/;
+
+    function val(id) {
+        var el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+    }
+    function norm(s) {
+        return s.trim().toLowerCase();
+    }
+    function sameAsBilling() {
+        return norm(val('shipping_address_1')) === norm(val('billing_address_1'))
+            && norm(val('shipping_city')) === norm(val('billing_city'));
+    }
+
+    function blocked() {
+        var country = val('billing_country');
+        if (!country || country === 'IL') return false;
+        var ship = document.getElementById('ship-to-different-address-checkbox');
+        if (!ship || !ship.checked) return true;
+        if (sameAsBilling()) return true;
+        return !IL_PHONE.test(val('shipping_phone').replace(/[\s\-.()]/g, ''));
+    }
+
+    function show() {
+        popup.removeAttribute('hidden');
+        document.body.classList.add('offer-popup-open');
+    }
+    function hide() {
+        popup.setAttribute('hidden', '');
+        document.body.classList.remove('offer-popup-open');
+    }
+
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form.classList || !form.classList.contains('checkout')) return;
+        if (!blocked()) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        show();
+    }, true);
+
+    popup.querySelector('[data-ship-guard-cancel]').addEventListener('click', function () {
+        window.location.href = popup.getAttribute('data-cancel-url');
+    });
+
+    popup.querySelector('[data-ship-guard-proceed]').addEventListener('click', function () {
+        hide();
+        var ship = document.getElementById('ship-to-different-address-checkbox');
+        if (ship && !ship.checked) {
+            ship.checked = true;
+            // Bubbling native event reaches WooCommerce's delegated jQuery
+            // handler, which slides the shipping fields open.
+            ship.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        if (sameAsBilling()) {
+            ['shipping_address_1', 'shipping_city'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+        var block = document.getElementById('ship-to-different-address') || ship;
+        if (block) block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(function () {
+            var street = document.getElementById('shipping_address_1');
+            if (street) street.focus({ preventScroll: true });
+        }, 450); // after WooCommerce's slideDown
+    });
+
+    Array.prototype.forEach.call(popup.querySelectorAll('[data-ship-guard-close]'), function (el) {
+        el.addEventListener('click', hide);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !popup.hasAttribute('hidden')) hide();
+    });
+})();
