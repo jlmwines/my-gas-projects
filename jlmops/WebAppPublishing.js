@@ -134,6 +134,25 @@ function WebAppPublishing_applyPendingCalendarUpdates() {
 }
 
 /**
+ * Re-dates one content row of JLMops_Publishing from the Calendar tab's date
+ * cell (admin only in the UI). Writes cal_Date only; task dates are not shifted.
+ * @param {string} slug exact cal_Slug.
+ * @param {string} isoDate 'YYYY-MM-DD'.
+ * @returns {Object} { success } or { success:false, error }.
+ */
+function WebAppPublishing_updateCalendarDate(slug, isoDate) {
+  const serviceName = 'WebAppPublishing';
+  const functionName = 'updateCalendarDate';
+  const sessionId = Utilities.getUuid();
+  try {
+    return StatusReportService.updateCalendarDate(slug, isoDate, sessionId);
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
  * Sets slb_CampaignId on a Library entity (admin-only field update).
  * @param {Object} params - { entityId, campaignId }
  * @returns {Object} { success, data: { entity }, error? }

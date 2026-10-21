@@ -162,13 +162,6 @@ const LibraryService = (function() {
             slb_References: references.join(',')
         };
 
-        // Optional target publish date — the deficiency-view demand signal
-        // (CONTENT_WORKFLOW_REDESIGN_PLAN Decision 1). Written only when supplied;
-        // ignored gracefully until slb_TargetDate is synced into the sheet header.
-        if (params.targetDate) {
-            fieldMap.slb_TargetDate = params.targetDate;
-        }
-
         // Apply typeFields → slb_* columns where they exist.
         Object.keys(typeFields).forEach(key => {
             const col = _typeFieldToColumn(key);

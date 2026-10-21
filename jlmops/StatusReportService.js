@@ -667,25 +667,12 @@ const StatusReportService = (function() {
       const allConfig = ConfigService.getAllConfig();
       const calSheetId = allConfig['system.calendar.sheet_id'] && allConfig['system.calendar.sheet_id'].id;
       const folderId = allConfig['system.folder.calendar'] && allConfig['system.folder.calendar'].id;
-      if (!calSheetId) throw new Error('system.calendar.sheet_id not configured');
       if (!folderId) throw new Error('system.folder.calendar not configured');
 
-      const calSs = SpreadsheetApp.openById(calSheetId);
-      const calSheet = calSs.getSheets()[0];
-      if (!calSheet) throw new Error('No sheet in JLMops_Publishing');
-
-      const calValues = calSheet.getDataRange().getValues();
-      if (calValues.length < 1) throw new Error('JLMops_Publishing has no header row');
-      const calHeaders = calValues[0].map(function(h) { return String(h).trim(); });
-      const slugIdx = calHeaders.indexOf('cal_Slug');
-      if (slugIdx === -1) throw new Error('JLMops_Publishing missing cal_Slug column');
-
-      // Map existing slug -> sheet row number (1-based; data starts at row 2)
-      const slugToRow = {};
-      for (let r = 1; r < calValues.length; r++) {
-        const s = String(calValues[r][slugIdx] || '').trim();
-        if (s) slugToRow[s] = r + 1;
-      }
+      const cal = _openCalendarSheet(calSheetId);
+      const calSheet = cal.calSheet;
+      const calHeaders = cal.calHeaders;
+      const slugToRow = cal.slugToRow;
 
       const stagingFolder = DriveApp.getFolderById(folderId);
       const archiveFolder = _getCalendarArchiveFolder(stagingFolder);
@@ -753,10 +740,78 @@ const StatusReportService = (function() {
     }
   }
 
+  /**
+   * Opens JLMops_Publishing's first sheet and maps each cal_Slug to its sheet
+   * row number (1-based; data starts at row 2). Shared by the pending-updates
+   * merge and the Calendar tab's date edit.
+   * @private
+   */
+  function _openCalendarSheet(calSheetId) {
+    if (!calSheetId) throw new Error('system.calendar.sheet_id not configured');
+    const calSheet = SpreadsheetApp.openById(calSheetId).getSheets()[0];
+    if (!calSheet) throw new Error('No sheet in JLMops_Publishing');
+
+    const calValues = calSheet.getDataRange().getValues();
+    if (calValues.length < 1) throw new Error('JLMops_Publishing has no header row');
+    const calHeaders = calValues[0].map(function(h) { return String(h).trim(); });
+    const slugIdx = calHeaders.indexOf('cal_Slug');
+    if (slugIdx === -1) throw new Error('JLMops_Publishing missing cal_Slug column');
+
+    const slugToRow = {};
+    for (let r = 1; r < calValues.length; r++) {
+      const s = String(calValues[r][slugIdx] || '').trim();
+      if (s) slugToRow[s] = r + 1;
+    }
+    return { calSheet: calSheet, calValues: calValues, calHeaders: calHeaders, slugToRow: slugToRow };
+  }
+
+  /**
+   * Re-dates one content row of JLMops_Publishing (Calendar tab date cell,
+   * admin only in the UI). Writes cal_Date only — task dates are not shifted —
+   * then re-sorts. holiday/blackout/note rows are refused (sheet-edited).
+   * @param {string} slug exact cal_Slug.
+   * @param {string} isoDate 'YYYY-MM-DD'.
+   * @param {string} sessionId correlation id (CCP-2).
+   * @returns {Object} { success } or { success:false, error }.
+   */
+  function updateCalendarDate(slug, isoDate, sessionId) {
+    const fnName = 'updateCalendarDate';
+    try {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate || ''));
+      if (!m) throw new Error('Invalid date: ' + isoDate);
+      const key = String(slug || '').trim();
+      if (!key) throw new Error('Missing slug');
+
+      const allConfig = ConfigService.getAllConfig();
+      const calSheetId = allConfig['system.calendar.sheet_id'] && allConfig['system.calendar.sheet_id'].id;
+      const cal = _openCalendarSheet(calSheetId);
+      const rowNum = cal.slugToRow[key];
+      if (!rowNum) throw new Error('Calendar row not found: ' + key);
+
+      const typeIdx = cal.calHeaders.indexOf('cal_Type');
+      const dateIdx = cal.calHeaders.indexOf('cal_Date');
+      if (dateIdx === -1) throw new Error('JLMops_Publishing missing cal_Date column');
+      const type = typeIdx > -1 ? String(cal.calValues[rowNum - 1][typeIdx] || '').trim() : '';
+      if (['holiday', 'blackout', 'note'].indexOf(type) > -1) throw new Error('Row type ' + type + ' is not editable here');
+
+      // Local date from the parts (script timezone is Israel) — new Date('YYYY-MM-DD') would be UTC midnight.
+      const newDate = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      cal.calSheet.getRange(rowNum, dateIdx + 1).setValue(newDate);
+      _sortCalendarByDate(cal.calSheet, cal.calHeaders);
+
+      logger.info(SERVICE_NAME, fnName, 'Calendar date changed: ' + key + ' -> ' + isoDate, { sessionId: sessionId });
+      return { success: true };
+    } catch (e) {
+      logger.error(SERVICE_NAME, fnName, 'Calendar date change failed: ' + e.message, e, { sessionId: sessionId });
+      return { success: false, error: e.message };
+    }
+  }
+
   return {
     refreshLiveBlocks: refreshLiveBlocks,
     refreshKpiBlock: refreshKpiBlock,
-    applyPendingCalendarUpdates: applyPendingCalendarUpdates
+    applyPendingCalendarUpdates: applyPendingCalendarUpdates,
+    updateCalendarDate: updateCalendarDate
   };
 })();
 

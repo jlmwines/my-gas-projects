@@ -323,7 +323,9 @@
     if (!iso) return '';
     var d = new Date(iso);
     if (isNaN(d.getTime())) return String(iso);
-    return d.toISOString().slice(0, 10);
+    // Local date parts, not toISOString (UTC) - Israel midnight is the previous day in UTC
+    var mm = d.getMonth() + 1, dd = d.getDate();
+    return d.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
   };
 
   TaskWidgets.formatDateShort = function(iso) {

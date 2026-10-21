@@ -384,7 +384,7 @@
         <div><label>Target date</label><div class="field-value" id="pv-drawer-targetdate">—</div></div>
         <div><label>Campaign</label>
           <div class="field-value" id="pv-drawer-campaign">—</div>
-          <div data-roles="admin" style="margin-top:4px;display:flex;gap:6px;align-items:center">
+          <div data-roles="admin" id="pv-drawer-campaign-edit" style="margin-top:4px;display:flex;gap:6px;align-items:center">
             <select class="form-control form-control-sm" id="pv-drawer-campaign-select" style="font-size:12px;height:28px;flex:1"></select>
             <button type="button" class="btn btn-sm btn-light" id="pv-drawer-campaign-save" style="white-space:nowrap" onclick="PublishingView.saveCampaignField()">Save</button>
           </div>
@@ -420,6 +420,23 @@
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
       <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('pvDrawerAttachModal')">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="pv-btn-drawer-attach-submit">Attach</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar date modal — admin re-dates a content row (cal_Date only; task dates are not shifted). -->
+<div class="modal-overlay" id="pvCalDateModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:360px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Change publishing date</h6>
+    </div>
+    <div style="padding:15px;">
+      <p class="mb-2 small"><strong id="pv-cal-date-slug"></strong></p>
+      <input type="date" class="form-control form-control-sm" id="pv-cal-date-input" />
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('pvCalDateModal')">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="pv-btn-cal-date-save" onclick="PublishingView.saveCalendarDate()">Save</button>
     </div>
   </div>
 </div>
@@ -605,8 +622,13 @@
             state.projects = res.data.projects || [];
             state.shortUrls = res.data.shortUrls || [];
             state.holidays = res.data.holidays || [];
+            // cal_Date is the publish date the Library shows (slb_TargetDate is obsolete).
+            state.calDateBySlug = {};
+            state.holidays.forEach(function(h) { if (h.slug) state.calDateBySlug[h.slug] = h.date; });
             renderCampaigns();
             renderCalendar();
+            // The Library rendered before the calendar arrived; re-render so its dates fill in.
+            renderLibrary();
           } else {
             var msg = (res && res.error) ? res.error : 'Failed to load campaigns/projects';
             document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
@@ -666,8 +688,8 @@
         (tasksByBase[base] = tasksByBase[base] || []).push(t);
       });
 
-      // Entities, same grouping — checked first for the row click target (see
-      // _routeTarget below): an entity's drawer is shown whenever one exists.
+      // Entities, same grouping — the row click opens the entity's drawer when
+      // one exists (openCalendarRow), a bare drawer when only tasks exist.
       var libGroupByBase = {};
       (state.library || []).forEach(function(e) {
         var slug = e.slug || '';
@@ -677,20 +699,15 @@
         (libGroupByBase[base] = libGroupByBase[base] || []).push(e);
       });
 
-      // Click target for a calendar row. Redesigned 2026-07-09 (CALENDAR_TAB_UX_PLAN.md
-      // Phase 2) — previously routed straight to the earliest open task with no
-      // confirmation step, so a wrong click cost a full round-trip out of the task
-      // pack. Now: show the entity drawer (details) first whenever an entity
-      // exists — its attached-tasks list is already independently clickable
-      // (TaskDetail.open) as the explicit "advance to task" action. Only route
-      // straight to a task when there's no entity yet to show (fresh spawn, no
-      // Doc attached — nothing to preview).
-      function _routeTarget(base) {
-        var group = libGroupByBase[base];
-        if (group && group.length) {
-          var rep = group.filter(function(e) { return e.slug.slice(-3) === '-en'; })[0] || group[0];
-          return { kind: 'entity', slug: rep.slug };
-        }
+      // Kept for the drawer opened from a calendar row (openCalendarRow): it lists
+      // every task for the row's base slug, both languages, not the server's
+      // exact-slug list for the EN entity alone.
+      state.calTasksByBase = tasksByBase;
+      state.calLibGroupByBase = libGroupByBase;
+
+      // Earliest open task for the row's "Task" button — goes straight to the
+      // task (openAttachedTask), same selection the row click used to make.
+      function _firstOpenTask(base) {
         var open = (tasksByBase[base] || []).filter(function(t) {
           return t.status !== 'Done' && t.status !== 'Cancelled';
         });
@@ -698,7 +715,7 @@
         if (isManager) open = open.filter(function(t) { return t.assignedTo === 'Manager' && !!t.dueDate; });
         if (!open.length) return null;
         open.sort(function(a, b) { return (a.createdDate || '').localeCompare(b.createdDate || ''); });
-        return { kind: 'task', id: open[0].id };
+        return open[0];
       }
 
       // Row status bucket — shared by the status pill and the status filter so
@@ -742,21 +759,22 @@
       }
 
       var html = '<table class="pv-cal-table responsive-stack"><thead><tr>';
-      html += '<th>Date</th><th>Type</th><th>Slug</th><th>Title</th><th>Status</th><th>Notes</th>';
+      html += '<th>Date</th><th>Type</th><th>Slug</th><th>Title</th><th>Status</th><th>Notes</th><th></th>';
       html += '</tr></thead><tbody>';
 
       // Types ContentStreamModal's own picker excludes (not real content rows) --
       // never selectable as a spawn target.
       var SPAWNABLE = function(h) { return h.slug && ['holiday', 'blackout', 'note'].indexOf(h.type) === -1; };
+      // Re-dating is admin-only and content rows only (holiday/blackout/note stay sheet-edited).
+      var canEditDate = document.body.classList.contains('role-admin');
 
       rows.forEach(function(h) {
-        var target = h.slug ? _routeTarget(h.slug) : null;
+        var hasDrawer = h.slug && (libGroupByBase[h.slug] || tasksByBase[h.slug]);
+        var openTask = h.slug ? _firstOpenTask(h.slug) : null;
         var rowAttrs = '';
         var isSelected = false;
-        if (target && target.kind === 'task') {
-          rowAttrs = ' style="cursor:pointer;" onclick="PublishingView.openAttachedTask(\'' + TaskWidgets.escape(target.id) + '\')"';
-        } else if (target && target.kind === 'entity') {
-          rowAttrs = ' style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(target.slug) + '\')"';
+        if (hasDrawer) {
+          rowAttrs = ' style="cursor:pointer;" onclick="PublishingView.openCalendarRow(\'' + TaskWidgets.escape(h.slug) + '\')"';
         } else if (SPAWNABLE(h)) {
           // No entity/task exists yet for this row -- clicking it selects it as the
           // target for the "Create Content Tasks" button above, instead of doing
@@ -771,12 +789,18 @@
           statusCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(rowStatus) + '">' + TaskWidgets.escape(rowStatus) + '</span>';
         }
         html += '<tr' + rowAttrs + '>';
-        html += '<td data-label="Date">' + TaskWidgets.escape(h.date) + (isSelected ? ' &#10003;' : '') + '</td>';
+        var dateAttrs = (canEditDate && SPAWNABLE(h))
+          ? ' style="cursor:pointer;text-decoration:underline dotted;" title="Change publishing date" onclick="event.stopPropagation();PublishingView.openCalendarDateModal(\'' + TaskWidgets.escape(h.slug) + '\')"'
+          : '';
+        html += '<td data-label="Date"' + dateAttrs + '>' + TaskWidgets.escape(h.date) + (isSelected ? ' &#10003;' : '') + '</td>';
         html += '<td data-label="Type"><span style="font-size:11px;color:#6c757d;">' + TaskWidgets.escape(h.type) + '</span></td>';
         html += '<td data-label="Slug"><span style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;color:#6c757d;">' + (h.slug ? TaskWidgets.escape(h.slug) : '—') + '</span></td>';
         html += '<td data-label="Title"><strong>' + TaskWidgets.escape(h.name) + '</strong></td>';
         html += '<td data-label="Status">' + statusCell + '</td>';
         html += '<td data-label="Notes">' + (h.notes ? TaskWidgets.escape(h.notes) : '—') + '</td>';
+        html += '<td data-label="">' + (openTask
+          ? '<button type="button" class="btn btn-sm btn-light" onclick="event.stopPropagation();PublishingView.openAttachedTask(\'' + TaskWidgets.escape(openTask.id) + '\')" title="Go to the earliest open task">Task</button>'
+          : '') + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
@@ -793,6 +817,41 @@
         state.selectedCalRow = { slug: slug, type: type };
       }
       renderCalendar();
+    }
+
+    // Admin re-dates a content row from its date cell. Writes cal_Date only;
+    // task start/due dates are re-dated by hand (CALENDAR_TAB_UX_PLAN.md §3).
+    function openCalendarDateModal(slug) {
+      var row = (state.holidays || []).filter(function(h) { return h.slug === slug; })[0];
+      if (!row) return;
+      state.calDateSlug = slug;
+      document.getElementById('pv-cal-date-slug').textContent = row.name || slug;
+      document.getElementById('pv-cal-date-input').value = row.date || '';
+      ModalOverlay.open('pvCalDateModal');
+    }
+
+    function saveCalendarDate() {
+      var slug = state.calDateSlug;
+      var isoDate = document.getElementById('pv-cal-date-input').value;
+      if (!slug || !isoDate) { TaskWidgets.toast('Pick a date', 'warning'); return; }
+      var btn = document.getElementById('pv-btn-cal-date-save');
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          if (!res || !res.success) {
+            TaskWidgets.toast((res && res.error) ? res.error : 'Failed to change date', 'error');
+            return;
+          }
+          ModalOverlay.close('pvCalDateModal');
+          TaskWidgets.toast('Date changed to ' + isoDate, 'success');
+          _loadCampaignsAndProjects();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          TaskWidgets.toast(err && err.message ? err.message : 'Network error', 'error');
+        })
+        .WebAppPublishing_updateCalendarDate(slug, isoDate);
     }
 
     // ===== CAMPAIGNS TAB =====
@@ -1349,6 +1408,14 @@
       container.innerHTML = html;
     }
 
+    // Publish date for a Library entity: its calendar row's cal_Date, matched by
+    // base slug. '' for items with no calendar row (images, templates).
+    function _calDateFor(slug) {
+      var s = slug || '';
+      var base = (s.slice(-3) === '-en' || s.slice(-3) === '-he') ? s.slice(0, -3) : s;
+      return (state.calDateBySlug || {})[base] || '';
+    }
+
     function renderDeficiency(searchTerm) {
       var now = new Date();
       var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1356,8 +1423,9 @@
       var horizon = new Date(startOfToday.getTime() + windowDays * 86400000);
 
       var rows = state.library.filter(function(e) {
-        if (!e.targetDate) return false;
-        var td = new Date(e.targetDate);
+        var calDate = _calDateFor(e.slug);
+        if (!calDate) return false;
+        var td = new Date(calDate);
         if (isNaN(td.getTime())) return false;
         var overdue = td < startOfToday && _entityStatus(e) !== 'done';
         var inWindow = td >= startOfToday && td <= horizon;
@@ -1369,7 +1437,7 @@
         return true;
       });
 
-      rows.sort(function(a, b) { return (a.targetDate || '').localeCompare(b.targetDate || ''); });
+      rows.sort(function(a, b) { return _calDateFor(a.slug).localeCompare(_calDateFor(b.slug)); });
 
       var container = document.getElementById('pv-library-table-wrap');
       if (rows.length === 0) {
@@ -1381,7 +1449,8 @@
       html += '<th>Target</th><th>Title</th><th>Type</th><th>Lang</th><th>Status</th><th>Tasks</th><th></th>';
       html += '</tr></thead><tbody>';
       rows.forEach(function(e) {
-        var td = new Date(e.targetDate);
+        var calDate = _calDateFor(e.slug);
+        var td = new Date(calDate);
         var status = _entityStatus(e);
         var overdue = td < startOfToday && status !== 'done';
         var openCount = (state.tasks || []).filter(function(t) {
@@ -1389,7 +1458,7 @@
         }).length;
         var taskCell = openCount > 0 ? (openCount + ' open') : '0 open';
         html += '<tr' + (overdue ? ' style="background:#fff3cd;"' : '') + '>';
-        html += '<td data-label="Target">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong>(overdue)</strong>' : '') + '</td>';
+        html += '<td data-label="Target">' + TaskWidgets.formatDate(calDate) + (overdue ? ' <strong>(overdue)</strong>' : '') + '</td>';
         html += '<td data-label="Title"><a class="pv-entity-title-link" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' +
                 (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') +
                 '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
@@ -1414,8 +1483,57 @@
 
     function openEntityDrawer(slug) {
       if (!slug) return;
+      state.calDrawerBase = null;
       state.entityStack = [];
       _loadEntityDrawer(slug);
+    }
+
+    // Calendar row click: the entity's drawer (EN representative) when an entity
+    // exists, otherwise a bare drawer built from the calendar row. Either way the
+    // task list is every task for the row's base slug (_drawerTasks).
+    function openCalendarRow(base) {
+      if (!base) return;
+      state.calDrawerBase = base;
+      state.entityStack = [];
+      var group = (state.calLibGroupByBase || {})[base];
+      if (group && group.length) {
+        var rep = group.filter(function(e) { return e.slug.slice(-3) === '-en'; })[0] || group[0];
+        _loadEntityDrawer(rep.slug);
+        return;
+      }
+      _renderBareDrawer(base);
+    }
+
+    // Tasks for the drawer: when opened from a calendar row, every task for that
+    // row's base slug (both languages, archived included) instead of the
+    // server's exact-slug match.
+    function _drawerTasks(slug, serverTasks) {
+      var s = slug || '';
+      var base = (s.slice(-3) === '-en' || s.slice(-3) === '-he') ? s.slice(0, -3) : s;
+      if (state.calDrawerBase && base === state.calDrawerBase) return (state.calTasksByBase || {})[base] || [];
+      return serverTasks || [];
+    }
+
+    // Row with tasks but no entity (no Doc attached yet): header from the
+    // calendar row plus the task list. No entity fields or actions.
+    function _renderBareDrawer(base) {
+      var row = (state.holidays || []).filter(function(h) { return h.slug === base; })[0] || {};
+      var tasks = _drawerTasks(base, []);
+      state.currentEntitySlug = null;
+      state.currentEntity = null;
+      _setDrawerLoading(base);
+      _updateDrawerBackButton();
+      document.getElementById('pv-drawer-title').textContent = row.name || base;
+      document.getElementById('pv-drawer-type').textContent = row.type || '—';
+      document.getElementById('pv-drawer-language').textContent = '—';
+      var derivedStatus = TaskWidgets.deriveStatus(tasks);
+      document.getElementById('pv-drawer-state').innerHTML = '<span class="tw-status-pill ' + TaskWidgets.statusClass(derivedStatus) + '">' + TaskWidgets.escape(derivedStatus) + '</span>';
+      document.getElementById('pv-drawer-targetdate').textContent = row.date || '—';
+      document.getElementById('pv-drawer-campaign').textContent = '—';
+      document.getElementById('pv-drawer-lasttouched').textContent = '—';
+      document.getElementById('pv-drawer-campaign-edit').style.display = 'none';
+      _renderDrawerAttachedTasks(tasks);
+      ModalOverlay.open('pvEntityDrawer');
     }
 
     function backEntityDrawer() {
@@ -1461,15 +1579,17 @@
     function _renderEntityDrawer(data) {
       var entity = (data && data.entity) || {};
       state.currentEntity = entity;
+      var tasks = _drawerTasks(entity.slug, data && data.attached_tasks);
+      document.getElementById('pv-drawer-campaign-edit').style.display = '';
       document.getElementById('pv-drawer-title').textContent = entity.title || entity.slug || 'Entity';
       document.getElementById('pv-drawer-slug').textContent = entity.slug || '—';
       document.getElementById('pv-drawer-type').textContent = entity.contentType || '—';
       document.getElementById('pv-drawer-language').textContent = entity.language || '(none)';
-      var derivedStatus = TaskWidgets.deriveStatus((data && data.attached_tasks) || []);
+      var derivedStatus = TaskWidgets.deriveStatus(tasks);
       document.getElementById('pv-drawer-state').innerHTML = entity.state === 'abandoned'
         ? '<span class="tw-status-pill">abandoned</span>'
         : '<span class="tw-status-pill ' + TaskWidgets.statusClass(derivedStatus) + '">' + TaskWidgets.escape(derivedStatus) + '</span>';
-      document.getElementById('pv-drawer-targetdate').textContent = entity.targetDate ? TaskWidgets.formatDate(entity.targetDate) : '—';
+      document.getElementById('pv-drawer-targetdate').textContent = _calDateFor(entity.slug) ? TaskWidgets.formatDate(_calDateFor(entity.slug)) : '—';
       document.getElementById('pv-drawer-campaign').textContent = CAMPAIGN_LABELS[entity.campaignId] || entity.campaignId || '—';
       document.getElementById('pv-drawer-lasttouched').textContent = entity.lastTouched ? TaskWidgets.formatDate(entity.lastTouched) : '—';
       var campSel = document.getElementById('pv-drawer-campaign-select');
@@ -1486,7 +1606,7 @@
 
       _renderDrawerActions(entity);
       _renderDistributePanel(entity);
-      _renderDrawerAttachedTasks((data && data.attached_tasks) || []);
+      _renderDrawerAttachedTasks(tasks);
     }
 
     function openAttachedTask(id) {
@@ -1530,6 +1650,7 @@
       state.entityStack = [];
       state.currentEntitySlug = null;
       state.currentEntity = null;
+      state.calDrawerBase = null;
     }
 
     function _renderDrawerActions(entity) {
@@ -1657,6 +1778,9 @@
       switchPreset: switchPreset,
       spawnForEntity: spawnForEntity,
       toggleCalendarRowSelection: toggleCalendarRowSelection,
+      openCalendarRow: openCalendarRow,
+      openCalendarDateModal: openCalendarDateModal,
+      saveCalendarDate: saveCalendarDate,
       switchCalFilter: switchCalFilter,
       switchCalHolidays: switchCalHolidays,
       openAttachedTask: openAttachedTask,
