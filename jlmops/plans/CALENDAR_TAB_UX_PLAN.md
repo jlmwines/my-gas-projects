@@ -1,65 +1,54 @@
 # Calendar Tab UX Plan
 
-**Status (2026-08-25 cleanup pass):** Phases 2-4 shipped live 2026-07-09 (jlmops @461) and their facts already live in `jlmops/docs/WORKFLOWS.md` §13.1 (entity-drawer-first click-through, status filter, search placement). This plan now tracks **Phase 1 only** — the Calendar tab refresh bug, still open, root cause not found. Not archived because Phase 1 remains genuinely unresolved.
+Open work on `PublishingView.html`'s Calendar tab and the dates it shows. One open bug (refresh, cause not found) and four planned items (2026-10-21, none built): a date-display prerequisite, explicit row-click choices, editing a row's publishing date, and the Library running on `cal_Date` instead of obsolete `slb_TargetDate`. Shipped Calendar behavior (search, status filter, current row click) is documented in `jlmops/docs/WORKFLOWS.md` §13.1.
 
-Implementation plan for the four Calendar-tab items logged 2026-07-09 (`.claude/bugs.md` + `.claude/wishlist.md`), all in `PublishingView.html`'s Calendar tab. Traced against the actual current code before writing this — two of the four turned out smaller or different than they looked from the bug/wish description alone.
+## Build order
 
-## Scope
+1. Date display fix (prerequisite: every date below is shown through `formatDate`).
+2. Row click: details or task. 3. Edit publishing date. Build and test these two together; both change how a row reacts to clicks.
+4. Library on `cal_Date`.
 
-1. **Bug:** Calendar tab doesn't refresh after "Apply Pending Updates" or "Create Content Tasks" succeed.
-2. **Wish:** row click shows entity details before advancing to a task, replacing the current auto-route-straight-to-task.
-3. **Wish:** filter Calendar rows by status.
-4. **Wish:** search tool — **turns out this already exists** (`#pv-cal-search`, fully wired and functional). The actual gap is only its position: it renders in a row below the title bar, not inside the title bar next to the buttons. Correcting the wishlist entry to reflect this.
+All four ship in one jlmops deploy (code only, no config rebuild), then are tested in this order; a failing item is reverted alone and redeployed.
 
-## Current architecture (traced 2026-07-09)
+## 1. Prerequisite — date display one day early
 
-- Calendar rows come from `state.holidays`, populated via `_loadCampaignsAndProjects()` → `WebAppPublishing_getCampaignsAndProjects()` (`PublishingView.html:573-593`). Despite the name, this holds the full unified calendar (holidays + content rows), not just literal holidays.
-- `renderCalendar()` (`:611-705`) groups tasks and library entities by base slug (strip `-en`/`-he`), computes `_routeTarget(base)` per row: earliest open task if one qualifies (role-aware — manager sees only tasks assigned to `'Manager'`), else the entity (drawer fallback), else nothing (non-interactive row, e.g. holidays).
-- Row click currently calls either `openAttachedTask(id)` (`:1339` — full view navigation to AdminTasks/ManagerDashboard, no confirmation) or `openEntityDrawer(slug)` (`:1262` — opens the existing entity detail drawer: status, type, language, target date, campaign, last-touched, and an attached-tasks list where each task row is *already* independently clickable via `TaskDetail.open(id)`, `:1365`).
-- Search (`#pv-cal-search`) already filters rows by name+slug (`:664-668`), listener already wired (`:497-498`). Markup sits in `.ds-section-actions` (`:246-250`), a separate row below `.ds-section-head` (`:241-245`, the title bar holding "Create Content Tasks" / "Apply Pending Updates").
-- `applyPendingCalendarUpdates()` success handler already calls `_loadCampaignsAndProjects()` (`:564`), which sets `state.holidays` and calls `renderCalendar()` (`:580-582`). `ContentStreamModal`'s reload path (`_loadData` → `_onLoaded`, `:546`) also reaches `_loadCampaignsAndProjects()`. **So a client-side refresh call already exists for both triggers** — the bug isn't a missing `renderCalendar()` call.
+Dates are date-only, but `TaskWidgets.formatDate` (`TaskWidgets.html` ~322) displays them via `toISOString().slice(0, 10)`, i.e. in UTC. A date stored as Israel local midnight is 21:00/22:00 UTC the previous day, so every screen using `formatDate` shows it one day early. Meanwhile `dueClass`/`isOverdue` and `formatDateShort` work in local time, so the same task can show different dates on different screens, and the overdue colour is judged on a different day than the one displayed. This likely explains the occasional "one day off" due dates the user has seen.
 
-## Phase 1 — Refresh bug: investigate before fixing
+- **Fix:** `formatDate` builds `YYYY-MM-DD` from local `getFullYear/getMonth/getDate`. One shared function, so every caller is corrected at once.
+- **Check on ship:** a pure ISO string (`2026-10-29`) parses as UTC midnight, which is still the same local day in Israel; all users are in Israel, so local-date output is correct for both input shapes. Spot-check a task due date, the drawer, and the Library after deploy.
+- Relates to the open `bugs.md` item "Audit timestamps + date formats system-wide" (2026-05-04); this fixes one concrete instance, not the whole audit.
 
-The obvious fix ("add a refresh call after the action") is already ruled out — both triggers already call the refresh chain. Don't write a fix until the actual cause is confirmed:
+## 2. Row click: details or task, by choice
 
-- Reproduce directly (Apply Pending Updates, watch whether `WebAppPublishing_getCampaignsAndProjects`'s response actually contains the new/changed row, or a stale snapshot).
-- Read the server-side implementation behind `WebAppPublishing_getCampaignsAndProjects` (not yet located/read — file TBD, likely `WebAppPublishing.js`) for caching (`CacheService`, a memoized read, a stale reference).
-- Check whether `StatusReportService.applyPendingCalendarUpdates` (the merge function) commits synchronously before its response fires, or has any async/deferred write.
-- Fix shape depends entirely on what's found — likely a cache-invalidation gap or a write/read ordering issue, not a client-side change.
+The user sees row clicks behave unpredictably in the admin Calendar (2026-10-21). `_routeTarget` (`PublishingView.html` ~688) has a hidden rule (entity exists → drawer; tasks but no entity → earliest open task) that doesn't fully account for what the user sees; two further confusions found: the drawer shows only the EN entity's tasks (below), and the two "go to task" paths behave differently. Replace with explicit choices:
 
-## Phase 2 — Click-through: details before task (small, additive)
+- **Row click always opens the drawer** for a content row with an entity or tasks.
+- **Drawer task list = every task for the row.** Today `LibraryService.getEntityDetail` matches `st_EntityId` exactly against the one entity slug opened (the EN representative), so HE tasks never appear. When opened from the Calendar, list all tasks for the row's base slug (both languages, archived included) from the already-loaded `tasksByBase`, not the server's exact-slug list.
+- **Bare drawer** when the row has tasks but no entity (no Doc attached): header from the calendar row (name, slug, type, date) plus that same task list. No entity fields or entity actions.
+- **"Task" button on the row** goes straight to the earliest open task, using today's row behavior (`openAttachedTask`: navigate to AdminTasks / ManagerDashboard with the task selected), not the drawer's `TaskDetail.open` popup. Same selection as today's `_routeTarget` task branch, role-aware for manager. Shown only when the row has an open task; `stopPropagation` so the row click doesn't also fire. Copy the button class from an existing row button in the file (e.g. the Library tab's Spawn button).
+- **Untouched rows** (no entity, no tasks) keep the current select-for-Create-Content-Tasks click.
+- **On ship:** rewrite the row-click description in `WORKFLOWS.md` §13.1.
 
-- Change the row `onclick` in `renderCalendar()` (`:684-688`): when `_routeTarget` returns a task target for a slug that *has* an entity, open the entity drawer instead of routing straight to the task.
-- Edge case: a freshly-spawned chain with no Doc attached yet has a task but no entity (`_routeTarget` returns `{kind:'task'}` with nothing in `libGroupByBase`) — there's no entity to show a drawer for. Keep direct-to-task routing for that specific case; the redesign only changes the common case where an entity exists.
-- No new component needed: the entity drawer's attached-tasks list already renders each task as an independently-clickable row (`TaskDetail.open(id)`) — that already *is* the "advance to task" action, just currently unreached from Calendar because Calendar bypasses the drawer entirely today.
+## 3. Edit a row's publishing date
 
-## Phase 3 — Filter by status (small, additive)
+Today the only way to move a calendar date is editing `JLMops_Publishing` directly in Drive, and re-dating is frequent. Scope (user, 2026-10-21): change the date and refresh the display. Task start/due dates are **not** shifted; the admin re-dates remaining tasks by hand, since only the unfinished part of a chain ever needs adjusting. Automatic back-scheduling stays in `CONTENT_CHAIN_SCHEDULING_PLAN.md`.
 
-- Copy the existing filter-dropdown pattern from `AdminTasksView.html` (`filter-task-status`: a `<select>` populated from status options, `change` listener sets state + re-renders, predicate `state.X !== 'all' && rowStatus !== state.X`) — established convention, don't invent a new filter UI.
-- Status values are the three-tier derived status already computed per row via `TaskWidgets.deriveStatus` (not started / in progress / done — `WORKFLOWS.md` §13.4).
-- Add `<select id="pv-cal-status-filter">` next to the search box; wire its `change` handler alongside the existing `renderCalendar` trigger.
+- **Admin only.** The manager sees the Calendar tab but never edits dates; the date cell is clickable only for admin (`data-roles="admin"` / role check). No server-side role check is possible until the authorization program exists (`CODE_AUDIT_FIX_SEQUENCE.md` Session R), same as every other endpoint.
+- **Content rows only** (`cal_Type` is a content type). Holidays are managed separately and never editable here; `blackout`/`note` rows stay sheet-edited too.
+- **Entry point:** the date cell. Clicking it opens a small `modal-overlay` (date input + Save, via `ModalOverlay`) and stops propagation so the row click doesn't also fire. Name and notes stay sheet-edited.
+- **Server:** a public `updateCalendarDate(slug, isoDate)` in `StatusReportService.js`, next to `applyPendingCalendarUpdates`, reusing its slug-to-row lookup and `_sortCalendarByDate`. Finds the row by `cal_Slug` (exact match), refuses `holiday`/`blackout`/`note` rows, writes `cal_Date`, re-sorts, errors if the slug isn't found. **Writes a local date:** build the Date from the `YYYY-MM-DD` parts (`new Date(y, m-1, d)` in the script's Israel timezone), never `new Date('YYYY-MM-DD')`, which is UTC midnight. A thin `WebAppPublishing_updateCalendarDate` wrapper exposes it.
+- **Refresh:** on success, call `_loadCampaignsAndProjects()` like the Apply Pending Updates handler. The open refresh bug (below) may hit this too, so the first live test doubles as its repro.
+- **On ship:** update `DATA_MODEL.md` Publishing Calendar write rules (admin can re-date from the Calendar tab) and `WORKFLOWS.md` §13.1.
 
-## Phase 4 — Search placement (correction: already built, just misplaced)
+## 4. Library on `cal_Date`, retire `slb_TargetDate`
 
-- Move the `.tw-filter-bar` block (`:246-250`, containing `#pv-cal-search`) from `.ds-section-actions` into `.ds-section-head` (`:241-245`), after the two buttons. Markup/CSS move only — no JS change, since the search logic already works correctly.
+`cal_Date` is the only live publish date. `slb_TargetDate` (SysLibrary) is obsolete: nothing writes it any more (`ContentStreamModal.html` still sends `targetDate`, but `spawnContentChain` ignores it and `_ensureEntity` never sets it), so only pre-2026-07-08 entities carry a value, and it never tracks calendar changes. It is still read, so the Library shows stale or blank dates.
 
-## Suggested build order
+- **Readers to repoint to `cal_Date`** (matched by base slug, the same `-en`/`-he` stripping the Calendar uses): the drawer's "Target date" field (`pv-drawer-targetdate`), the Library tab's Target column and overdue flag, and the **Deficiency preset** (`PublishingView.html` ~1359-1392; pieces with a date inside `system.content.deficiency_window_days`, default 56, plus overdue not-done). The setting stays; the preset now runs on `cal_Date`, so posts that never had a target date start appearing. Library items with no calendar row (images, templates) show no date.
+- **Load order:** the Library renders from `WebAppLibrary_getData` before the calendar arrives (`_loadCampaignsAndProjects` is a separate, later call). Re-render the Library once `state.holidays` is loaded, or it shows blank dates first.
+- **Dead write path to remove:** the `targetDate` param in `ContentStreamModal.html`'s `spawnContentChain` call and the `slb_TargetDate` write in `LibraryService.js` `addEntity`. `WebAppLibrary.js` stops mapping `targetDate` from `slb_TargetDate`.
+- **Sheet column stays** (schema is append-only); it just goes unread. On ship, mark it obsolete in `DATA_MODEL.md` SysLibrary (which also wrongly says it can be "set manually via the entity drawer") and update `WORKFLOWS.md` §13.1's Deficiency description.
 
-Phase 4 (trivial correction) → Phase 3 (additive, independent) → Phase 2 (additive, independent) → Phase 1 (needs investigation first — scope unknown until reproduced against the server-side code, which hasn't been read yet).
+## Open bug — Calendar doesn't refresh after "Apply Pending Updates" / "Create Content Tasks"
 
-## Status (2026-07-09)
-
-- **Phase 1 (refresh bug):** Investigated, not fixed. Traced both trigger paths end to end (client refresh calls, server merge write, server read) — no defect found in any of it; see the investigation note below. Root cause still open — needs a live repro (browser Network tab or temporary diagnostic logging), not more static reading.
-- **Phase 2 (click-through):** Implemented — `_routeTarget` now checks for an entity first and opens the drawer whenever one exists; only routes straight to a task when no entity exists yet (fresh spawn, no Doc attached).
-- **Phase 3 (status filter):** Implemented — `#pv-cal-status-filter` select added next to search; `_calRowStatus(h)` is the single status-bucket definition, shared by the filter and the status pill (was previously computed inline, duplicated).
-- **Phase 4 (search placement):** Implemented — `#pv-cal-search` moved into `.ds-section-head`, empty `.ds-section-actions` wrapper removed.
-
-Phases 2–4 deployed live 2026-07-09, jlmops @461. **Phase 3 (status filter) smoke-tested and confirmed working by the user, 2026-07-09.** Phases 2 (click-through) and 4 (search placement) not yet smoke-tested.
-
-### Phase 1 investigation findings
-
-- Client refresh calls confirmed wired for both triggers: `applyPendingCalendarUpdates()`'s success handler calls `_loadCampaignsAndProjects()` (`:564`); `ContentStreamModal`'s spawn success calls `cfg.reload()` → `_loadData()` → `_onLoaded()` → `_loadCampaignsAndProjects()`.
-- Server merge (`StatusReportService.applyPendingCalendarUpdates`) does direct `SpreadsheetApp` reads/writes, no caching; the post-merge sort reads the sheet back within the same execution (reliable read-after-write).
-- Server read (`WebAppPublishing_getCampaignsAndProjects` → `_loadHolidays`) opens the sheet fresh on every call via `SpreadsheetApp.openById`, no `CacheService`, no memoization.
-- Conclusion: the obvious causes (missing refresh call, stale cache, unflushed write) are all ruled out by static reading. Next step needs runtime observation.
+Investigated, not fixed. Static reading ruled out the obvious causes: client refresh calls are wired for both triggers (`applyPendingCalendarUpdates()` success → `_loadCampaignsAndProjects()`; `ContentStreamModal` spawn → `cfg.reload()` → `_loadData()` → `_onLoaded()` → `_loadCampaignsAndProjects()`); the server merge writes directly with no caching and reads back in the same execution; the server read opens the sheet fresh on every call. Next step needs runtime observation (browser Network tab or temporary logging): does the response after the action contain the changed row or a stale one?

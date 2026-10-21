@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-21 — Calendar tab plan (date edit, row click, date display)
+
+- Daily review, then planned (not built) four Calendar items in `jlmops/plans/CALENDAR_TAB_UX_PLAN.md`: `formatDate` UTC one-day-early fix (prerequisite), row click as explicit drawer/Task choice with all-language task list, admin-only publishing-date edit, Library/Deficiency on `cal_Date` retiring `slb_TargetDate`. Plan reviewed for holes with the user; one bundled deploy.
+- Shipped Phases 2-4 removed from the plan (confirmed working by user; documented in WORKFLOWS §13.1).
+- Next: build the plan when the user says go.
+- User correction: verify facts and settle in chat before writing plans (memory updated).
+
+---
+
 ## 2026-10-20/21 — FAQ refresh, Israel-only checkout guard, packing slip insert
 
 - FAQ EN refreshed and pushed; launch waits on the Google reviews link (manager, today) and HE translation.
