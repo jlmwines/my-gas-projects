@@ -46,7 +46,6 @@ Projects: jlmops, web, marketing, content
 - [ ] Year in Wine 2025
 - [ ] Blog Posts
 - [ ] Video content
-- [ ] FAQ/Glossary
 - [ ] YouTube channel
 - [ ] 2026-05-07: Wine tasting / sampling events at restaurants and venues — previously planned by partner, canceled by war; QR-code + discount cards already produced for new-customer acquisition; revisit and execute
 - [ ] 2026-05-15: Bundle duplicate meta (titles/descriptions repeated across the category). Package imagery done (rule in `website/BRAND.md`).
@@ -54,4 +53,4 @@ Projects: jlmops, web, marketing, content
 ## content
 
 - [ ] Holiday wine posts (Pesach, Rosh Hashana, etc.)
-- [ ] FAQ page implementation (Elementor)
+- [ ] 2026-10-21: FAQ launch: EN refreshed (`content/faq/FAQ EN.md`); needs Google reviews link, then a blog-type chain (slug `blog-faq`, HE translation, page publish) with its own email.

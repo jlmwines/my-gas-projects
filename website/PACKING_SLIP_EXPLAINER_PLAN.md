@@ -53,19 +53,30 @@ Agreed sample:
 > **Gift:** candle-lighting at friends'? Something in the middle suits any table.
 > Intensity ●●●○○ · Complexity ●●●○○
 
-Slip-style lines are set in the slip's font/size on the insert. Pairing wording must match `PackingSlipService` output exactly (check before final copy).
+Slip-style lines use the slip's font/size on the printed insert. Pairing wording must match `PackingSlipService` output exactly (check before final copy).
 
 **3. Glossary.** What the scales mean (more circles = more of it), Harmonize vs Contrast and the four food types, the decanting note, and that a gift recipient gets the same slip without prices. Wording can draw on `/red-wine-intensity/`, `/wine-complexity/`, `/white-rose-wine-acidity/`, `/pairing-food-and-wine/`, `/how-to-store-open-serve-wine/`.
 
 **4. Greeting + QR.** A short, year-round (neutral) note from Evyatar, starting from "A note from Evyatar" in `website/HOMEPAGE_COPY.md`, beside a QR that opens the business WhatsApp (`https://wa.me/972555174805`).
 
-## Printing
+## Copy in the library
 
-The insert is a Google Doc template in the jlmops print templates folder (`1dUSbbkNCrGbVUpZnmoa0D_e5zib9HaXe`) with placeholders for the seasonal section (EN and HE). When a batch's packing slips are generated, jlmops also produces that batch's inserts, one per order, printed right after the slips (user, 2026-10-21). It copies the insert template to the output folder and fills the placeholders on the copy (`replaceText`); the template never changes. It stays a separate document because `PrintService.js` copies the slip template, clears its body and rebuilds every slip in code.
+Two `template` entries, each with EN/HE siblings, worked through Draft, Edit, Translate, Edit Translation (template has no pre-checked chain in the create dialog; tick those stages). Candidate slugs:
+
+1. `template-packing-insert`: the full insert text with one seasonal set as the sample. Also the source for the blog post.
+2. `template-packing-insert-seasons`: all eight seasonal sets in one Doc, so the manager edits and translates them together.
+
+## Print templates and rotation (user, 2026-10-21)
+
+**Eight complete print templates**, one per season, each two-sided: English on one side, Hebrew on the other. No placeholders and no season text in config: each template is the finished page, so a longer or shorter seasonal section can't break the layout, and a wording change is a Doc edit with no deploy. Shared parts (intro, glossary, greeting) repeat across the eight; they should rarely change.
+
+**A session builds the eight** from the two locked library Docs; the method is decided in that session.
+
+**jlmops only chooses the template.** When a batch's packing slips are generated, it works out the season from the Hebrew date, copies that season's template into the output folder, and the insert is printed double-sided once per order, right after the slips. The templates live in the jlmops print templates folder (`1dUSbbkNCrGbVUpZnmoa0D_e5zib9HaXe`). The insert is a separate document because `PrintService.js` copies the slip template, clears its body and rebuilds every slip in code.
 
 ## Seasons
 
-The seasonal section is the reason for the Hebrew-date conversion. Proposed start dates (candidate, awaiting confirmation): 1 Elul High Holidays; 23 Tishrei Autumn; 1 Kislev Hanukkah; 3 Tevet Winter / Tu Bishvat; 1 Adar (Adar II in a leap year) Purim; 15 Adar (Adar II) Pesach; 23 Nisan Spring / BBQ / Shavuot; 7 Sivan Summer. A leap year only lengthens Winter. Season texts (EN + HE) live in `jlmops/config/printing.json`.
+The seasonal section is the reason for the Hebrew-date conversion. Proposed start dates (candidate, awaiting confirmation): 1 Elul High Holidays; 23 Tishrei Autumn; 1 Kislev Hanukkah; 3 Tevet Winter / Tu Bishvat; 1 Adar (Adar II in a leap year) Purim; 15 Adar (Adar II) Pesach; 23 Nisan Spring / BBQ / Shavuot; 7 Sivan Summer. A leap year only lengthens Winter. How jlmops maps a season to its template (config table of start dates and Doc IDs, or Docs named by season in one folder) is decided at build.
 
 **Mechanics.** Apps Script converts natively: `Intl.DateTimeFormat('en-u-ca-hebrew', {timeZone: 'Asia/Jerusalem'})` with `formatToParts` gives Hebrew day/month/year and distinguishes Adar I / Adar II (verified in the live GAS runtime, 2026-10-21). No lookup table.
 
@@ -73,11 +84,11 @@ The seasonal section is the reason for the Hebrew-date conversion. Proposed star
 
 ## Blog post
 
-Nearly the insert itself, with a short frame: your order has arrived, look for the packing slip, it has details on every wine that make it easy to match to the occasion; don't worry, this simple guide is in the box too. Then the insert's sections, each with a one-line lead-in; the seasonal part explained in detail with one season as a sample (static text). Illustrated with photos of the real insert and a slip (test order or blurred; QR legible). Title candidates: "When Your Wine Arrives," "Enjoying Your Wine When the Order Arrives." Possibly sticky (check the theme first). The insert copy is the master; the post follows the normal blog pipeline.
+Nearly the insert itself, with a short frame: your order has arrived, look for the packing slip, it has details on every wine that make it easy to match to the occasion; don't worry, this simple guide is in the box too. Then the insert's sections, each with a one-line lead-in; the seasonal part explained in detail with one season as a sample (static text). Illustrated with photos of the real insert and a slip (test order or blurred; QR legible). Title candidates: "When Your Wine Arrives," "Enjoying Your Wine When the Order Arrives." Possibly sticky (check the theme first). The insert copy is the master; the post is its own blog chain, including its email.
 
-## FAQ
+## FAQ entry
 
-A new section headed **"What's in the Box"** (when your order arrives, and after); long answer points to the blog post, short mention of the seasonal examples. Added once the post exists.
+A new section headed **"What's in the Box"** (when your order arrives, and after); long answer points to the blog post, short mention of the seasonal examples. A single task, no chain or email, added once the post exists. (The full FAQ launch is separate, with its own chain and email: tracked in `.claude/wishlist.md`.)
 
 ## Open points
 
@@ -87,9 +98,9 @@ A new section headed **"What's in the Box"** (when your order arrives, and after
 
 ## Build order
 
-1. Finish English insert copy (seasons, glossary, greeting); user/manager review.
+1. Finish English copy in chat (seasons, glossary, greeting), then into the two library entries; manager edits.
 2. Manager translates to Hebrew.
-3. Build the insert template (layout, QR, seasonal placeholders).
-4. Printing hookup: batch inserts after slips, season picker, texts in `printing.json` (jlmops deploy, needs explicit OK).
-5. Blog post from the insert copy, with photos.
-6. FAQ "What's in the Box" section.
+3. A session builds the eight two-sided print templates (QR, slip-style lines).
+4. jlmops rotation: Hebrew-date season picker, copy that season's template with each slip batch (jlmops deploy, needs explicit OK).
+5. Blog post chain from the insert copy, with photos and its email.
+6. FAQ "What's in the Box" entry (single task).
