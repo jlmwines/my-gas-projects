@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-22. jlmops @591 live (real Mailchimp recipients per contact, back navigation, Calendar tab UX); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; SiteGround PHP patched against PHP2Shell.
+**Updated:** 2026-10-22. jlmops @592 live (desktop views fill the content area, real Mailchimp recipients per contact, back navigation); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; SiteGround PHP patched against PHP2Shell.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-22 |
 | Revenue | Steady |
-| Deploy Version | jlmops @591 · theme v1.2.32 |
+| Deploy Version | jlmops @592 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-22 · theme 2026-10-21 (Israel-only checkout guard, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
