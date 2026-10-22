@@ -36,7 +36,7 @@ The other half of the story is learning what to plant. Once studies showed which
 
 **What to Expect in the Glass**
 
-Old-vine Carignan is the Coastal Plain's real signature. Vines that have been in the ground this long give smaller crops with more depth and concentration, and Carignan, a grape that thrives in warm Mediterranean climates, shows real character here. Alongside it, the heat-adapted plantings like Syrah and Marselan bring riper, warmer-climate character: generous fruit and fuller body, with a softer line of freshness than you'd find in a wine from the Galilee or the Golan.
+Old-vine Carignan is one of the Coastal Plain's real signatures. Vines that have been in the ground this long give smaller crops with more depth and concentration, and Carignan, a grape that thrives in warm Mediterranean climates, often shows real character here. Alongside it, the heat-adapted plantings like Syrah and Marselan bring riper, warmer-climate character: generous fruit and fuller body, with a softer line of freshness than you'd find in a wine from the Galilee or the Golan.
 
 As with any region where many producers make their own choices, the best approach is to taste across a few of them. Start with an old-vine Carignan, then try a Syrah or Marselan from the same stretch of coast, and let the region show you its range. It's a style shaped honestly by its own conditions rather than working against them.
 
@@ -45,5 +45,78 @@ As with any region where many producers make their own choices, the best approac
 
 - Tishbi - well known for its restaurant and chocolates alongside the wine.
 - Binyamina - one of the coast's established names.
-- Dadah
-- Haroe - a tiny, personal boutique experience.
+- Dadah - boutique wineries with unique blends
+- Haroe - a tiny, very warm and personal boutique experience.
+
+
+## EXCERPT
+Where Israel's modern wine industry was born, on a warm strip of coast cooled by the sea, home to some of its oldest vines.
+
+
+## FEATURED MEDIA
+__FEATURED_ID__
+
+
+## EMAIL SUBJECT
+The Israeli wine region where it all began
+
+
+## EMAIL PREVIEW TEXT
+Ancient export wineries, Rothschild's 1892 cellars still in use, and some of Israel's oldest Carignan vines, all on a warm strip cooled by the sea.
+
+
+## EMAIL BODY
+Long before anyone talked about Israeli wine regions, the coast was wine country on a serious scale. This is where the ports were, and wine made close to a port could travel the whole Mediterranean. At Yavneh, a huge winery complex around 1,500 years old was built to produce wine for export.
+
+The modern chapter starts here too. In the 1880s Baron Edmond de Rothschild chose the coast to restart the local wine industry, and by 1892 Carmel had built its cellars in Zichron Ya'acov. Those cellars are still in use today.
+
+I wanted to show you how the sea does the cooling where there's no altitude, and why the coast's old-vine Carignan is worth seeking out.
+
+- Evyatar
+
+
+## EMAIL CTA
+Read the full guide →
+
+
+## NEWSLETTER EXCERPT (web/social)
+Israel's modern wine industry was born on the Coastal Plain, where Rothschild's 1892 cellars are still in use and some of the country's oldest vines are still in the ground. With no altitude to speak of, the sea does the cooling instead.
+[Read the full guide →]
+
+
+## PRINT NEWSLETTER BODY
+**Where it all began**
+
+Long before anyone talked about Israeli wine regions, the coast was wine country on a serious scale. This is where the ports were, and wine made close to a port could travel the whole Mediterranean. Along this strip stands a huge winery complex at Yavneh, around 1,500 years old and built to produce wine for export.
+
+The modern chapter starts here too. In the 1880s Baron Edmond de Rothschild chose the coast to restart the local wine industry, and by 1892 Carmel had built its cellars in Zichron Ya'acov. Those cellars are still in use today. Because vineyards, once planted, tend to stay planted, the coast holds some of the oldest vines in the country, many of them Carignan.
+
+There's no altitude here to cool the vines, so the sea does that job instead, with steady Mediterranean breezes taking the edge off the heat.
+
+If you'd like to try an old-vine Carignan from the coast, ask me. I'll find you something that will suit your tastes.
+
+- Evyatar
+
+
+## CTA
+Read the full guide →
+
+
+## IMAGE PROMPTS
+<!-- Impressionist oil painting, consistent warm coastal palette across the post. -->
+
+**Featured image**
+Vineyard rows on a low coastal plain running toward the Mediterranean at golden hour, the sea shimmering on the horizon.
+
+**Body image 1: The Story**
+Old stone wine cellars on a gentle Carmel slope above Zichron Ya'acov, with gnarled old Carignan vines in the foreground.
+
+**Body image 2: Why the Coast Grows Differently**
+A sea breeze moving through a low vineyard on sandy soil, palm trees and soft sea haze in the distance.
+
+
+## NOTES
+- Source: Library Doc `blog-region-coastal-plain-en 26-10-18-09-40` (manager-edited, locked 2026-10-22). Body synced verbatim from it.
+- Extracts draw from Story and Why the Coast Grows Differently only, not the Wineries list.
+- English only; manager translates the full set.
+- Extracts delivered as Library Doc version `blog-region-coastal-plain-en 26-10-22-19-50` (attached), awaiting Review Extracts.

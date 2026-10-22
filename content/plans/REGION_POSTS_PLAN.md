@@ -17,7 +17,7 @@ Negev published out of sequence 2026-07-06 (ahead of its original Slot F date), 
 | A | 2026-07-06 | 2026-07-07 | 2026-07-27 | Negev | `blog-region-negev` | **Published live (EN+HE) 2026-07-06** |
 | B | 2026-08-17 | 2026-08-11 (slipped, published 2026-08-17) | 2026-08-25 | Galilee | `blog-region-galilee` | **Published live (EN+HE) 2026-08-17** — `jlmwines.com/galilee-wine/` + `/he/galilee-wine/`; companion emails built and scheduled in Mailchimp for 2026-08-18 |
 | C | 2026-09-22 | — (no dedicated email, deliberate) | 2026-09-23 and 2026-10-05 (two) | Central Mountains | `blog-region-central-mountains` | **Published live (EN+HE) 2026-10-14** — `jlmwines.com/central-mountains-wine/` + `/he/central-mountains-wine/`; companion email HTML built (`content/regions/central-mountains/central-mountains-email-en.html`/`-he.html`). |
-| D | 2026-10-19 | 2026-10-20 | 2026-10-27 | Coastal Plain | `blog-region-coastal-plain` | Body drafted 2026-08-17 from manager seed content, awaiting lock (session stopped at the 3a gate). Calendar rows staged 2026-08-25, pending "Apply Pending Updates." |
+| D | 2026-10-19 | 2026-10-20 | 2026-10-27 | Coastal Plain | `blog-region-coastal-plain` | Body locked by manager; extracts drafted in Library Doc version 26-10-22-19-50, awaiting Review Extracts. |
 | E | 2026-11-16 | 2026-11-17 | 2026-11-24 | Golan Heights | `blog-region-golan-heights` | Body drafted 2026-08-17 from manager seed content, awaiting lock (session stopped at the 3a gate). Calendar rows staged 2026-08-25, pending "Apply Pending Updates." |
 | F | 2026-12-14 | 2026-12-15 | 2026-12-29 | Judea (Foothills) | `blog-region-judea` | **Slot assignment confirmed 2026-08-25** — dates match this slot's placeholder exactly, per the user's working editorial calendar. No body drafted yet. Calendar rows staged 2026-08-25, pending "Apply Pending Updates." |
 
@@ -50,7 +50,7 @@ Post source files live in a per-region subfolder alongside that region's image a
 
 **Judea (Foothills)** — Opening archetype: ancient-rediscovery (light). Judean Foothills (Shfela), 50–350m, chalky clay loams. Largest region by vineyard share (27%). Barkan, Bravdo, Segal. Latroun Monastery (1890) is oldest. Indigenous grapes angle (Marawi, Hamdani) belongs here — see guide plan for sources and editorial caution on contested framing.
 
-**Coastal Plain** — Body drafted 2026-08-17 (Slot D) from manager seed content; awaiting lock. Opening archetype: heritage-continuity. Baron Edmond de Rothschild (1880s), Carmel's Zichron Ya'akov cellars (1892). 0–150m, Mediterranean breezes; known now for old-vine Carignan. Wineries per seed: Tishbi, Binyamina, Dadah, Haroe. Tribal geography omitted (guide plan flags this region's tie as weakest/borderland).
+**Coastal Plain** — Body locked (Slot D); extracts awaiting the manager's review. Opening archetype: heritage-continuity. Baron Edmond de Rothschild (1880s), Carmel's Zichron Ya'akov cellars (1892). 0–150m, Mediterranean breezes; known now for old-vine Carignan. Wineries per seed: Tishbi, Binyamina, Dadah, Haroe. Tribal geography omitted (guide plan flags this region's tie as weakest/borderland).
 
 **Negev** — Opening archetype: ancient-rediscovery (strongest arc). Nabataean/Byzantine desert viticulture at Avdat, Shivta, Nizzana → modern revival at Mitzpe Ramon (800m). Carmel first at Ramat Arad 1998; Yatir. Ancient sources in guide plan §Regions. **Done** — published live both languages 2026-07-06 (EN `/negev-wine/`, HE `/he/negev-wine/`, matching slugs, WPML-linked); promotional email sent 2026-07-07.
 
