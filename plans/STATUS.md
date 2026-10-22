@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-22. jlmops @588 live (back navigation, Calendar tab UX, job-queue purge fix); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; PHP2Shell exposure check on SiteGround pending.
+**Updated:** 2026-10-22. jlmops @588 live (back navigation, Calendar tab UX, job-queue purge fix); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; SiteGround PHP patched against PHP2Shell.
 
 ## At a glance
 
@@ -44,7 +44,6 @@ The live "what now" — daily review reads these first.
 10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager).
 11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.
 12. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
-13. **PHP2Shell (CVE-2026-109618/109619) — check jlmwines.com's PHP on SiteGround.** Critical PHP core RCE, fixed 2026-10-21 in 8.5.12 / 8.4.27 / 8.3.36 / 8.2.35; EOL branches get no fix. User checks Site Tools → Devs → PHP Manager (version, Managed vs pinned) or asks SiteGround support. User action.
 
 ## Active Plans
 
