@@ -11,6 +11,8 @@
           <button class="btn mr-2 mb-2" onclick="runRefreshStatusExport()">Push Status Export</button>
           <button class="btn mr-2 mb-2" onclick="runLibraryIntegrity()">Library Integrity</button>
           <button class="btn mr-2 mb-2" onclick="runPullCoupons()">Pull Coupons Now</button>
+          <button type="button" class="btn mr-2 mb-2" onclick="runRefreshMailchimp()">Refresh Mailchimp</button>
+          <button type="button" class="btn mr-2 mb-2" onclick="runBackfillRecipients()">Backfill Recipients</button>
         </div>
         <div class="d-flex align-items-center flex-wrap mt-1">
           <select id="sync-headers-sheet" class="mr-2 mb-2" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:14px; min-width:180px;">
@@ -204,6 +206,48 @@
         resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
       })
       .pullCouponsFromApi();
+  }
+
+  // Same call as Admin Contacts' ⟳ MC button: subscribers + campaigns + recent recipients.
+  function runRefreshMailchimp() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Refreshing Mailchimp (subscribers, campaigns, recipients)...</p>';
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res || res.error) {
+          resultDiv.innerHTML = `<p class="alert alert-danger">Mailchimp refresh failed: ${res ? res.error : 'no response'}</p>`;
+          return;
+        }
+        const s = res.subscribers || {}, c = res.campaigns || {}, r = res.recipients || {};
+        resultDiv.innerHTML = `<p class="alert alert-success">Mailchimp refreshed: subscribers ${s.imported || 0} new, ${s.updated || 0} updated; campaigns ${c.upserted || 0}/${c.fetched || 0}; recipient rows ${r.created || 0}.</p>`;
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
+      })
+      .WebAppContacts_refreshMailchimp();
+  }
+
+  // One-off: real recipients for every campaign in SysCampaigns. Time-budgeted;
+  // if it stops early, run again to continue (already-written rows are skipped).
+  function runBackfillRecipients() {
+    devConfirm('Backfill campaign recipients for all campaigns? Writes one activity row per recipient; safe to re-run.', function() {
+      const resultDiv = document.getElementById('dev-tools-results');
+      resultDiv.innerHTML = '<p class="text-info">Backfilling campaign recipients (up to ~4 min)...</p>';
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || res.error) {
+            resultDiv.innerHTML = `<p class="alert alert-danger">Backfill failed: ${res ? res.error : 'no response'}</p>`;
+            return;
+          }
+          const more = res.timedOut ? ' Stopped at the time limit; run again to continue.' : '';
+          const errs = res.errors && res.errors.length ? ` ${res.errors.length} campaign error(s), see SysLog.` : '';
+          resultDiv.innerHTML = `<p class="alert alert-${res.timedOut || errs ? 'warning' : 'success'}">Processed ${res.processed}/${res.campaigns} campaigns, ${res.created} recipient rows written.${more}${errs}</p>`;
+        })
+        .withFailureHandler(err => {
+          resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
+        })
+        .WebAppContacts_backfillCampaignRecipients();
+    });
   }
 
   // Populate sheet picker on load

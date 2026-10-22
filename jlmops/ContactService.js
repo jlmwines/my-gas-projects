@@ -538,6 +538,41 @@ const ContactService = (function () {
     };
   }
 
+  /** Builds one SysContactActivity row array in sheet column order. */
+  function _buildActivityRow(activity, indices) {
+    const rowArray = new Array(Object.keys(indices).length).fill('');
+    // Use passed activityId if provided (for deduplication), otherwise generate new
+    rowArray[indices.sca_ActivityId] = activity.sca_ActivityId || Utilities.getUuid();
+    rowArray[indices.sca_Email] = (activity.sca_Email || '').toLowerCase().trim();
+    rowArray[indices.sca_Timestamp] = activity.sca_Timestamp || new Date();
+    rowArray[indices.sca_Type] = activity.sca_Type || '';
+    rowArray[indices.sca_Summary] = activity.sca_Summary || '';
+    rowArray[indices.sca_Details] = typeof activity.sca_Details === 'object'
+      ? JSON.stringify(activity.sca_Details)
+      : (activity.sca_Details || '');
+    rowArray[indices.sca_CreatedBy] = activity.sca_CreatedBy || 'system';
+    return rowArray;
+  }
+
+  /**
+   * Appends many activity records in one range write. For bulk system writes
+   * (e.g. campaign recipients); does not update LastContactDate, so callers
+   * must not pass contact./note./comm. types — use createActivity for those.
+   * @param {Array<Object>} activities - Activity data objects
+   * @returns {number} Rows written
+   */
+  function createActivities(activities) {
+    if (!activities || !activities.length) return 0;
+    const sheet = _getActivitySheet();
+    if (!sheet) {
+      throw new Error('SysContactActivity sheet not found');
+    }
+    const indices = _getActivityColumnIndices();
+    const rows = activities.map(function(a) { return _buildActivityRow(a, indices); });
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    return rows.length;
+  }
+
   /**
    * Creates an activity record.
    * @param {Object} activity - Activity data
@@ -550,21 +585,8 @@ const ContactService = (function () {
     }
 
     const indices = _getActivityColumnIndices();
-    const headers = Object.keys(indices);
-
-    // Use passed activityId if provided (for deduplication), otherwise generate new
-    const activityId = activity.sca_ActivityId || Utilities.getUuid();
-    const rowArray = new Array(headers.length).fill('');
-
-    rowArray[indices.sca_ActivityId] = activityId;
-    rowArray[indices.sca_Email] = (activity.sca_Email || '').toLowerCase().trim();
-    rowArray[indices.sca_Timestamp] = activity.sca_Timestamp || new Date();
-    rowArray[indices.sca_Type] = activity.sca_Type || '';
-    rowArray[indices.sca_Summary] = activity.sca_Summary || '';
-    rowArray[indices.sca_Details] = typeof activity.sca_Details === 'object'
-      ? JSON.stringify(activity.sca_Details)
-      : (activity.sca_Details || '');
-    rowArray[indices.sca_CreatedBy] = activity.sca_CreatedBy || 'system';
+    const rowArray = _buildActivityRow(activity, indices);
+    const activityId = rowArray[indices.sca_ActivityId];
 
     sheet.appendRow(rowArray);
 
@@ -972,6 +994,7 @@ const ContactService = (function () {
     upsertContact: upsertContact,
     batchUpsertContacts: batchUpsertContacts,
     createActivity: createActivity,
+    createActivities: createActivities,
     getActivities: getActivities,
     getAllActivities: getAllActivities,
     refreshAllContacts: refreshAllContacts,

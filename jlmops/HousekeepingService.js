@@ -784,6 +784,11 @@ function HousekeepingService() {
       { name: 'refreshBundlePushStatus', fn: () => this.refreshBundlePushStatus() },
       { name: 'pullMailchimpSubscribers', fn: () => ContactImportService.importFromMailchimpApi() },
       { name: 'pullMailchimpCampaigns', fn: () => CampaignService.pullRecentCampaigns() },
+      // Weekly: campaigns usually go out Tuesday evening, so the Wednesday-night run
+      // catches them; the 14-day lookback covers a missed week (RELIABILITY_AUDIT §3.3).
+      { name: 'pullCampaignRecipients', fn: () => {
+        if (Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'EEE') === 'Wed') CampaignService.pullCampaignRecipients();
+      } },
       { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
       { name: 'pullCoupons', fn: () => CouponService.pullFromApi() },
       // Safety net: with pullCoupons succeeding, coupons_last_update stays fresh and this

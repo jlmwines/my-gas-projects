@@ -373,17 +373,39 @@ function WebAppContacts_refreshMailchimp() {
   try {
     const subscribers = ContactImportService.importFromMailchimpApi();
     const campaigns = CampaignService.pullRecentCampaigns();
+    // Isolated so a recipient-pull failure doesn't mask the subscriber/campaign refresh.
+    let recipients;
+    try {
+      recipients = CampaignService.pullCampaignRecipients();
+    } catch (e) {
+      LoggerService.error('WebAppContacts', 'refreshMailchimp', 'Recipient pull failed: ' + e.message, e);
+      recipients = { created: 0, error: e.message };
+    }
     const subs = ConfigService.getConfig('system.mailchimp.subscribers_last_update');
     const camps = ConfigService.getConfig('system.mailchimp.campaigns_last_update');
     return {
       success: true,
       subscribers: subscribers,
       campaigns: campaigns,
+      recipients: recipients,
       subscribersLastUpdate: subs && subs.value ? subs.value : null,
       campaignsLastUpdate: camps && camps.value ? camps.value : null
     };
   } catch (e) {
     LoggerService.error('WebAppContacts', 'refreshMailchimp', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * One-off backfill of real campaign recipients for every campaign in
+ * SysCampaigns (Admin Dev). Time-budgeted; re-run to continue if it stops early.
+ */
+function WebAppContacts_backfillCampaignRecipients() {
+  try {
+    return CampaignService.pullCampaignRecipients(null);
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'backfillCampaignRecipients', e.message, e);
     return { error: e.message };
   }
 }

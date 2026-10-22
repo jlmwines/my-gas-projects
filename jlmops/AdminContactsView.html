@@ -788,9 +788,11 @@
         renderMailchimpFreshness(res.subscribersLastUpdate, res.campaignsLastUpdate);
         var s = res.subscribers || {};
         var c = res.campaigns || {};
+        var r = res.recipients || {};
         var msg = 'Mailchimp refreshed — '
           + 'subscribers: ' + (s.imported || 0) + ' new, ' + (s.updated || 0) + ' updated, ' + (s.unsubscribed || 0) + ' unsubscribed; '
-          + 'campaigns: ' + (c.upserted || 0) + '/' + (c.fetched || 0);
+          + 'campaigns: ' + (c.upserted || 0) + '/' + (c.fetched || 0) + '; '
+          + 'recipient rows: ' + (r.created || 0);
         if (typeof showToast === 'function') showToast(msg);
         else console.log(msg);
         loadContacts();

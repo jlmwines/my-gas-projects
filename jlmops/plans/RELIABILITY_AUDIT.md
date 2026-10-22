@@ -475,7 +475,8 @@ Dead `woo.api.orders_last_pull` key now stamped by `WooOrderPullService.pullOrde
 2. Write one row per recipient, same shape and id as the backfill so the two never duplicate: `sca_ActivityId = campaign.received.<campaignId>.<email>`, `sca_Type: 'campaign.received'`, timestamp = send date, `sca_CreatedBy: 'mailchimp'`. Skip ids already present. Batch the writes (one range write per campaign), not one `createActivity` per row.
 3. Schedule: nightly housekeeping runs the step only when the Israel day is Wednesday (day-gate pattern already used in `HousekeepingService`). The 14-day lookback means a missed Wednesday is caught the next week. No cursor or new SysConfig key needed; idempotency comes from the activity ids.
 4. **On demand (user, 2026-10-22):** the existing Admin Contacts **⟳ MC** button (`WebAppContacts_refreshMailchimp`) also runs the recipient step after subscribers + campaigns, and its result message adds the recipient-row count. An Admin Dev button calls the same `WebAppContacts_refreshMailchimp` — identical behavior, second entry point, no separate logic.
-5. The manual inference backfill stays for history before this ships; once live, stop using it for new campaigns.
+5. **Backfill (user, 2026-10-22):** the 14-day lookback only covers new sends, so an Admin Dev **Backfill Recipients** button runs the same step over every campaign in `SysCampaigns` (`pullCampaignRecipients(null)`). 4-minute time budget; if it stops early, run again (written rows are skipped).
+6. The old inferred backfill (`ActivityBackfillService.backfillCampaignActivity`) is retired for new campaigns. Its earlier rows share the same ids, so real recipients it already guessed right are kept as-is; rows it guessed for people who weren't actually sent the campaign remain (`sca_CreatedBy = 'import'`) unless separately cleaned.
 
 **CCPs.** CCP-1 (reportFailure on pull error), CCP-2 (sessionId). No new OAuth scope (Mailchimp calls already authorized).
 
