@@ -12,10 +12,8 @@ Projects: jlmops, web, marketing, content
 - [ ] 2025-12-22: refactor config JSON files - remove empty padding, consolidate repetitive entries
 - [ ] 2025-12-29: Plan transition from current region system (regions overhaul — see CONTENT_LIBRARY_PLAN §14)
 - [ ] 2025-12-29: Texts lookup is random and probably inefficient - need to examine
-- [ ] 2026-01-01: add pairing to packing slip
 - [ ] URL shortener integration for campaign tracking
 - [ ] 2026-05-08: Newsletter UTM/QR helper — admin form takes target URL + campaign code (e.g., `may26-art`), returns canonical UTM-tagged URL, registers a short redirect (`jlmwines.com/n/<code>`), generates a print-ready QR (SVG, error-correction Q, optimized for ~3cm print) downloadable for layout. Pairs with URL shortener item above.
-- [ ] Hourly order sync via WooCommerce API (infrastructure exists: runHourlyTrigger())
 - [ ] Smarter reprint logic: Track first immutable print separately
 - [ ] Remove one-time backfill code when CRM is stable
 - [ ] 2026-06-08: **Bundles — surface missed profit opportunities.** Flag high-profit wines (`wpm_ProfitRate`) that aren't used in ANY bundle (cross-bundle `usage` = 0, the Stage 6 index) so the operator can pull them into a bundle. The signals already exist (profit from Stage 2, usage from Stage 6); this is a read-only "high-margin wines not in any bundle" report/card on AdminBundles. Capstone to the Stage 7 generator.
@@ -25,7 +23,7 @@ Projects: jlmops, web, marketing, content
 - [ ] AI/Claude integration
 - [ ] 2026-01-23: add name of comax order export file to notifications same as done with web inventory update csv
 - [ ] 2026-01-29: Back button support - hash routing should support browser back/forward navigation
-- [ ] 2026-05-15: **Product-centered ops view (single product overview).** One-screen detail view per product showing Comax-side state, Web/WooCommerce-side state, last-update timestamps, product image, and a link to the live product page. Today the per-product picture is scattered across SysProducts row + WC admin + live site. Use case: ops triage when something looks off on a specific product. No plan doc yet; sized as an admin view alongside existing AdminProductsView.
+- [ ] 2026-05-15: Single-product ops view: Comax + Woo state, last updates, image and live-page link on one screen, for triage. No plan doc yet.
 - [ ] 2026-05-15: **Replace Woo App / Jetpack with jlmops order view + status update.** Jetpack currently runs on the website solely to enable the WooCommerce mobile app, which the manager uses to view orders and change status. If jlmops gets a mobile-friendly order view with status-update capability, Jetpack can be removed (reduces plugin surface + performance overhead). Not blocking; the Woo App works today.
 - [ ] 2026-05-15: **Outreach to unpaid orders / abandoned carts / consummated-but-not-paid.** Identify customers who intended to buy but didn't complete payment (pending orders, on-hold, abandoned carts if trackable). High-intent contacts worth reaching. Check what data we already have (WebOrdM has pending/on-hold; abandoned cart data may require a Woo API extension or plugin). Once trackable, ship as a new topic on `task.contact.outreach` so the manager surfaces and contacts them through the same Action Panel flow. (Broader scope than the @110-@111 pending-payment auto-followup which only covers `pending` Woo status.)
 - [ ] 2026-06-10: **Back button in the view title bar.** An in-UI back control in each view's title bar to return to the prior view / dashboard. Distinct from but pairs with the 2026-01-29 browser back/forward hash-routing item above.
@@ -33,24 +31,20 @@ Projects: jlmops, web, marketing, content
 
 ## web
 
-- [ ] 2026-06-08: **Bundle explainer message on bundle pages (soon).** Closable/dismissible info area on jlmwines.com bundle (woosb) product pages explaining how bundles work to the customer (flexible vs fixed slots, how to swap/add, pricing). Per-language EN + HE copy — text being drafted (user). Dismissible (remember-dismissed). Theme-side, not jlmops.
 - [ ] 2025-12-29: Risk that redundant text is affecting SEO - research enriched text in products
 - [ ] 2026-01-22: Examine website cache and other speed-related settings to optimize
 - [ ] 2026-05-15: **Nav menu structure + mobile review** (consolidates 2026-04-29 + 2026-05-07 notes). Audit desktop layout, mobile drawer hierarchy, deep-link targets (e.g., `#footer-contact`). What customers actually need vs. what the menu currently has. Check mobile drawer appearance against design system. Single audit pass.
 
 ## marketing
 
-- [ ] Year in Wine product dynamic content
+- [ ] Year in Wine 2026, low priority (2025 edition had poor response)
 - [ ] Referral coupons
 - [ ] Referral short URL
-- [ ] Year in Wine 2025
 - [ ] Blog Posts
 - [ ] Video content
 - [ ] YouTube channel
-- [ ] 2026-05-07: Wine tasting / sampling events at restaurants and venues — previously planned by partner, canceled by war; QR-code + discount cards already produced for new-customer acquisition; revisit and execute
 - [ ] 2026-05-15: Bundle duplicate meta (titles/descriptions repeated across the category). Package imagery done (rule in `website/BRAND.md`).
 
 ## content
 
-- [ ] Holiday wine posts (Pesach, Rosh Hashana, etc.)
-- [ ] 2026-10-21: FAQ launch: EN refreshed (`content/faq/FAQ EN.md`); needs Google reviews link, then a blog-type chain (slug `blog-faq`, HE translation, page publish) with its own email.
+_(none — holiday suggestions live in the packing slip insert plan; FAQ launch is Next Action 11)_
