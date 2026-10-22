@@ -387,6 +387,7 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   `processed_timestamp`: When the job was last processed or completed.
     *   `error_message`: Details if the job failed.
     *   `original_file_id`: ID of the original source file (if applicable).
+*   **Retention:** nightly housekeeping (`HousekeepingService.purgeOldJobs`) removes `COMPLETED`/`FAILED` rows older than 30 days, aged by `processed_timestamp`, falling back to `created_timestamp` when that's blank (same rule as the failed-job count in `jlmops-status.md`). Rows with neither date are kept.
     *   `original_file_last_updated`: Last modified timestamp of the original file.
 
 

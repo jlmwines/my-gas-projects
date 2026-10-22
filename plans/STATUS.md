@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-22. jlmops @585 live with the Calendar tab UX; insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; PHP2Shell exposure check on SiteGround pending.
+**Updated:** 2026-10-22. jlmops @586 live (Calendar tab UX; job-queue purge now clears failed jobs with no processed time); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; PHP2Shell exposure check on SiteGround pending.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-22 |
 | Revenue | Steady |
-| Deploy Version | jlmops @585 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-10-21 · theme 2026-10-21 (Israel-only checkout guard, no version bump) |
+| Deploy Version | jlmops @586 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-10-22 · theme 2026-10-21 (Israel-only checkout guard, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -53,7 +53,6 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — open: H (timestamps + date-format audit), I (count-task creation audit). Session F folded into the sync hardening plan below.
 - **Sync hardening** (`jlmops/plans/SYNC_HARDENING_PLAN.md`) — single home for sync-pipeline work. All locking stages and Bug 2 are built, live, and running clean; open: Bugs 1 and 3 (need a live repro), Stage E's inside-lock re-check not yet exercised by a real collision, step 9 `JLMops_Logs` cleanup (queued behind Test Suite Tier 4).
 - **Test suite extension** (`jlmops/plans/TEST_SUITE_EXTENSION_PLAN.md`) — Tiers 1-3 live and passing; only Tier 4 remains (I/O-heavy code, deferred, needs a mocking-layer decision).
-- **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config removed and live; SysConfig rebuilt since. One manual step remains: delete the `SysLkp_Cities` sheet tab (unconfirmed whether done).
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — refresh bug open (doesn't refresh after "Apply Pending Updates"/"Create Content Tasks", root cause not found, needs a live repro). Admin date edit is live but its Save hasn't been used yet; first real re-date doubles as the repro.
 - **Woo API push** (`jlmops/plans/WOO_API_PUSH_PLAN.md`) — live; new-product and existing-product push paths confirmed working. Open: the `date_created` ("Published" date from the originating task) not yet smoke-tested live; RankMath meta push deferred (manual for now).

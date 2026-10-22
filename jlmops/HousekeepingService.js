@@ -2255,6 +2255,7 @@ function HousekeepingService() {
       const headers = jobSchema.headers.split(',');
       const statusCol = headers.indexOf('status');
       const processedCol = headers.indexOf('processed_timestamp');
+      const createdCol = headers.indexOf('created_timestamp');
 
       if (statusCol === -1 || processedCol === -1) {
         logger.error('HousekeepingService', functionName, 'Required columns not found in SysJobQueue schema.');
@@ -2279,7 +2280,10 @@ function HousekeepingService() {
         for (let i = 1; i < jobData.length; i++) {
           const row = jobData[i];
           const status = String(row[statusCol]).toLowerCase();
-          const processedDate = row[processedCol] ? new Date(row[processedCol]) : null;
+          // Fall back to created_timestamp, same as the failed-job sweep: a job that
+          // failed before processed_timestamp was written would otherwise never age out.
+          const tsRaw = row[processedCol] || (createdCol !== -1 ? row[createdCol] : null);
+          const processedDate = tsRaw ? new Date(tsRaw) : null;
 
           // Purge if: (completed or failed) AND processed > threshold days ago
           const isTerminal = ['completed', 'failed'].includes(status);

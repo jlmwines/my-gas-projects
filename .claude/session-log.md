@@ -8,7 +8,9 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 - PHP2Shell (critical PHP RCE, patched 2026-10-21) likely affects jlmwines.com until SiteGround patches; PHP version hidden from headers, user to check PHP Manager (Next Action 13).
 - Cleanup: STATUS de-duplicated, performance plan graduated to ARCHITECTURE.md and archived, portfolio STATUS refreshed.
-- Next: user reports PHP version; wishlist bloat still needs user decisions.
+- Bugs/wishlist moved to `plans/BUGS.md` / `plans/WISHLIST.md`; wishlist groomed with user. City-removal plan archived (tab deleted).
+- @586: job-queue purge falls back to created_timestamp so old FAILED jobs age out. Verify: next snapshot after 02:30 housekeeping shows 1-2 failed jobs, not 3.
+- Next: user reports PHP version.
 
 ---
 

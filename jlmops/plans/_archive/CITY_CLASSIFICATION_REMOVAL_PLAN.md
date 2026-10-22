@@ -1,6 +1,6 @@
 # City Classification Removal Plan
 
-**What this is.** A plan to fully remove the SysLkp_Cities city-classification feature from jlmops. **Status: in progress** — code + config fully stripped, committed, pushed, and live (shipped incidentally via the @479+ deploys that followed, since `clasp push` sends the full working tree). Two manual steps remain: run `rebuildSysConfigFromSource()` so the live `SysConfig` sheet picks up the stripped entries, and delete the `SysLkp_Cities` data tab. Scope is a clean deletion, not a deprecation.
+**What this is.** A plan to fully remove the SysLkp_Cities city-classification feature from jlmops. **Status: done, archived 2026-10-22** — code + config stripped and live, `SysConfig` rebuilt, `SysLkp_Cities` tab deleted. Only the stale `SysConfigSnapshot.csv` still names it. Scope is a clean deletion, not a deprecation.
 
 ## Why
 
