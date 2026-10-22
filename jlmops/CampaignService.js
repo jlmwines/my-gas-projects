@@ -1159,9 +1159,21 @@ const CampaignService = (function () {
       return !cutoff || sendDate >= cutoff;
     });
 
+    // existingIds: skip rows already written (real or old inferred backfill).
+    // doneCampaigns: campaigns this real pull already processed — a sent campaign's
+    // recipient list never changes, so they're skipped without an API call. Without
+    // this, a time-budgeted backfill re-fetches the same campaigns every run and stalls.
     const existingIds = new Set();
+    const doneCampaigns = new Set();
+    const ID_PREFIX = 'campaign.received.';
     ContactService.getAllActivities().forEach(function(a) {
-      if (a.sca_Type === 'campaign.received' && a.sca_ActivityId) existingIds.add(a.sca_ActivityId);
+      if (a.sca_Type !== 'campaign.received' || !a.sca_ActivityId) return;
+      existingIds.add(a.sca_ActivityId);
+      if (a.sca_CreatedBy === 'mailchimp') {
+        const rest = String(a.sca_ActivityId).slice(ID_PREFIX.length);
+        const dot = rest.indexOf('.');
+        if (dot > 0) doneCampaigns.add(rest.slice(0, dot));
+      }
     });
 
     let processed = 0;
@@ -1172,6 +1184,7 @@ const CampaignService = (function () {
     for (let i = 0; i < campaigns.length; i++) {
       if (Date.now() - startTime > TIME_BUDGET_MS) { timedOut = true; break; }
       const c = campaigns[i];
+      if (doneCampaigns.has(c.scm_CampaignId)) { processed++; continue; }
       try {
         const recipients = MailchimpService.paginate(
           '/reports/' + c.scm_CampaignId + '/sent-to',
