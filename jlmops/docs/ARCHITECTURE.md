@@ -20,6 +20,7 @@ The entire user interface is a modern, dashboard-driven Single Page Application 
 
 *   **Application Shell:** `AppView.html` contains the persistent UI elements, including the main header and the navigation sidebar.
 *   **Dynamic Content:** The main content area within the shell is dynamically populated by loading other HTML files (e.g., `AdminDashboardView.html`, `PackingSlipView.html`) into it via client-side JavaScript (`google.script.run`). This approach avoids full page reloads and creates a responsive user experience.
+*   **Back navigation:** every view change made through `loadView` is pushed to `google.script.history` (state: view, position, role), so the browser/phone back button and the header's ← button (shown once past the first view) reload the previous view. The view loads fresh; in-view state (filters, drawers, selection, scroll) is not restored. Back with a `ModalOverlay` popup open closes the topmost popup and stays on the view, same as Esc. Switching roles starts a fresh history; entries from the other role are ignored.
 *   **Dashboard Paradigm:** The initial view loaded is a dashboard composed of several "widgets," with each widget representing a major functional area of the system (e.g., Orders, System Health). This provides a centralized, at-a-glance overview of all system operations.
 
 ### 2.1.1. WebApp Controller Architecture

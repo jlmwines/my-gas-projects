@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-22. jlmops @586 live (Calendar tab UX; job-queue purge now clears failed jobs with no processed time); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; PHP2Shell exposure check on SiteGround pending.
+**Updated:** 2026-10-22. jlmops @588 live (back navigation, Calendar tab UX, job-queue purge fix); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; PHP2Shell exposure check on SiteGround pending.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-22 |
 | Revenue | Steady |
-| Deploy Version | jlmops @586 · theme v1.2.32 |
+| Deploy Version | jlmops @588 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-22 · theme 2026-10-21 (Israel-only checkout guard, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -65,6 +65,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **CRM enrichment** — 548 contacts with dual-language preferences; `campaign.received` backfill manual only (daily auto-wiring deferred). Plans → `jlmops/plans/CONTACT_MANAGER_PLAN.md`, `CRM_PLAN.md`.
 - **Content Library** — entity/task model live (no auto-paired EN/HE entities, lazy entity creation on first Doc attach with title sourced from the spawning task's `cal_Name`, task-derived status everywhere, calendar-row-picker-only content creation). `PublishingView.html` (promoted from `LibraryView.html`) is the current UI: admin sees Calendar/Library/Campaigns/Projects tabs, manager sees Calendar/Tasks/Library, both with a "Create Content Tasks" entry point. Both Library and Calendar tabs show a Slug column for connection diagnosis. Library tab's paired EN/HE rows: each language's status pill carries its own doc-open link, and mobile viewports stack columns into labeled rows. System doc → `jlmops/docs/DATA_MODEL.md`, `jlmops/docs/WORKFLOWS.md` §13; drafting/placement procedure → `jlmops/plans/CONTENT_CREATION_CHECKLIST.md`.
 - **Calendar tab UX** — row click always opens the drawer (all base-slug tasks, both languages; bare drawer for Doc-less rows) with a separate Task button; admin re-dates content rows from the date cell; Library Deficiency and drawer date run on `cal_Date`; dates display in local time everywhere. Status filter and search box. All confirmed live 2026-10-21 except date-edit Save (`jlmops/docs/WORKFLOWS.md` §13.1). Refresh-after-apply bug open (Active Plans above).
+- **Back navigation** — browser back and the header ← button return to the previous view; back closes an open popup first; per-role history. Confirmed live on desktop 2026-10-22; phone back not yet tried (`jlmops/docs/ARCHITECTURE.md`, Application Shell).
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR); short URLs pasted manually (auto-push deferred). Plan → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
 - **Bundles** — implemented; plan graduated to system docs (`jlmops/docs/DATA_MODEL.md` "Bundle Management Data Model", `jlmops/docs/WORKFLOWS.md` §15) and archived (`jlmops/plans/_archive/BUNDLE_PLAN.md`). Maintain/Re-roll self-check their own result against the live deficiency test and record the real reason when a slot stays deficient. Composite scoring weights (`GENERATOR_WEIGHTS` in `BundleService.js`) remain a single global tunable, not yet split per-slot/per-bundle — UI redesign tracked separately in `jlmops/plans/ADMIN_BUNDLES_UI_PLAN.md`.
 - **Ops↔session bridge** — OPS writes system-health (15-min) + KPI (daily) into `jlmops-status.md`; `/review-daily` reads it each run. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.

@@ -17,7 +17,6 @@ Projects: jlmops, web, marketing, content
 - [ ] Mailchimp export from CRM
 - [ ] Recommendation engine
 - [ ] AI/Claude integration
-- [ ] 2026-01-29: Back navigation: browser/phone back returns to the previous view (hash routing), plus a back button in each view's title bar
 - [ ] 2026-05-15: Single-product ops view: Comax + Woo state, last updates, image and live-page link on one screen, for triage. No plan doc yet.
 - [ ] 2026-05-15: **Outreach to unpaid orders / abandoned carts / consummated-but-not-paid.** Identify customers who intended to buy but didn't complete payment (pending orders, on-hold, abandoned carts if trackable). High-intent contacts worth reaching. Check what data we already have (WebOrdM has pending/on-hold; abandoned cart data may require a Woo API extension or plugin). Once trackable, ship as a new topic on `task.contact.outreach` so the manager surfaces and contacts them through the same Action Panel flow. (Broader scope than the @110-@111 pending-payment auto-followup which only covers `pending` Woo status.)
 
