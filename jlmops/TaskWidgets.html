@@ -432,6 +432,10 @@
         var t = el._twTrigger;                        // restore focus to trigger
         if (t && typeof t.focus === 'function') t.focus();
         el._twTrigger = null;
+      },
+      // Topmost open modal id, or null — lets the shell's back handler close it (same as Esc).
+      top: function() {
+        return stack.length ? stack[stack.length - 1] : null;
       }
     };
   })();

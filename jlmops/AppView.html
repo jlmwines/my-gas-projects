@@ -256,6 +256,7 @@
                 <? } ?>
             </select>
         </div>
+        <button id="nav-back-btn" class="hamburger-btn" type="button" aria-label="Back" title="Back" style="display:none;" onclick="navBack()">&#8592;</button>
         <span id="view-title" class="view-title-label"></span>
         <span id="view-loading-indicator"><span class="spinner-border spinner-border-sm" role="status"></span></span>
     </div>
@@ -382,7 +383,66 @@
         ManagerProducts: 'Products',
       };
 
-      function loadView(viewName, linkElement) {
+      // Back navigation: every view change is a google.script.history entry, so the
+      // browser/phone back button and the title-bar back button both return to the
+      // previous view (freshly loaded; in-view state isn't restored). Back with a
+      // popup open closes the popup instead, same as Esc.
+      let navIdx = 0;          // position of the current view in this role's history
+      let navViews = [];       // view name per position (title-bar back fallback)
+      let currentView = null;
+      let navBackPending = null;
+
+      function _currentRole() { return document.getElementById('roleSelect').value; }
+
+      function _navState(viewName) { return { view: viewName, idx: navIdx, role: _currentRole() }; }
+
+      function _updateBackBtn() {
+        const btn = document.getElementById('nav-back-btn');
+        if (btn) btn.style.display = navIdx > 0 ? '' : 'none';
+      }
+
+      function _pushNav(viewName) {
+        navIdx++;
+        navViews[navIdx] = viewName;
+        navViews.length = navIdx + 1;
+        google.script.history.push(_navState(viewName), null, viewName);
+        _updateBackBtn();
+      }
+
+      function _onNavChange(e) {
+        if (navBackPending) { clearTimeout(navBackPending); navBackPending = null; }
+        const st = e && e.state;
+        const topModal = (window.ModalOverlay && ModalOverlay.top) ? ModalOverlay.top() : null;
+        // Popup open, or an entry from before a role switch: stay on the current view.
+        if (topModal || !st || !st.view || st.role !== _currentRole()) {
+          if (topModal) ModalOverlay.close(topModal);
+          google.script.history.push(_navState(currentView), null, currentView);
+          return;
+        }
+        navIdx = st.idx || 0;
+        loadView(st.view, null, true);
+        _updateBackBtn();
+      }
+
+      function navBack() {
+        if (navIdx <= 0) return;
+        history.back();
+        // Fallback in case the sandboxed frame's history.back() doesn't reach the
+        // top-level history: load the previous view directly.
+        navBackPending = setTimeout(function() {
+          navBackPending = null;
+          const prev = navViews[navIdx - 1];
+          if (!prev) return;
+          navIdx--;
+          loadView(prev, null, true);
+          google.script.history.replace(_navState(prev), null, prev);
+          _updateBackBtn();
+        }, 600);
+      }
+
+      function loadView(viewName, linkElement, fromHistory) {
+        if (!fromHistory) _pushNav(viewName);
+        currentView = viewName;
         const viewContent = document.getElementById('content');
         viewContent.innerHTML = '<h2>Loading...</h2>';
 
@@ -434,6 +494,10 @@
       function switchRole() {
         const selectedRole = document.getElementById('roleSelect').value;
         setNavigationForRole(selectedRole);
+        // Fresh history per role: the dashboard load below becomes position 0, and
+        // older entries (other role) are ignored by _onNavChange.
+        navIdx = -1;
+        navViews = [];
 
         if (selectedRole === 'admin') {
             loadView('AdminDashboard');
@@ -456,10 +520,13 @@
         // Load the initial view and set navigation based on the role passed from the server
         const initialRole = document.getElementById('roleSelect').value;
         setNavigationForRole(initialRole);
-        if (initialRole === 'admin') {
-            loadView('AdminDashboard');
-        } else if (initialRole === 'manager') {
-            loadView('ManagerDashboard');
+        google.script.history.setChangeHandler(_onNavChange);
+        const initialView = initialRole === 'admin' ? 'AdminDashboard' : (initialRole === 'manager' ? 'ManagerDashboard' : null);
+        if (initialView) {
+            // Position 0 replaces the page's own entry rather than adding one.
+            navViews = [initialView];
+            loadView(initialView, null, true);
+            google.script.history.replace(_navState(initialView), null, initialView);
         }
 
         // Version footer
