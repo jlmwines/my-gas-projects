@@ -398,7 +398,8 @@
 
       function _updateBackBtn() {
         const btn = document.getElementById('nav-back-btn');
-        if (btn) btn.style.display = navIdx > 0 ? '' : 'none';
+        // Explicit inline-flex: the borrowed .hamburger-btn class is display:none on desktop.
+        if (btn) btn.style.display = navIdx > 0 ? 'inline-flex' : 'none';
       }
 
       function _pushNav(viewName) {
