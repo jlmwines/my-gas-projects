@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-22. jlmops @588 live (back navigation, Calendar tab UX, job-queue purge fix); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; SiteGround PHP patched against PHP2Shell.
+**Updated:** 2026-10-22. jlmops @591 live (real Mailchimp recipients per contact, back navigation, Calendar tab UX); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; SiteGround PHP patched against PHP2Shell.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-22 |
 | Revenue | Steady |
-| Deploy Version | jlmops @588 · theme v1.2.32 |
+| Deploy Version | jlmops @591 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-22 · theme 2026-10-21 (Israel-only checkout guard, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -61,7 +61,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 
 - **Sync workflow** — stable. 12-state machine (Comax ↔ Sheets ↔ WooCommerce); imports, exports, validation all working. Sync-state and job-queue writes are now concurrency-safe under the widget's 1s polling (`jlmops/docs/ARCHITECTURE.md` §2.5.4.1, live-verified 2026-08-27); a validation rule that errors is treated the same as one that fails (Bug 6), no longer a silent pass. Inventory-push job auto-retries transient server failures on just the still-failing rows, surfaces the real per-SKU failure reason instead of a generic status string, and Retry/Reset are guarded against double-submission; see `jlmops/docs/WORKFLOWS.md` §11.2, `jlmops/docs/ARCHITECTURE.md` §2.5.6.
 - **Import system** — full Woo REST API pull (products + translations + orders); 30-day rolling window.
-- **CRM enrichment** — 548 contacts with dual-language preferences; `campaign.received` backfill manual only (daily auto-wiring deferred). Plans → `jlmops/plans/CONTACT_MANAGER_PLAN.md`, `CRM_PLAN.md`.
+- **CRM enrichment** — 548 contacts with dual-language preferences; real Mailchimp recipients recorded per contact (`campaign.received`, weekly Wednesday + ⟳ MC, all campaigns backfilled; weekly run not yet observed, `jlmops/docs/DATA_MODEL.md` SysContactActivity). Plans → `jlmops/plans/CONTACT_MANAGER_PLAN.md`, `CRM_PLAN.md`.
 - **Content Library** — entity/task model live (no auto-paired EN/HE entities, lazy entity creation on first Doc attach with title sourced from the spawning task's `cal_Name`, task-derived status everywhere, calendar-row-picker-only content creation). `PublishingView.html` (promoted from `LibraryView.html`) is the current UI: admin sees Calendar/Library/Campaigns/Projects tabs, manager sees Calendar/Tasks/Library, both with a "Create Content Tasks" entry point. Both Library and Calendar tabs show a Slug column for connection diagnosis. Library tab's paired EN/HE rows: each language's status pill carries its own doc-open link, and mobile viewports stack columns into labeled rows. System doc → `jlmops/docs/DATA_MODEL.md`, `jlmops/docs/WORKFLOWS.md` §13; drafting/placement procedure → `jlmops/plans/CONTENT_CREATION_CHECKLIST.md`.
 - **Calendar tab UX** — row click always opens the drawer (all base-slug tasks, both languages; bare drawer for Doc-less rows) with a separate Task button; admin re-dates content rows from the date cell; Library Deficiency and drawer date run on `cal_Date`; dates display in local time everywhere. Status filter and search box. All confirmed live 2026-10-21 except date-edit Save (`jlmops/docs/WORKFLOWS.md` §13.1). Refresh-after-apply bug open (Active Plans above).
 - **Back navigation** — browser back and the header ← button return to the previous view; back closes an open popup first; per-role history. Confirmed live on desktop 2026-10-22; phone back not yet tried (`jlmops/docs/ARCHITECTURE.md`, Application Shell).

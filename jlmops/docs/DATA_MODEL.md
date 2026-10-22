@@ -576,13 +576,13 @@ This section defines the sheets used for customer relationship management, conta
     *   `type.changed` - Customer type change. Details: `{ from, to }`
     *   `comm.whatsapp` - WhatsApp sent. Details: `{ template, outcome, notes }`
     *   `comm.email` - Email sent. Details: `{ subject }`
-    *   `comm.mailchimp` - Included in Mailchimp campaign. Details: `{ campaignName, campaignId }`
+    *   `campaign.received` - Contact was sent a Mailchimp campaign. Id `campaign.received.<campaignId>.<email>` (idempotent). Written by `CampaignService.pullCampaignRecipients` from Mailchimp's real `/reports/{id}/sent-to` list (`sca_CreatedBy = 'mailchimp'`): weekly in Wednesday-night housekeeping (14-day lookback), and on demand via Admin Contacts ⟳ MC / Admin Dev Refresh Mailchimp. All campaigns back to the start are backfilled. Older rows from a one-time inferred backfill (`sca_CreatedBy = 'import'`, guessed by language) also exist. Details: `{ campaignId, title, status }`
     *   `coupon.offered` - Coupon shared. Details: `{ code, channel, campaignName }`
     *   `coupon.used` - Coupon redeemed. Details: `{ code, orderId, discount }`
     *   `note.added` - Manual note. Details: `{ note }`
     *   `reward.given` - Loyalty reward gesture logged by manager (extra/upgraded bottle, not a discount). Details: `{ note }` (free text — which bottle, upgrade vs. add)
-    *   `mailchimp.subscribed` - New subscription detected.
-    *   `mailchimp.unsubscribed` - Subscription removed.
+    *   `subscription.started` - Subscription start (from the activity backfill).
+    *   `subscription.unsubscribed` / `subscription.cleaned` - Mailchimp status flipped from subscribed (unsubscribed vs. bounced/cleaned), detected by the daily subscriber pull; timestamped with Mailchimp's `last_changed`. Not logged for contacts already unsubscribed before tracking began.
 
 ### 3. `SysCoupons` (Coupon Reference)
 *   **Purpose:** Reference data for WooCommerce coupons. Imported from coupon export CSV.

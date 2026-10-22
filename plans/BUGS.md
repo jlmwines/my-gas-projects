@@ -27,7 +27,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates"/"Create Content Tasks". `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
 - [ ] 2026-07-02: `ConfigService.loadConfig` drops the second (P03/P04) key-value pair for non-schema settings — worked around for `ga4_audience_report` only.
 - [ ] 2026-06-16: Product Replacement reads dead WebProdM columns (`wpm_WebIdEn`/`wpm_WebIdHe`) — not yet traced whether it breaks the reassign step.
-- [ ] 2026-05-28: Real Mailchimp recipients not written to `SysContactActivity` (only a manual, inferred backfill). Decided: weekly Wednesday `sent-to` pull, `jlmops/plans/RELIABILITY_AUDIT.md` §3.3.
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
 - [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop only detects failures that *throw* — most catch internally, unchecked.

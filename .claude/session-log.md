@@ -12,6 +12,7 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - @586: job-queue purge falls back to created_timestamp so old FAILED jobs age out. Verify: next snapshot after 02:30 housekeeping shows 1-2 failed jobs, not 3.
 - @587-@588: back navigation (google.script.history; browser back + header ← button, popup-aware, per-role). Confirmed on desktop; phone back untried. Wish removed.
 - SiteGround PHP confirmed patched against PHP2Shell (user); Next Action 13 removed.
+- @589-@591: real Mailchimp recipients (`campaign.received` from sent-to), weekly Wed + ⟳ MC + Dev refresh; backfill complete (re-run 0 rows), Dev backfill button removed (server wrapper kept). Found + fixed: all-digit campaign id duplicated daily in SysCampaigns (61 rows). Next: confirm weekly Wed run; user deletes 60 dup rows.
 
 ---
 

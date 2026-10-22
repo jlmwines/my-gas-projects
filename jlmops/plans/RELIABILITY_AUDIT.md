@@ -124,7 +124,7 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 - ✓ **CLOSED (3.1, 2026-06-03)** — Integrations heartbeat card on the admin dashboard shows last-successful-pull per source (Woo orders/products, Mailchimp subscribers/campaigns) with per-source staleness thresholds. **Comax heartbeat still omitted** (no config key; lives in SysJobQueue COMPLETED rows) — small 3.1 follow-up.
 - ✓ **CLOSED (3.1, 2026-06-03)** — `woo.api.orders_last_pull` dead key now written by `WooOrderPullService.pullOrders` on success + added to `RUNTIME_KEYS`.
 - No rate-limit usage visibility. **(still open)**
-- Mailchimp campaign sends are pulled at aggregate level only; real per-recipient activity rows are missing (only a manual inferred backfill exists). **(open — §3.3, approach decided 2026-10-22, not built)**
+- Mailchimp per-recipient activity rows. **(done @589-@591, see §3.3; behavior in `jlmops/docs/DATA_MODEL.md` SysContactActivity)**
 
 ### 3.5 Observability
 
@@ -462,34 +462,9 @@ Dead `woo.api.orders_last_pull` key now stamped by `WooOrderPullService.pullOrde
 
 **KPI block — OPEN (deferred; daily cadence).** `refreshKpiBlock` renders KPIs as a section *inside the same file*. Three parts: **(1) Foundation gate** — verify/edit the GA4 + GSC add-on reports first (GA4 "JLM GA4 Weekly", property `properties/279950414`: schedule firing, `date` dimension present, metrics cover sessions/users/engagement/keyEvents/revenue; GSC Search-Analytics-for-Sheets: add a **Date** dimension if still Page-only, else no trend accumulates). **(2) Ops mirror** — ops has full `SpreadsheetApp` access (the multi-tab limit is Claude's Drive path only), so `refreshKpiBlock` reads the GA4/GSC workbooks by ID, aggregates last-7/WTD/MTD, and writes a Traffic subsection alongside internal KPIs (today/week/month orders + revenue from WebOrdM, AOV, new-vs-returning via `sc_FirstCompletedDate`, EN/HE split); stamp each external metric with its tab's max date, render "no data" rather than throw. No GA4 Data API needed. **(3) Trend spine (optional)** — append the daily aggregate to the `KpiData` sheet (`KpiService.js` stubs it) for WoW/MoM beyond the rolling 90-day window; this is where the trajectory-monitoring deferral resolves. New SysConfig keys for the KPI build: `system.sheet.ga4_report`/`ga4_data_tab`, `system.sheet.gsc_report`/`gsc_data_tab`. Depends-on: soft after 3.1.
 
-#### 3.3 Mailchimp activity-log per-recipient writes (moved up from former 6.3)
+#### 3.3 Mailchimp activity-log per-recipient writes — SHIPPED @589-@591 (2026-10-22)
 
-**Goal.** Close open bug 2026-05-28: per-contact `SysContactActivity` rows recording which contacts actually received each Mailchimp campaign. Answers "did this customer receive this campaign?" and feeds order-after-send attribution.
-
-**Decided (user, 2026-10-22).** Use Mailchimp's real recipient list (`/reports/{id}/sent-to`), not inference. Run **weekly on Wednesday** (campaigns go out less than weekly, usually Tuesday evening), not daily.
-
-**Today.** `ActivityBackfillService.backfillCampaignActivity` (manual) already writes `campaign.received` rows, but *infers* recipients (EN/HE by Hebrew characters in the title, subscribed before send date), so it misses segments, unsubscribes, bounces and mislabels titles without Hebrew. `CampaignService.pullRecentCampaigns` pulls aggregates only.
-
-**Approach.**
-1. New step: for each campaign sent in the last ~14 days, fetch `/reports/{id}/sent-to` (`count=1000`; ~350 recipients per campaign = one call, page only if `total_items` exceeds it).
-2. Write one row per recipient, same shape and id as the backfill so the two never duplicate: `sca_ActivityId = campaign.received.<campaignId>.<email>`, `sca_Type: 'campaign.received'`, timestamp = send date, `sca_CreatedBy: 'mailchimp'`. Skip ids already present. Batch the writes (one range write per campaign), not one `createActivity` per row.
-3. Schedule: nightly housekeeping runs the step only when the Israel day is Wednesday (day-gate pattern already used in `HousekeepingService`). The 14-day lookback means a missed Wednesday is caught the next week. No cursor or new SysConfig key needed; idempotency comes from the activity ids.
-4. **On demand (user, 2026-10-22):** the existing Admin Contacts **⟳ MC** button (`WebAppContacts_refreshMailchimp`) also runs the recipient step after subscribers + campaigns, and its result message adds the recipient-row count. An Admin Dev button calls the same `WebAppContacts_refreshMailchimp` — identical behavior, second entry point, no separate logic.
-5. **Backfill (user, 2026-10-22):** the 14-day lookback only covers new sends, so an Admin Dev **Backfill Recipients** button runs the same step over every campaign in `SysCampaigns` (`pullCampaignRecipients(null)`). 4-minute time budget; if it stops early, run again (written rows are skipped).
-6. The old inferred backfill (`ActivityBackfillService.backfillCampaignActivity`) is retired for new campaigns. Its earlier rows share the same ids, so real recipients it already guessed right are kept as-is; rows it guessed for people who weren't actually sent the campaign remain (`sca_CreatedBy = 'import'`) unless separately cleaned.
-
-**CCPs.** CCP-1 (reportFailure on pull error), CCP-2 (sessionId). No new OAuth scope (Mailchimp calls already authorized).
-
-**Smoke.** Run the step by hand after a real send. Pick 3 known recipients; each has one `campaign.received` row with the right title and send date. Re-run; no duplicates. Check a contact outside the campaign's segment has no row.
-
-**Rollback.** Git revert + redeploy. Rows already written stay and are correct.
-
-**Depends on.** Nothing structural. Independent.
-
-**Open.**
-- `[defer]` Rate-limiting tuning if a campaign has 1000+ recipients and a single pull hits 6-min cap. Cursor pattern handles continuation across runs; verify on first large campaign.
-
-**CCP audit.** CCP-1 reportFailure on Mailchimp API error; CCP-2 sessionId threaded; CCP-6 cursor key in SysConfig not constant.
+Real recipients from `/reports/{id}/sent-to` written as `campaign.received` rows; weekly Wednesday, on demand via ⟳ MC / Admin Dev, all campaigns backfilled. Behavior: `jlmops/docs/DATA_MODEL.md` SysContactActivity. Weekly Wednesday run not yet observed live.
 
 #### 3.4 Scheduled aggregate-consistency check (weekly via days-since gate)
 
