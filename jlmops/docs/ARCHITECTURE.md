@@ -42,6 +42,8 @@ To ensure a clear separation of concerns, the interface between the HTML Views a
 **2. Dedicated View Controller:**
 *   For standalone or highly complex views, a dedicated View Controller script may be used (e.g., `WebAppDashboardV2.js` for `AdminDashboardView_v2.html`/`ManagerDashboardView_v2.html`).
 *   **Responsibility:** This script is responsible *only* for the data and actions of its specific view.
+*   **One load call per dashboard:** each dashboard mounts with a single endpoint (`WebAppDashboardV2_getData` / `_getManagerData`) that reads each sheet once and builds every widget's data, instead of one `google.script.run` round-trip per widget re-reading the same sheets.
+*   **Heavy computes stay off the mount path:** e.g. the Bundles view mount (`WebAppBundles_getViewData`) omits the low-inventory health alerts, which load on demand via `WebAppBundles_getBundlesWithLowInventory`; inside that compute, invariant sheet loads are hoisted out of per-slot loops (no N+1 `WebProdM` reads).
 
 **Data Providers:**
 Regardless of the controller pattern used, View Controllers call upon **Data Providers** (e.g., `WebAppTasks.js`, `WebAppProducts.js`). These are reusable, internal libraries that contain functions to fetch data from backend *Services* and format it for UI consumption.

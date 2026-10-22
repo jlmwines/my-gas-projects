@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-22 — PHP2Shell question, /review-claude, cleanup
+
+- PHP2Shell (critical PHP RCE, patched 2026-10-21) likely affects jlmwines.com until SiteGround patches; PHP version hidden from headers, user to check PHP Manager (Next Action 13).
+- Cleanup: STATUS de-duplicated, performance plan graduated to ARCHITECTURE.md and archived, portfolio STATUS refreshed.
+- Next: user reports PHP version; wishlist bloat still needs user decisions.
+
+---
+
 ## 2026-10-21 — Calendar tab UX built (@585)
 
 - Shipped all four plan items in one deploy; user confirmed live except date-edit Save (no re-date needed yet).
