@@ -11,7 +11,8 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Via WC API: "Yerushalayim" fixed on 8 EN products, "רבננות" on 9 HE products. Script kept in the session scratchpad only.
 - New plan `jlmops/plans/TARGETED_COUPONS_PLAN.md` (not started). Open decision: revive AdminContactsView or build a new admin Audiences & Offers view.
 - Found: `SysCouponUsage` is never written and `coupon.used` only comes from the manual backfill (plan build step 1).
-- Next: still open from earlier - delete the 60 dup SysCampaigns rows, confirm the Wed recipient run, try phone back. Nothing pushed.
+- User deleted the 60 dup SysCampaigns rows (bug closed) and confirmed back navigation works on phone.
+- Next: confirm the Wed recipient run. Nothing pushed.
 
 ## 2026-10-22 — PHP2Shell question, /review-claude, cleanup
 
