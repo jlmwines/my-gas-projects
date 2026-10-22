@@ -23,7 +23,7 @@ The daily coupon pull gains a real job: **reconcile** jlmops-owned coupons (emai
 
 ## jlmops UI
 
-Extends the existing **Admin Contacts → Export Audience** tool rather than a new screen:
+**Open decision — where this lives.** The Export Audience tool is in `AdminContactsView.html`, which was delisted as legacy at @189: the admin "Contacts" nav link now opens the lean `ManagerContactView` (single-contact lookup, no export). Either revive the legacy view under its own admin nav item, or build a new admin audience/offers surface. The pieces below apply either way:
 
 1. **Coupon section in Export Audience** — code, ₪ or %, minimum spend, optional product/category limits, expiry, optional EN/HE custom line. On export: create or update the Woo coupon with exactly the exported emails, write `coupon.offered` per contact, and add the code + auto-apply link columns to the export sheet for the Mailchimp upload.
 2. **Active offers list** — code, offered count, redeemed count, expiry, reconcile status; "End now" expires it in Woo.

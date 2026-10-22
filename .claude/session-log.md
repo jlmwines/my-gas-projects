@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-22 — Typo audits, coupons plan, @592 layout
+
+- @592: desktop views fill the area beside the sidebar; Dev backfill button removed.
+- EN/HE typo audits of the live site; fix lists in `exchange/website-typos*-2026-10-22.csv` (local only, gitignored). User fixed most by hand and fixed the kashrut lookups (EN + HE).
+- Via WC API: "Yerushalayim" fixed on 8 EN products, "רבננות" on 9 HE products. Script kept in the session scratchpad only.
+- New plan `jlmops/plans/TARGETED_COUPONS_PLAN.md` (not started). Open decision: revive AdminContactsView or build a new admin Audiences & Offers view.
+- Found: `SysCouponUsage` is never written and `coupon.used` only comes from the manual backfill (plan build step 1).
+- Next: still open from earlier - delete the 60 dup SysCampaigns rows, confirm the Wed recipient run, try phone back. Nothing pushed.
+
 ## 2026-10-22 — PHP2Shell question, /review-claude, cleanup
 
 - PHP2Shell (critical PHP RCE, patched 2026-10-21) likely affects jlmwines.com until SiteGround patches; PHP version hidden from headers, user to check PHP Manager (Next Action 13).
