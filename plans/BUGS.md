@@ -30,7 +30,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
 - [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop only detects failures that *throw* — most catch internally, unchecked.
-- [ ] 2026-10-22: `SysCampaigns` had 61 rows for all-digit id 9954190656 (number vs string `===` in `upsertCampaign`); fixed @591. Delete extra rows; campaign stats summed it 61x.
 - [ ] 2026-10-19 (low): Bundle descriptions never land in `WebProdM.wpm_PostContent`; bundle detail view (`WebAppBundles.js:102`) shows none. WordPress is the only copy.
 - [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead — no UI, no push. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
 
@@ -38,6 +37,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 _One line each; full root-cause analysis lives in the git commit._
 
+- [x] 2026-10-22: `SysCampaigns` duplicated all-digit campaign id daily (61 rows) — fixed @591, extra rows deleted by user.
 - [x] 2026-10-12: Admin attach of a manager-owned Doc failed at `setOwner` — now attaches a copy. Verified live, jlmops @576. `jlmops/docs/DATA_MODEL.md`.
 - [x] 2026-09-03: Welcome task fired for repeat customers with an archived first order — fixed @575, verified live 2026-10-10. `CONTACT_MANAGER_PLAN.md`.
 - [x] 2026-09-02: Bundle deficiency count on view-load was stale — automation removed, review now manual-only. jlmops @574.
