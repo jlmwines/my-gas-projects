@@ -81,11 +81,16 @@
             background: rgba(74,122,62,0.15);
             border-radius: 4px;
         }
+        /* View fills the area right of the sidebar and below the header. The only gutter is
+           15px left/right (same as Bootstrap .container-fluid), so views with or without a
+           container-fluid root get the same margin. Mobile overrides below. */
         .content {
-            margin-left: 170px;
-            padding: 20px;
+            margin-left: 160px;
+            padding: 0 15px;
             width: 100%;
+            min-height: calc(100vh - 60px);
         }
+        .content > .container-fluid { padding-left: 0; padding-right: 0; }
 
         /* ===== Mobile primitives — shared across all views ===== */
 
