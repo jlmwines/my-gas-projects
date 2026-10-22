@@ -98,7 +98,7 @@ Replaces content-shaped SysConfig rows (SysConfig stays for true config). Templa
 
 Shared vocabulary lives in the ops lookup tabs (product attribute codes: intensity/complexity/acidity/grapes/etc.). Library entities use the **same codes** via `taxonomy[]` — a post tagged `intensity=IN3` matches every product whose `wdm_Intensity` is `IN3`; no new vocabulary infra.
 
-**Cross-linking renders at publish, ops-side** — no WP custom taxonomies, no taxonomy sync into WP. The model is the existing `WooCommerceFormatter.formatDescriptionHTML()`: take an entity's `taxonomy[]` codes, query product data for matches, emit a "related products" HTML block injected into the post body at publish (and the reverse PDP "related posts" via a custom field). Prerequisites: the lookup-add UI (shipped) and the **regions overhaul** (§14) — region codes need cleanup + EN-primary keying before region cross-linking works.
+**Cross-linking renders at publish, ops-side** — no WP custom taxonomies, no taxonomy sync into WP. The model is the existing `WooCommerceFormatter.formatDescriptionHTML()`: take an entity's `taxonomy[]` codes, query product data for matches, emit a "related products" HTML block injected into the post body at publish (and the reverse PDP "related posts" via a custom field). Prerequisite: the lookup-add UI (shipped). Region is not a cross-link dimension: region posts don't link to that region's products (judged infeasible, user 2026-10-22); the region lookup itself is settled.
 
 ## 12. Slug convention
 
@@ -115,8 +115,7 @@ Campaign entities carry KPI stats as columns on the entity row, refreshed on cad
 **Open intent:**
 - **Templates migration** (§10) — welcome, then pending-payment, then cooling/VIP/win-back as they become real.
 - **Distribution events (phase 11)** — `email`/`news`/`mention`/`social` as entities + a spawner for the 16 dormant distribution task templates. `email` first (reuses blog's `CONTENT_STAGES`, repurposing the `email` stage as the Mailchimp "schedule send" step; `register-library.js` gains an update mode to patch a sent campaign's row to `published` + Mailchimp metadata). From June 2026 each issue + companion email + mentions register as library entities.
-- **Cross-link renderer (phase 12)** — §11; post→product direction first, then PDP→post. Blocked on the regions overhaul for the region dimension.
-- **Regions overhaul (prerequisite)** — define the canonical EN region list, add EN codes + EN/HE labels to the texts lookup, repoint product rows (one-pass sweep if small, else organic). Fixes editorial misalignment, invalid pairings, and the HE-primary inconsistency.
+- **Cross-link renderer (phase 12)** — §11; post→product direction first, then PDP→post. No region dimension.
 - **Customer migration / project absorption** (low priority) — move SysContacts / collapse PROJ-X into the entity table only when there's a real benefit.
 - **Product images** — separate plan once the post side is settled.
 - **Book assembly** (long-term) — a book is a filtered + ordered view of existing entities; no special type. Mentioned only to confirm the model is forward-compatible.
