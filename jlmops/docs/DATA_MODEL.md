@@ -585,7 +585,7 @@ This section defines the sheets used for customer relationship management, conta
     *   `subscription.unsubscribed` / `subscription.cleaned` - Mailchimp status flipped from subscribed (unsubscribed vs. bounced/cleaned), detected by the daily subscriber pull; timestamped with Mailchimp's `last_changed`. Not logged for contacts already unsubscribed before tracking began.
 
 ### 3. `SysCoupons` (Coupon Reference)
-*   **Purpose:** Reference data for WooCommerce coupons. Imported from coupon export CSV.
+*   **Purpose:** Reference data for WooCommerce coupons. Pulled daily from the WooCommerce REST API by housekeeping (`CouponService.pullFromApi`, also the Admin Dev "Pull Coupons Now" button); the coupon export CSV import remains as a manual fallback.
 *   **Prefix:** `sco_`
 *   **Primary Key:** `sco_Code`
 *   **Columns:**

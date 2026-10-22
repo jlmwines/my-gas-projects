@@ -60,7 +60,7 @@ _One line each; full root-cause analysis lives in the git commit._
 
 ### Resolved
 
-- [x] 2026-09-03: 50NEW first-purchase check hooked to a nonexistent WC filter, never ran at all. Fixed, live, not yet order-tested. `inc/coupons.php`.
+- [x] 2026-09-03: 50NEW first-purchase check hooked to a nonexistent WC filter, never ran at all. Fixed, live, confirmed working on real orders (per user 2026-10-22). `inc/coupons.php`.
 - [x] 2026-08-28: 50NEW reusable by repeat guest-checkout customers — turned out incomplete, see 2026-09-03 entry above. `inc/coupons.php`.
 - [x] 2026-08-20: `deploy-theme.ps1` truncated live files to 0 bytes mid-deploy — restored from backup, hardened (byte-verify + atomic rename, curl).
 
