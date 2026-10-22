@@ -150,7 +150,8 @@ const CampaignService = (function () {
   function getCampaignById(campaignId) {
     if (!campaignId) return null;
     const campaigns = _loadCampaigns();
-    return campaigns.find(c => c.scm_CampaignId === campaignId) || null;
+    const target = String(campaignId).trim();
+    return campaigns.find(c => String(c.scm_CampaignId).trim() === target) || null;
   }
 
   /**
@@ -202,10 +203,13 @@ const CampaignService = (function () {
 
     campaignData.scm_LastImported = new Date();
 
-    // Find existing row
+    // Find existing row. Compare as strings: Sheets stores an all-digit Mailchimp
+    // id (e.g. 9954190656) as a number, which never === the API's string id —
+    // that mismatch appended a duplicate row on every daily pull.
+    const targetId = String(campaignData.scm_CampaignId).trim();
     let rowIndex = -1;
     for (let i = 1; i < data.length; i++) {
-      if (data[i][indices.scm_CampaignId] === campaignData.scm_CampaignId) {
+      if (String(data[i][indices.scm_CampaignId]).trim() === targetId) {
         rowIndex = i;
         break;
       }
@@ -1153,10 +1157,18 @@ const CampaignService = (function () {
     const cutoff = days === null ? null : new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     clearCache();  // read SysCampaigns fresh — pullRecentCampaigns may have just upserted
-    const campaigns = getCampaigns({}).filter(function(c) {
-      if (!c.scm_CampaignId || !c.scm_SendDate) return false;
+    // One entry per campaign id: SysCampaigns can hold more than one row for the
+    // same campaign, and each would otherwise re-fetch the same recipient list.
+    // Ids normalized to strings: an all-digit id comes back from Sheets as a number.
+    const seenIds = new Set();
+    const campaigns = [];
+    getCampaigns({}).forEach(function(c) {
+      const id = String(c.scm_CampaignId || '').trim();
+      if (!id || !c.scm_SendDate || seenIds.has(id)) return;
       const sendDate = c.scm_SendDate instanceof Date ? c.scm_SendDate : new Date(c.scm_SendDate);
-      return !cutoff || sendDate >= cutoff;
+      if (cutoff && sendDate < cutoff) return;
+      seenIds.add(id);
+      campaigns.push({ id: id, sendDate: sendDate, title: c.scm_Title || c.scm_Subject || id });
     });
 
     // existingIds: skip rows already written (real or old inferred backfill).
@@ -1184,36 +1196,35 @@ const CampaignService = (function () {
     for (let i = 0; i < campaigns.length; i++) {
       if (Date.now() - startTime > TIME_BUDGET_MS) { timedOut = true; break; }
       const c = campaigns[i];
-      if (doneCampaigns.has(c.scm_CampaignId)) { processed++; continue; }
+      if (doneCampaigns.has(c.id)) { processed++; continue; }
       try {
         const recipients = MailchimpService.paginate(
-          '/reports/' + c.scm_CampaignId + '/sent-to',
+          '/reports/' + c.id + '/sent-to',
           { fields: 'sent_to.email_address,sent_to.status,total_items' },
           'sent_to'
         );
-        const sendDate = c.scm_SendDate instanceof Date ? c.scm_SendDate : new Date(c.scm_SendDate);
         const rows = [];
         recipients.forEach(function(r) {
           const email = String(r.email_address || '').toLowerCase().trim();
           if (!email) return;
-          const activityId = 'campaign.received.' + c.scm_CampaignId + '.' + email;
+          const activityId = 'campaign.received.' + c.id + '.' + email;
           if (existingIds.has(activityId)) return;
           existingIds.add(activityId);
           rows.push({
             sca_ActivityId: activityId,
             sca_Email: email,
-            sca_Timestamp: sendDate,
+            sca_Timestamp: c.sendDate,
             sca_Type: 'campaign.received',
-            sca_Summary: 'Received campaign: ' + (c.scm_Title || c.scm_Subject || c.scm_CampaignId),
-            sca_Details: { campaignId: c.scm_CampaignId, title: c.scm_Title || '', status: r.status || 'sent' },
+            sca_Summary: 'Received campaign: ' + c.title,
+            sca_Details: { campaignId: c.id, title: c.title, status: r.status || 'sent' },
             sca_CreatedBy: 'mailchimp'
           });
         });
         created += ContactService.createActivities(rows);
         processed++;
       } catch (e) {
-        errors.push('Campaign ' + c.scm_CampaignId + ': ' + e.message);
-        LoggerService.warn(SERVICE_NAME, fnName, 'Failed for campaign ' + c.scm_CampaignId + ': ' + e.message);
+        errors.push('Campaign ' + c.id + ': ' + e.message);
+        LoggerService.warn(SERVICE_NAME, fnName, 'Failed for campaign ' + c.id + ': ' + e.message);
       }
     }
 
