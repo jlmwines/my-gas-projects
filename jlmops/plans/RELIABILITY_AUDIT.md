@@ -124,7 +124,7 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 - ✓ **CLOSED (3.1, 2026-06-03)** — Integrations heartbeat card on the admin dashboard shows last-successful-pull per source (Woo orders/products, Mailchimp subscribers/campaigns) with per-source staleness thresholds. **Comax heartbeat still omitted** (no config key; lives in SysJobQueue COMPLETED rows) — small 3.1 follow-up.
 - ✓ **CLOSED (3.1, 2026-06-03)** — `woo.api.orders_last_pull` dead key now written by `WooOrderPullService.pullOrders` on success + added to `RUNTIME_KEYS`.
 - No rate-limit usage visibility. **(still open)**
-- Mailchimp campaign sends are pulled at aggregate level only; per-recipient activity log writes are missing (`plans/BUGS.md` 2026-05-28). **(still open — Tier 3.3 not built)**
+- Mailchimp campaign sends are pulled at aggregate level only; real per-recipient activity rows are missing (only a manual inferred backfill exists). **(open — §3.3, approach decided 2026-10-22, not built)**
 
 ### 3.5 Observability
 
@@ -464,25 +464,23 @@ Dead `woo.api.orders_last_pull` key now stamped by `WooOrderPullService.pullOrde
 
 #### 3.3 Mailchimp activity-log per-recipient writes (moved up from former 6.3)
 
-**Goal.** Close open bug 2026-05-28: `comm.campaign` activity rows missing on per-contact log. Visibility gap for "did this customer receive this campaign?"
+**Goal.** Close open bug 2026-05-28: per-contact `SysContactActivity` rows recording which contacts actually received each Mailchimp campaign. Answers "did this customer receive this campaign?" and feeds order-after-send attribution.
 
-**Anchors.**
-- Current writer: `CampaignService.pullRecentCampaigns` pulls aggregate-level only (recipients, opens, clicks).
-- Activity-row writer precedent: `ContactService.createActivity({sca_Email, sca_Type, sca_Summary, sca_Details})` exists and is the canonical entry.
-- Mailchimp recipient-list endpoint: `/reports/{id}/sent-to` returns per-recipient delivery for a campaign.
-- Idempotency surface: `SysContactActivity` rows keyed by (campaignId, email) implicitly via the activity row contents; need explicit dedup check before insert.
+**Decided (user, 2026-10-22).** Use Mailchimp's real recipient list (`/reports/{id}/sent-to`), not inference. Run **weekly on Wednesday** (campaigns go out less than weekly, usually Tuesday evening), not daily.
 
-**Implementation.**
-1. Extend `CampaignService.pullRecentCampaigns` to, after the aggregate upsert, iterate the campaign's recipient list via the Mailchimp report endpoint.
-2. For each recipient: check if a `comm.campaign` activity row already exists for (campaignId, email); if not, write via `ContactService.createActivity({sca_Email, sca_Type: 'comm.campaign', sca_Summary: <campaign title>, sca_Details: JSON.stringify({campaignId, sendDate})})`.
-3. Rate-limiting: pull recipients in pages (Mailchimp default 10/page; cap session iterations to avoid 6-min timeout on popular campaigns; resume on next pull via cursor in SysConfig).
-4. New SysConfig key `system.mailchimp.activity_log_cursor` for resumability.
+**Today.** `ActivityBackfillService.backfillCampaignActivity` (manual) already writes `campaign.received` rows, but *infers* recipients (EN/HE by Hebrew characters in the title, subscribed before send date), so it misses segments, unsubscribes, bounces and mislabels titles without Hebrew. `CampaignService.pullRecentCampaigns` pulls aggregates only.
 
-**CCPs.** CCP-1 (reportFailure on pull error), CCP-2 (sessionId), CCP-6 (cursor in SysConfig).
+**Approach.**
+1. New step: for each campaign sent in the last ~14 days, fetch `/reports/{id}/sent-to` (`count=1000`; ~350 recipients per campaign = one call, page only if `total_items` exceeds it).
+2. Write one row per recipient, same shape and id as the backfill so the two never duplicate: `sca_ActivityId = campaign.received.<campaignId>.<email>`, `sca_Type: 'campaign.received'`, timestamp = send date, `sca_CreatedBy: 'mailchimp'`. Skip ids already present. Batch the writes (one range write per campaign), not one `createActivity` per row.
+3. Schedule: nightly housekeeping runs the step only when the Israel day is Wednesday (day-gate pattern already used in `HousekeepingService`). The 14-day lookback means a missed Wednesday is caught the next week. No cursor or new SysConfig key needed; idempotency comes from the activity ids.
+4. The manual inference backfill stays for history before this ships; once live, stop using it for new campaigns.
 
-**Smoke.** Trigger `pullRecentCampaigns` manually after a real campaign send. Pick 3 known recipients. Confirm each has a `comm.campaign` row in `SysContactActivity` with matching campaign title + sendDate. Re-trigger; confirm no duplicates (idempotency).
+**CCPs.** CCP-1 (reportFailure on pull error), CCP-2 (sessionId). No new OAuth scope (Mailchimp calls already authorized).
 
-**Rollback.** Git revert + redeploy. Any activity rows already written stay (idempotent — re-pulling will not duplicate). New SysConfig key orphans harmlessly.
+**Smoke.** Run the step by hand after a real send. Pick 3 known recipients; each has one `campaign.received` row with the right title and send date. Re-run; no duplicates. Check a contact outside the campaign's segment has no row.
+
+**Rollback.** Git revert + redeploy. Rows already written stay and are correct.
 
 **Depends on.** Nothing structural. Independent.
 
