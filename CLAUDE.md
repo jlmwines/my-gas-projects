@@ -28,7 +28,8 @@ Online wine retailer in Israel. Anti-snob positioning—makes wine accessible, c
 
 - `docs/` — General documentation
 - `exchange/` — File exchange/temp storage
-- `.claude/` — Shared commands, wishlist, bugs (see `jlmops/CLAUDE.md` for details)
+- `.claude/` — Shared commands, hooks, session log (see `jlmops/CLAUDE.md` for details)
+- `plans/BUGS.md`, `plans/WISHLIST.md` — bug list and feature wishlist
 
 ## Starting a Task
 

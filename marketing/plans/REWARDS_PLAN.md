@@ -22,7 +22,7 @@ Eligible customers get a system-flagged reward that surfaces as an active choice
 
 **Known prior art, don't repeat the mistake it looks like:** an earlier version of this general shape (auto-applying a coupon) was explicitly rejected — but for a different, specific reason: silent auto-apply via shareable URLs let the discount leak to anyone with the link. This proposal is an active choice the customer makes at checkout, not a silent auto-apply, so that objection doesn't carry over as-is. Worth remembering the history so it doesn't look like relitigating a settled question.
 
-**Infrastructure note:** the WooCommerce coupon plugin was removed a while back; first-purchase discount logic now runs off native theme code, not a plugin (`.claude/bugs.md` history). "Customer has an eligible reward at checkout" would need new plumbing, not a flip of something dormant — this is checkout/theme-flow work (`website/`), not a jlmops-only build.
+**Infrastructure note:** the WooCommerce coupon plugin was removed a while back; first-purchase discount logic now runs off native theme code, not a plugin (`plans/BUGS.md` history). "Customer has an eligible reward at checkout" would need new plumbing, not a flip of something dormant — this is checkout/theme-flow work (`website/`), not a jlmops-only build.
 
 ---
 

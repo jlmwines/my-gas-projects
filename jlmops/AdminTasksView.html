@@ -1791,7 +1791,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     // Single bulk call — backend reads sheet once + deletes in descending
     // row order so earlier deletes don't shift later targets. Replaces the
     // prior pattern of N parallel WebAppTasks_deleteTask calls that suffered
-    // a row-index race (see .claude/bugs.md 2026-05-15 entry).
+    // a row-index race (see plans/BUGS.md 2026-05-15 entry).
     google.script.run
       .withSuccessHandler(function(result) {
         btn.disabled = false;

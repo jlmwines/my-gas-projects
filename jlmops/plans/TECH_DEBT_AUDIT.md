@@ -4,7 +4,7 @@
 **Updated:** 2026-05-11 — first cheap-wins pass complete (see §6 "Done" subsection).
 **Method:** Survey pass — scan-and-list, no deep verification. Each finding needs triage before any fix.
 **Scope:** dead/one-use code, obsolete dev UI controls, code-compliance drift, plan-doc accuracy, data integrity gaps.
-**Out of scope:** the existing data-integrity backlog already captured in `.claude/bugs.md` (timestamp audit, CRM cleanup, count-task audit, decanting zero, SKU mgmt test verifications) — referenced from §5 but not re-discovered.
+**Out of scope:** the existing data-integrity backlog already captured in `plans/BUGS.md` (timestamp audit, CRM cleanup, count-task audit, decanting zero, SKU mgmt test verifications) — referenced from §5 but not re-discovered.
 
 **Severity legend:** S=safe-to-delete after one quick check · M=needs scope decision · L=lower priority / cosmetic.
 
@@ -28,7 +28,7 @@ Pending: `clasp push` to retire from the deployed source tree.
 - One-time migration from a legacy spreadsheet (hardcoded ID `1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc`) to JLMops master sheets. Already executed. See §7 for full legacy-retirement context.
 
 ### 1.4 Retired-feature dead code (already known)
-- War-support detection — flagged in `.claude/bugs.md` CRM-cleanup bundle. Cross-referenced here for completeness.
+- War-support detection — flagged in `plans/BUGS.md` CRM-cleanup bundle. Cross-referenced here for completeness.
 
 ### 1.5 ~~Stale state-machine branch in `SyncStateService.js`~~ — **WITHDRAWN 2026-05-11**
 - Finding was incorrect. `PUSHING_WEB_INVENTORY` IS declared in STATES (`SyncStateService.js:30`) — earlier grep filtered it out due to a too-narrow regex. The transition `WAITING_WEB_CONFIRM → PUSHING_WEB_INVENTORY` is valid; `PUSHING_WEB_INVENTORY → ['COMPLETE', 'FAILED']` is its outgoing edge. No fix needed.
@@ -101,7 +101,7 @@ Pending: `clasp push` to retire from the deployed source tree.
 
 ## 5. Data Integrity Gaps
 
-All major items here are already on `.claude/bugs.md` — cross-referenced, not re-listed:
+All major items here are already on `plans/BUGS.md` — cross-referenced, not re-listed:
 
 - CRM cleanup bundle (`sc_IsCore` defaulting overwrites import, Archive missing `CouponItems`, historical row corruption, dead war-support code, gift-detection rule) — `bugs.md:21-26`.
 - Timestamp + date format audit — `bugs.md:28`.
@@ -112,7 +112,7 @@ All major items here are already on `.claude/bugs.md` — cross-referenced, not 
 **New from this audit:**
 
 ### 5.1 Sync stuck-state recovery for failed Comax import
-- `.claude/bugs.md:19` notes this is deferred ("rare case"). Still worth a small fix — currently a corrected file upload after a failed import doesn't recover state, requiring manual intervention.
+- `plans/BUGS.md:19` notes this is deferred ("rare case"). Still worth a small fix — currently a corrected file upload after a failed import doesn't recover state, requiring manual intervention.
 - **L — add explicit state-reset path in `_checkAndAdvanceSyncState` for `FAILED → WAITING_COMAX_IMPORT` retry.**
 
 ### 5.2 SysConfig predeclared-row hygiene

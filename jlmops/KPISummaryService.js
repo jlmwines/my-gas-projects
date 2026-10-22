@@ -140,7 +140,7 @@ const KPISummaryService = (function() {
    */
   // Sheets sometimes auto-converts a plain "YYYY-MM" string cell into a real
   // Date (the 1st of that month) — normalize back to "YYYY-MM" before matching,
-  // don't rely on the stored type. See .claude/bugs.md 2026-07-03.
+  // don't rely on the stored type. See plans/BUGS.md 2026-07-03.
   function _asPeriodKey(v) {
     if (v instanceof Date) return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0');
     return String(v);

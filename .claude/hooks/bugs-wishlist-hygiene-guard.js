@@ -12,7 +12,8 @@
 // check is sufficient. Fails OPEN on any internal error or on any file this
 // isn't scoped to.
 const MAX_LINE = 200;
-const TARGET_SUFFIXES = ['jlmwines/.claude/bugs.md', 'jlmwines/.claude/wishlist.md'];
+// Moved out of .claude/ 2026-10-22 so edits don't hit .claude/ permission prompts.
+const TARGET_SUFFIXES = ['jlmwines/plans/BUGS.md', 'jlmwines/plans/WISHLIST.md'];
 
 let input = '';
 process.stdin.on('data', d => (input += d));

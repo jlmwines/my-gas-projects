@@ -1,6 +1,6 @@
 # JLMOps Bug Fix Sequence
 
-**Date:** 2026-05-28. **Source:** `.claude/bugs.md` ## jlmops ### Open.
+**Date:** 2026-05-28. **Source:** `plans/BUGS.md` ## jlmops ### Open.
 
 Sequenced by readiness (concrete fix shape → diagnosis needed → larger scope → audits). Each session is one focused unit of work. Sessions A–E each end with: commit → user OK → `clasp push` → user smoke → user OK → `deploy.ps1`.
 
@@ -104,7 +104,7 @@ Items:
 
 ## ✅ Session G — ManagerContactView search latency — RESOLVED 2026-05-29 (UI T3.2, @165 deploy @169)
 
-Shipped via the UI audit's Tier 3.2 session (`jlmops/plans/UI_T3_2_manager_contact_load_once.md`), not this sequence. Load-once on mount + client-side filter (email + name); recent 50 render on load. Impl caught a latent crash: filtering `c.phone.toLowerCase()` threw because phone is stored numeric — fixed with `String()` guards. See `.claude/bugs.md` 2026-05-15.
+Shipped via the UI audit's Tier 3.2 session (`jlmops/plans/UI_T3_2_manager_contact_load_once.md`), not this sequence. Load-once on mount + client-side filter (email + name); recent 50 render on load. Impl caught a latent crash: filtering `c.phone.toLowerCase()` threw because phone is stored numeric — fixed with `String()` guards. See `plans/BUGS.md` 2026-05-15.
 
 **Bug:** 2026-05-15. Each keystroke (debounced 250ms) round-trips to GAS, loading all ~548 contacts server-side.
 
@@ -142,7 +142,7 @@ UX optimization, not a correctness bug. Last in the sequence intentionally — e
 
 ## Session J — Product-editor cache failure + manager submit hang
 
-**Bugs:** 2026-07-12. Two bugs found together while investigating one manager-reported incident (SKU 7290101582403 submit stuck on "Submitting…" for several minutes) — see `.claude/bugs.md`.
+**Bugs:** 2026-07-12. Two bugs found together while investigating one manager-reported incident (SKU 7290101582403 submit stuck on "Submitting…" for several minutes) — see `plans/BUGS.md`.
 
 **Progress:** Item 1 (cache fix) shipped 2026-07-12 @469. Smoke-tested 2026-07-13 via `SysLog`: the per-SKU cache mechanism itself works (confirmed cache-hit log lines for repeat opens within the 300s TTL), **but total `getProductDetails` time didn't improve** — three opens the same day measured 18957ms (all 4 sheets miss), 18616ms (3 of 4 hit), 16743ms (cache expired, all miss again) — near-identical regardless of hit/miss ratio. The sheet-read cost item 1 targeted was never the dominant cost in that ~17-19s window; something else in the function (or the request round-trip itself) is untouched by the fix.
 

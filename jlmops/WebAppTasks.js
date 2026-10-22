@@ -531,7 +531,7 @@ function WebAppTasks_getStats() {
  * Replaces the prior pattern of firing N parallel WebAppTasks_deleteTask calls,
  * which suffered a row-index race: parallel readers computed stale indices
  * against each other's deletes, causing "Task not found" false positives and
- * wrong-row deletes (CONTENT_LIBRARY_PLAN unrelated — see .claude/bugs.md
+ * wrong-row deletes (CONTENT_LIBRARY_PLAN unrelated — see plans/BUGS.md
  * 2026-05-15 Admin Projects task delete entry).
  *
  * Algorithm: read sheet once → build taskId-to-rowIndex map → sort target

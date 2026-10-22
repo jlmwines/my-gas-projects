@@ -67,7 +67,7 @@ Reuse existing theme patterns rather than building from scratch:
 
 ## Deploy incident along the way
 
-The first deploy attempt (old `FtpWebRequest`-based `deploy-theme.ps1`) truncated 6 live theme files to 0 bytes mid-transfer, breaking the live site. Restored from a SiteGround backup, confirmed clean, then `deploy-theme.ps1` was hardened (upload → byte-verify → atomic rename, never writes the live filename directly) and its transport switched from .NET's `FtpWebRequest` to `curl` (root cause never conclusively identified — script/credentials unchanged for weeks, `FtpWebRequest` failed consistently against SiteGround while `curl` succeeded immediately). Full incident: `.claude/session-log.md` 2026-08-20, `.claude/bugs.md` (web, resolved).
+The first deploy attempt (old `FtpWebRequest`-based `deploy-theme.ps1`) truncated 6 live theme files to 0 bytes mid-transfer, breaking the live site. Restored from a SiteGround backup, confirmed clean, then `deploy-theme.ps1` was hardened (upload → byte-verify → atomic rename, never writes the live filename directly) and its transport switched from .NET's `FtpWebRequest` to `curl` (root cause never conclusively identified — script/credentials unchanged for weeks, `FtpWebRequest` failed consistently against SiteGround while `curl` succeeded immediately). Full incident: `.claude/session-log.md` 2026-08-20, `plans/BUGS.md` (web, resolved).
 
 ## Status
 

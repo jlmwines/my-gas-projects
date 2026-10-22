@@ -17,8 +17,6 @@ const CLAUDE_DIR_SUFFIX = 'jlmwines/.claude';
 const ALLOWED_FILES = new Set([
   'CLAUDE.md',
   'session-log.md',
-  'bugs.md',
-  'wishlist.md',
   'last-cleanup.md',
   'settings.json',
   'settings.local.json',

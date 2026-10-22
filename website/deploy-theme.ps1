@@ -23,7 +23,7 @@
 # script and credentials unchanged for weeks, so likely a server-side
 # change at SiteGround) truncated functions.php/style.css/main.css/
 # main.js to 0 bytes live, breaking the site; see .claude/session-log.md
-# 2026-08-20 and .claude/bugs.md.
+# 2026-08-20 and plans/BUGS.md.
 # ═══════════════════════════════════════════════════════════════════
 
 param(
@@ -58,7 +58,7 @@ foreach ($k in 'host','port','username','password') {
 # against SiteGround — script/credentials unchanged for weeks, so most
 # likely a server-side change at SiteGround; curl's FTPS implementation
 # connects and transfers cleanly against the same account. See
-# .claude/session-log.md 2026-08-20 and .claude/bugs.md.
+# .claude/session-log.md 2026-08-20 and plans/BUGS.md.
 if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
     Write-Host "Error: curl.exe not found on PATH"; exit 1
 }

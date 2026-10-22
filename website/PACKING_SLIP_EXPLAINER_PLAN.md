@@ -88,7 +88,7 @@ Nearly the insert itself, with a short frame: your order has arrived, look for t
 
 ## FAQ entry
 
-A new section headed **"What's in the Box"** (when your order arrives, and after); long answer points to the blog post, short mention of the seasonal examples. A single task, no chain or email, added once the post exists. (The full FAQ launch is separate, with its own chain and email: tracked in `.claude/wishlist.md`.)
+A new section headed **"What's in the Box"** (when your order arrives, and after); long answer points to the blog post, short mention of the seasonal examples. A single task, no chain or email, added once the post exists. (The full FAQ launch is separate, with its own chain and email: tracked in `plans/WISHLIST.md`.)
 
 ## Open points
 

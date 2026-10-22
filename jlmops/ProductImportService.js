@@ -1097,7 +1097,7 @@ const ProductImportService = (function() {
     // string default) and just relays success/failure to the caller. Moved
     // outside the try/catch (2026-08-21) so this relay throw can no longer be
     // caught by this function's own catch block and overwrite the specific
-    // message with this generic one — see .claude/bugs.md.
+    // message with this generic one — see plans/BUGS.md.
     const statusApplied = _updateJobStatus(executionContext, finalJobStatus);
 
     if (finalJobStatus === 'COMPLETED') {

@@ -7,9 +7,9 @@
 JLMops is business-critical (product sync, order flow, packing, CRM, content library) and currently under-protected and under-monitored:
 
 - Disaster recovery is one sentence in `ARCHITECTURE.md` §4.4: "manual backup and restore of Sheets." No documented procedure, no scheduled snapshots, no recovery drill on record.
-- Drift detection is broken (`validateDeployment` false-positives daily, four orphan deployments live in the deployments list, see `.claude/bugs.md` 2026-05-27).
+- Drift detection is broken (`validateDeployment` false-positives daily, four orphan deployments live in the deployments list, see `plans/BUGS.md` 2026-05-27).
 - Alerting fires per ERROR but there is no trend view, capacity telemetry, integration heartbeat, or aggregate-consistency check on schedule.
-- Tracking discipline has decayed: 7 items in the 2026-05-28 session alone shipped without their `.claude/bugs.md` / STATUS entries reflecting reality. Real state and recorded state drift apart.
+- Tracking discipline has decayed: 7 items in the 2026-05-28 session alone shipped without their `plans/BUGS.md` / STATUS entries reflecting reality. Real state and recorded state drift apart.
 
 This plan defines the path from ad-hoc resilience to a documented, measured posture that survives single-person bandwidth.
 
@@ -21,7 +21,7 @@ Two artifacts to build and maintain:
 
 **(1) Detection register.** One catalog of every system invariant: the invariant, its check function (or "NONE — gap"), severity, whether it's wired to `NotificationService.reportFailure`, and whether it reaches the status export / dashboard. A gap = any invariant with no check, or a check not wired to communication. Recurring invariant *classes* to seed it:
 - **Archiving actually happens** — every high-volume master that should archive is archiving (not silently stalled); newly-added high-volume data gets archive handling.
-- **Master ∪ archive in analysis** — every analytical/aggregate read over a master also reads its archive. This is the exact root cause of the write-verify bug (contact aggregates read `WebOrdM` but not `WebOrdM_Archive`, `.claude/bugs.md` 2026-05-28). Treat as a class — audit every aggregator, not one site.
+- **Master ∪ archive in analysis** — every analytical/aggregate read over a master also reads its archive. This is the exact root cause of the write-verify bug (contact aggregates read `WebOrdM` but not `WebOrdM_Archive`, `plans/BUGS.md` 2026-05-28). Treat as a class — audit every aggregator, not one site.
 - **Referential integrity / orphans** — every FK edge has no danglers: SKU across `WebProdM`/`WebProdS_EN`/`WebDetM`/`WebDetS`/`WebXltM`/`SysProductAudit`/`SysTasks`/`CmxProdM` (Fix Orphan SKU territory; `webProductReassign` latent gap); `SysTasks.st_ProjectId → SysProjects` (the PROJ-CONTENT rename can orphan tasks); `task.st_LinkedEntityId → entity`; contact↔order (email); bundle slot→product; campaign links (`spro_CampaignId`, `scm_MarketingCampaignId`).
 - **Aggregate reconciliation** — stored aggregates match their source within tolerance (generalize the CCP-3 write-verify pattern; identify which other aggregates need a reconciliation twin).
 - **Liveness** — every scheduled check/trigger is actually running; a detector that silently stopped is itself an undetected gap (ties to Tier 3.1 heartbeats).
@@ -60,7 +60,7 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 
 ### 3.1 Data store
 
-**In place.** Three workbooks split for performance (`ARCHITECTURE.md` §2.5.2). Schema validation runs in daily housekeeping Phase 2. `rebuildSysConfigFromSource()` is wrapped in snapshot + restore (verified at `SetupConfig.js:19-109`; `.claude/bugs.md` 2026-05-12) so runtime-mutable rows survive rebuilds.
+**In place.** Three workbooks split for performance (`ARCHITECTURE.md` §2.5.2). Schema validation runs in daily housekeeping Phase 2. `rebuildSysConfigFromSource()` is wrapped in snapshot + restore (verified at `SetupConfig.js:19-109`; `plans/BUGS.md` 2026-05-12) so runtime-mutable rows survive rebuilds.
 
 **Fails when.** Accidental sheet edit, malformed write, schema drift, account suspension or lock, accidental sheet deletion, malicious actor.
 
@@ -124,7 +124,7 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 - ✓ **CLOSED (3.1, 2026-06-03)** — Integrations heartbeat card on the admin dashboard shows last-successful-pull per source (Woo orders/products, Mailchimp subscribers/campaigns) with per-source staleness thresholds. **Comax heartbeat still omitted** (no config key; lives in SysJobQueue COMPLETED rows) — small 3.1 follow-up.
 - ✓ **CLOSED (3.1, 2026-06-03)** — `woo.api.orders_last_pull` dead key now written by `WooOrderPullService.pullOrders` on success + added to `RUNTIME_KEYS`.
 - No rate-limit usage visibility. **(still open)**
-- Mailchimp campaign sends are pulled at aggregate level only; per-recipient activity log writes are missing (`.claude/bugs.md` 2026-05-28). **(still open — Tier 3.3 not built)**
+- Mailchimp campaign sends are pulled at aggregate level only; per-recipient activity log writes are missing (`plans/BUGS.md` 2026-05-28). **(still open — Tier 3.3 not built)**
 
 ### 3.5 Observability
 
@@ -271,7 +271,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 - `[spike]` resolve mid-session via a small investigation (a 10-line test, a grep)
 - `[defer]` known unknown that does not block this session; document and move on
 
-**Session opening discipline.** Every session begins by reading: this audit doc (current section + cross-cuts), `.claude/bugs.md` for related entries, last 1-2 entries of `.claude/session-log.md` for continuity, and per the portfolio kernel at `projects/.claude/CLAUDE.md`. Commit small, push then deploy as separate change-points (memory `feedback_clasp_push_not_deploy`).
+**Session opening discipline.** Every session begins by reading: this audit doc (current section + cross-cuts), `plans/BUGS.md` for related entries, last 1-2 entries of `.claude/session-log.md` for continuity, and per the portfolio kernel at `projects/.claude/CLAUDE.md`. Commit small, push then deploy as separate change-points (memory `feedback_clasp_push_not_deploy`).
 
 **CCP audit.** Before declaring a session done, walk back through the CCPs the session cites and confirm each was actually applied in the code change. Skipping leads to half-pattern code that's harder to maintain later. Single sentence per CCP is enough.
 

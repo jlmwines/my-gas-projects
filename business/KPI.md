@@ -106,7 +106,7 @@ Each KPI below maps to one of those three.
   - Both are **multi-tab** (Report + Configuration), so sessions/Drive MCP can NOT read them usefully — **only OPS (GAS) reads them and flattens KPIs into the shared one-tab export (`jlmops-status.md` KPI block) that sessions consume.** Sessions never open these source workbooks directly, and don't verify them — that's OPS's job (or a human eyeball in the sheet UI).
 
 ### Remaining sub-item
-KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign") still depends on per-recipient activity writes that don't exist yet — see `.claude/bugs.md` 2026-05-28. Doesn't block anything above; KPI #3's coupon-based conversion+AOV numbers and KPI #5 (newsletter engagement) are both already live without it. Data path → `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`).
+KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign") still depends on per-recipient activity writes that don't exist yet — see `plans/BUGS.md` 2026-05-28. Doesn't block anything above; KPI #3's coupon-based conversion+AOV numbers and KPI #5 (newsletter engagement) are both already live without it. Data path → `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`).
 
 ---
 

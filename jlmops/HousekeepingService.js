@@ -496,7 +496,7 @@ function HousekeepingService() {
    * the combined sheets in that workbook grew large enough, with SysLog's own
    * ~1,570 entries/day as the active driver — silently failing every night
    * (caught internally, so no failure surfaced) and leaving SysLog to grow
-   * unbounded. See `.claude/bugs.md` / `.claude/session-log.md` 2026-08-21.
+   * unbounded. See `plans/BUGS.md` / `.claude/session-log.md` 2026-08-21.
    *
    * Assumes SysLog rows are in chronological append order (true as long as
    * LoggerService._log's `appendRow` is the only writer) — deletes the
@@ -788,7 +788,7 @@ function HousekeepingService() {
       { name: 'pullCoupons', fn: () => CouponService.pullFromApi() },
       // Safety net: with pullCoupons succeeding, coupons_last_update stays fresh and this
       // stays quiet. Left in place in case the pull ever fails silently rather than throwing
-      // (the exact housekeeping-failure-detection gap flagged in .claude/bugs.md 2026-08-21).
+      // (the exact housekeeping-failure-detection gap flagged in plans/BUGS.md 2026-08-21).
       { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
       { name: 'recomputeKpiSummary', fn: () => { KPISummaryService.recomputeCurrent(); KPISummaryService.maybeCloseMonth(); } },

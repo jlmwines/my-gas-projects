@@ -667,7 +667,7 @@ This section defines the sheets used for customer relationship management, conta
 *   **Prefix:** `sk_`
 *   **Primary Key:** `sk_Period`
 *   **Columns:** `sk_Period`, `sk_AsOfTimestamp`, `sk_NewCustomersEN`/`HE`/`Total`, `sk_FirstOrderConvRate`, `sk_FirstOrderAOV`, `sk_Return90Rate`, `sk_TotalCoreCustomers`, `sk_Subscribers`, `sk_SubscriberGrowthMoM` (only populated by `closeMonth()`, always blank on the `current` row), `sk_CampaignsSent`, `sk_AvgOpenRate`, `sk_AvgClickRate`, `sk_Notes`.
-*   **Known gotcha:** a plain `"YYYY-MM"` string written to `sk_Period` can get silently auto-converted to a Date by Sheets; readers must normalize (`instanceof Date` → reformat) rather than assume the stored type. `_upsertRow`'s own dedup match has this same unfixed bug — see `.claude/bugs.md` 2026-07-03.
+*   **Known gotcha:** a plain `"YYYY-MM"` string written to `sk_Period` can get silently auto-converted to a Date by Sheets; readers must normalize (`instanceof Date` → reformat) rather than assume the stored type. `_upsertRow`'s own dedup match has this same unfixed bug — see `plans/BUGS.md` 2026-07-03.
 *   **Not covered here:** the two GA4-source KPIs (#1 organic-traffic EN/HE split, #6 organic-source engagement) don't live in this sheet — both are read live from a GA4 Sheets add-on report (`StatusReportService._readGa4Audience`) and folded into `jlmops-status.md`'s Traffic block directly.
 *   Full engineering spec (build sequence, config, worked example) archived at `jlmops/plans/_archive/KPI_SUMMARY_TAB.md` — implementation complete, nothing pending.
 

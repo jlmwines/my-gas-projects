@@ -29,7 +29,7 @@ Restructure AdminBundlesView so the workflow answers "which bundle do I touch to
 4. Read `jlmops/AdminBundlesView.html` end-to-end (~1201 lines). Note the JS structure: `init()` → `loadCategories / loadStats / loadBundleList / loadHealthAlerts` parallel fan-out at `:186-191`.
 5. Read `jlmops/CLAUDE.md:80-95` (modal-overlay pattern).
 6. Read `LibraryView.html:267-285` (filter chips precedent for the chip atom shape).
-7. Open `.claude/bugs.md` — confirm no open bug on AdminBundlesView that would conflict.
+7. Open `plans/BUGS.md` — confirm no open bug on AdminBundlesView that would conflict.
 
 ## Stage A — Convert Slot Edit Modal from Bootstrap to modal-overlay
 

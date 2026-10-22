@@ -50,7 +50,7 @@ New `ProductService.correctProductName(sku, newNameEn, newNameHe)`, wrapped by `
 
 ## Related (out of scope, logged separately)
 
-The product-search path used elsewhere in SKU Management (`searchWebProducts` / `lookupProductBySku`) reads dead `wpm_WebIdEn`/`wpm_WebIdHe` columns off WebProdM and returns blank web IDs (the real ids are `wpm_ID` / WebXltM `wxm_ID`). This tool sidesteps it entirely by keying on `wpm_SKU`. The dead-column bug is tracked in `.claude/bugs.md` (2026-06-16, Product Replacement) for separate examination — not part of this tool's work.
+The product-search path used elsewhere in SKU Management (`searchWebProducts` / `lookupProductBySku`) reads dead `wpm_WebIdEn`/`wpm_WebIdHe` columns off WebProdM and returns blank web IDs (the real ids are `wpm_ID` / WebXltM `wxm_ID`). This tool sidesteps it entirely by keying on `wpm_SKU`. The dead-column bug is tracked in `plans/BUGS.md` (2026-06-16, Product Replacement) for separate examination — not part of this tool's work.
 
 ## Out of scope
 

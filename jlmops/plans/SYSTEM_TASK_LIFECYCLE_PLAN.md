@@ -4,7 +4,7 @@
 
 ## Problem
 
-System-created failure tasks (`task.system.failure`, raised via `NotificationService.reportFailure`) are created but **never closed**. Once raised, a task persists indefinitely even after its underlying condition clears, and there is **no user-facing way to dismiss it**. The manager/admin sees a stale "System Failure: …" task forever. First surfaced concretely by `reconciliation.sys_contacts.write_verify` (persisted after the contacts rebuild succeeded) and previously by `task.system.deployment_drift` (recurring, un-closable — `.claude/bugs.md`).
+System-created failure tasks (`task.system.failure`, raised via `NotificationService.reportFailure`) are created but **never closed**. Once raised, a task persists indefinitely even after its underlying condition clears, and there is **no user-facing way to dismiss it**. The manager/admin sees a stale "System Failure: …" task forever. First surfaced concretely by `reconciliation.sys_contacts.write_verify` (persisted after the contacts rebuild succeeded) and previously by `task.system.deployment_drift` (recurring, un-closable — `plans/BUGS.md`).
 
 ## Current state (as of 2026-06-02)
 
@@ -38,7 +38,7 @@ Then wire `resolveFailure` into the success branches of the remaining live repor
 For failures with no recurring success event, add a dashboard dismiss action.
 - **Backend:** a WebApp endpoint to complete a `task.system.*` task by id (reuse `TaskService.completeTask`); guard it to system task types so it can't be used to silently close operational work. Stamp `resolvedBy: 'manual'` + the acting user in notes.
 - **UI:** a "Dismiss" / "Resolve" button on system-failure rows (admin dashboard task card and/or `AdminTasksView`). Currently these rows have no close affordance.
-- Closes the `deployment_drift` "can't be UI-closed" complaint in `.claude/bugs.md`.
+- Closes the `deployment_drift` "can't be UI-closed" complaint in `plans/BUGS.md`.
 
 ## Open considerations
 
@@ -49,4 +49,4 @@ For failures with no recurring success event, add a dashboard dismiss action.
 ## Relationships
 
 - `RELIABILITY_AUDIT.md` — CCP-1/CCP-3 reporting pattern (Phase 1 extends it with the clear-path twin); Tier 3.4 scheduled aggregate-consistency check shares the reconciler + tolerance question.
-- `.claude/bugs.md` — `deployment_drift` (no UI close path) resolved by Phase 2; `reconciliation.sys_contacts.write_verify` root cause + this session's targeted slice.
+- `plans/BUGS.md` — `deployment_drift` (no UI close path) resolved by Phase 2; `reconciliation.sys_contacts.write_verify` root cause + this session's targeted slice.
