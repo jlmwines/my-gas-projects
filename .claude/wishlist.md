@@ -8,12 +8,9 @@ Projects: jlmops, web, marketing, content
 ## jlmops
 
 - [ ] 2025-12-14: improve and standardize confirmation messages
-- [ ] 2025-12-14: show task creation date in product detail update review and export
 - [ ] 2025-12-22: refactor config JSON files - remove empty padding, consolidate repetitive entries
 - [ ] 2025-12-29: Plan transition from current region system (regions overhaul — see CONTENT_LIBRARY_PLAN §14)
 - [ ] 2025-12-29: Texts lookup is random and probably inefficient - need to examine
-- [ ] URL shortener integration for campaign tracking
-- [ ] 2026-05-08: Newsletter UTM/QR helper — admin form takes target URL + campaign code (e.g., `may26-art`), returns canonical UTM-tagged URL, registers a short redirect (`jlmwines.com/n/<code>`), generates a print-ready QR (SVG, error-correction Q, optimized for ~3cm print) downloadable for layout. Pairs with URL shortener item above.
 - [ ] Smarter reprint logic: Track first immutable print separately
 - [ ] Remove one-time backfill code when CRM is stable
 - [ ] 2026-06-08: **Bundles — surface missed profit opportunities.** Flag high-profit wines (`wpm_ProfitRate`) that aren't used in ANY bundle (cross-bundle `usage` = 0, the Stage 6 index) so the operator can pull them into a bundle. The signals already exist (profit from Stage 2, usage from Stage 6); this is a read-only "high-margin wines not in any bundle" report/card on AdminBundles. Capstone to the Stage 7 generator.
@@ -21,10 +18,8 @@ Projects: jlmops, web, marketing, content
 - [ ] Mailchimp export from CRM
 - [ ] Recommendation engine
 - [ ] AI/Claude integration
-- [ ] 2026-01-23: add name of comax order export file to notifications same as done with web inventory update csv
 - [ ] 2026-01-29: Back button support - hash routing should support browser back/forward navigation
 - [ ] 2026-05-15: Single-product ops view: Comax + Woo state, last updates, image and live-page link on one screen, for triage. No plan doc yet.
-- [ ] 2026-05-15: **Replace Woo App / Jetpack with jlmops order view + status update.** Jetpack currently runs on the website solely to enable the WooCommerce mobile app, which the manager uses to view orders and change status. If jlmops gets a mobile-friendly order view with status-update capability, Jetpack can be removed (reduces plugin surface + performance overhead). Not blocking; the Woo App works today.
 - [ ] 2026-05-15: **Outreach to unpaid orders / abandoned carts / consummated-but-not-paid.** Identify customers who intended to buy but didn't complete payment (pending orders, on-hold, abandoned carts if trackable). High-intent contacts worth reaching. Check what data we already have (WebOrdM has pending/on-hold; abandoned cart data may require a Woo API extension or plugin). Once trackable, ship as a new topic on `task.contact.outreach` so the manager surfaces and contacts them through the same Action Panel flow. (Broader scope than the @110-@111 pending-payment auto-followup which only covers `pending` Woo status.)
 - [ ] 2026-06-10: **Back button in the view title bar.** An in-UI back control in each view's title bar to return to the prior view / dashboard. Distinct from but pairs with the 2026-01-29 browser back/forward hash-routing item above.
 - [ ] 2026-05-15: **Decouple Comax export + verify from sync (structural rethink).** Current sync round-trips through Comax: exports orders to reduce Comax inventory, waits for user to import the resulting Comax product file as baseline qty, then adjusts for on-hold orders not yet sent. The Comax export holds up the sync; Comax API access is too costly to use as a live check. Idea: accept the most recent Comax product file as baseline (whatever was last imported), adjust qty for ALL orders not yet exported to Comax (any status), and pull the export-to-Comax + verify steps out of the sync state machine. Net effect: sync no longer blocks on the Comax round-trip; Comax sync runs on its own cadence. Park as a structural rethink to revisit when sync architecture next opens up.
