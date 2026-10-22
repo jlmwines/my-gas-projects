@@ -474,7 +474,8 @@ Dead `woo.api.orders_last_pull` key now stamped by `WooOrderPullService.pullOrde
 1. New step: for each campaign sent in the last ~14 days, fetch `/reports/{id}/sent-to` (`count=1000`; ~350 recipients per campaign = one call, page only if `total_items` exceeds it).
 2. Write one row per recipient, same shape and id as the backfill so the two never duplicate: `sca_ActivityId = campaign.received.<campaignId>.<email>`, `sca_Type: 'campaign.received'`, timestamp = send date, `sca_CreatedBy: 'mailchimp'`. Skip ids already present. Batch the writes (one range write per campaign), not one `createActivity` per row.
 3. Schedule: nightly housekeeping runs the step only when the Israel day is Wednesday (day-gate pattern already used in `HousekeepingService`). The 14-day lookback means a missed Wednesday is caught the next week. No cursor or new SysConfig key needed; idempotency comes from the activity ids.
-4. The manual inference backfill stays for history before this ships; once live, stop using it for new campaigns.
+4. **On demand (user, 2026-10-22):** the existing Admin Contacts **⟳ MC** button (`WebAppContacts_refreshMailchimp`) also runs the recipient step after subscribers + campaigns, and its result message adds the recipient-row count. An Admin Dev button calls the same `WebAppContacts_refreshMailchimp` — identical behavior, second entry point, no separate logic.
+5. The manual inference backfill stays for history before this ships; once live, stop using it for new campaigns.
 
 **CCPs.** CCP-1 (reportFailure on pull error), CCP-2 (sessionId). No new OAuth scope (Mailchimp calls already authorized).
 
