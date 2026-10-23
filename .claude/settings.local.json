@@ -130,12 +130,9 @@
       "Bash(echo \"exit: $?\")",
       "Bash(echo \"exit code: $?\")",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(php *)"
-    ],
-    "ask": [
-      "Edit(//c/Users/B/projects/jlmwines/jlmops/*.js)",
-      "Edit(//c/Users/B/projects/jlmwines/jlmops/*.html)",
-      "Edit(//c/Users/B/projects/jlmwines/jlmops/config/**)"
+      "Bash(php *)",
+      "Read(//c/Users/B/.local/bin/**)",
+      "Read(//c/Users/B/.local/share/claude/versions/**)"
     ],
     "deny": [
       "Bash(git -C:*)",
@@ -143,6 +140,11 @@
       "Bash(git push --force:*)",
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)"
+    ],
+    "ask": [
+      "Edit(//c/Users/B/projects/jlmwines/jlmops/*.js)",
+      "Edit(//c/Users/B/projects/jlmwines/jlmops/*.html)",
+      "Edit(//c/Users/B/projects/jlmwines/jlmops/config/**)"
     ]
   },
   "outputStyle": "default",
