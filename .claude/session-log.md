@@ -12,7 +12,9 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - New plan `jlmops/plans/TARGETED_COUPONS_PLAN.md` (not started). Open decision: revive AdminContactsView or build a new admin Audiences & Offers view.
 - Found: `SysCouponUsage` is never written and `coupon.used` only comes from the manual backfill (plan build step 1).
 - User deleted the 60 dup SysCampaigns rows (bug closed) and confirmed back navigation works on phone.
-- Recipients for Tuesday's campaign were captured (user). Nothing pushed.
+- Recipients for Tuesday's campaign were captured (user).
+- Coastal Plain: body locked; EN extracts drafted and delivered as new Library Doc version 26-10-22-19-50 (user attached). Next: manager Review Extracts, then Hebrew.
+- @593: desktop view 10px top padding. Pushed.
 
 ## 2026-10-22 — PHP2Shell question, /review-claude, cleanup
 
