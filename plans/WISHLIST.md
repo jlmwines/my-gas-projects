@@ -23,6 +23,7 @@ Projects: jlmops, web, marketing, content
 ## web
 
 - [ ] 2025-12-29: Risk that redundant text is affecting SEO - research enriched text in products
+- [ ] 2026-10-23 (low): Remove or reverse `_invoice_note` product meta, left over from a failed attempt to get packing slip data into standard Woo output (WPML Copy field).
 - [ ] 2026-01-22: Examine website cache and other speed-related settings to optimize
 - [ ] 2026-05-15: **Nav menu structure + mobile review** (consolidates 2026-04-29 + 2026-05-07 notes). Audit desktop layout, mobile drawer hierarchy, deep-link targets (e.g., `#footer-contact`). What customers actually need vs. what the menu currently has. Check mobile drawer appearance against design system. Single audit pass.
 

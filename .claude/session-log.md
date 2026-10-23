@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-23 — HE product description fix
+
+- Via WC API: "גלו וגלו" → "חקרו וגלו יינות בביטחון" on 82 HE products (description field); re-scan 0. Script in session scratchpad only.
+- Side effect: WPML re-copied `_invoice_note`/`total_sales` from EN on 14 HE products (Copy fields) — harmless. `_invoice_note` removal added to wishlist.
+- User owns the jlmops side (descriptions, lookup texts, kashrut).
+
 ## 2026-10-22 — Typo audits, coupons plan, @592 layout
 
 - @592: desktop views fill the area beside the sidebar; Dev backfill button removed.

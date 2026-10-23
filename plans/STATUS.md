@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-10-22 |
+| Last Active | 2026-10-23 |
 | Revenue | Steady |
 | Deploy Version | jlmops @593 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-22 · theme 2026-10-21 (Israel-only checkout guard, no version bump) |
