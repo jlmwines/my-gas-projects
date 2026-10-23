@@ -2157,6 +2157,7 @@ function HousekeepingService() {
 
       const jobData = jobQueueSheet.getDataRange().getValues();
       if (jobData.length <= 1) {
+        NotificationService.resolveFailure('queue.failed_job_sweep', sessionId);
         return { failedJobCount: 0, oldestAgeDays: 0, newestAgeDays: 0, severity: null };
       }
 
@@ -2187,6 +2188,7 @@ function HousekeepingService() {
 
       const failedJobCount = failed.length;
       if (failedJobCount === 0) {
+        NotificationService.resolveFailure('queue.failed_job_sweep', sessionId);
         return { failedJobCount: 0, oldestAgeDays: 0, newestAgeDays: 0, severity: null };
       }
 
@@ -2208,6 +2210,9 @@ function HousekeepingService() {
           (anyZombie ? `; zombie job_type still PROCESSING: ${zombieJobTypes.join(', ')}` : '');
         NotificationService.reportFailure('queue.failed_job_sweep', msg, severity,
           { failedJobCount: failedJobCount, oldestAgeDays: oldestAgeDays, zombieJobTypes: zombieJobTypes }, sessionId);
+      } else {
+        // Condition cleared: auto-close any open sweep alert so it doesn't persist.
+        NotificationService.resolveFailure('queue.failed_job_sweep', sessionId);
       }
 
       logger.info('HousekeepingService', functionName,

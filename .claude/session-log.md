@@ -9,6 +9,8 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Via WC API: "גלו וגלו" → "חקרו וגלו יינות בביטחון" on 82 HE products (description field); re-scan 0. Script in session scratchpad only.
 - Side effect: WPML re-copied `_invoice_note`/`total_sales` from EN on 14 HE products (Copy fields) — harmless. `_invoice_note` removal added to wishlist.
 - User owns the jlmops side (descriptions, lookup texts, kashrut).
+- Failed-job alert: @586 purge fix confirmed working (first effective run 10/23, purged 77). Remaining 10/14 FAILED inventory push row deleted by user.
+- @594: `checkFailedJobs` now calls `resolveFailure` when clear, so the alert self-closes. Verify: open alert task closes after 10/24 02:24 housekeeping.
 
 ## 2026-10-22 — Typo audits, coupons plan, @592 layout
 
