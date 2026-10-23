@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-23 — Alert auto-resolve coverage check
+
+- Confirmed @594 auto-closes only the failed-job sweep alert; logged BUGS.md entry for the other system-failure contexts that never self-resolve.
+- `WebApp.js` `VERSION.commit` still carries the PublishingView Deploy 5 text despite @594; check whether deploy.ps1 updates it.
+- Next: verify sweep alert closes after 10/24 housekeeping; then decide which other contexts get `resolveFailure`.
+
 ## 2026-10-23 — HE product description fix
 
 - Via WC API: "גלו וגלו" → "חקרו וגלו יינות בביטחון" on 82 HE products (description field); re-scan 0. Script in session scratchpad only.
