@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-23. jlmops @594 live (failed-job alert self-closes, desktop views fill the content area, real Mailchimp recipients per contact, back navigation); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits; SiteGround PHP patched against PHP2Shell.
+**Updated:** 2026-10-26. jlmops @594 live, theme v1.2.32; Hebrew site typo sweep complete (products, WebDetM names/descriptions, posts, pages); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits.
 
 ## At a glance
 
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-10-23 |
+| Last Active | 2026-10-26 |
 | Revenue | Steady |
 | Deploy Version | jlmops @594 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-23 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
@@ -43,9 +43,8 @@ The live "what now" — daily review reads these first.
 9. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
 10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager).
 11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.
-12. **Hebrew site typos — only product rows remain** (manager-reviewed Drive sheet `website-typos-he-2026-10-22`, id `1JHtOaiu46jZx9apLn2M0zd1X9EIlDOoTfV7liJ8_KDI`). Blog posts, pages, gifts page, La Foret Blanche, Memorias and the low-acidity line (66 products) are done. Left: grape spellings in description prose and titles (~45 prose spots, 11 titles) plus ארטיזנל. The `SysLkp_Grapes` lookup is internally consistent and feeds the generated grape line correctly, but four manager picks contradict it (Shiraz, Petite Sirah, Colombard, Bobal). Waiting on the user confirming the lookup spellings with the manager; then WebDetM titles, then a session fixes the site prose.
-13. **Valid business review process** — `/review-deep` trend reads are invalid (no YoY on seasonal data, snapshot inputs, short summer-only history, stale/broken KPIs interpreted). Deficiencies and candidate requirements → `plans/REVIEW_PROCESS_PLAN.md`; design not started.
-14. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
+12. **Valid business review process** — `/review-deep` trend reads are invalid (no YoY on seasonal data, snapshot inputs, short summer-only history, stale/broken KPIs interpreted). Deficiencies and candidate requirements → `plans/REVIEW_PROCESS_PLAN.md`; design not started.
+13. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
 
 ## Active Plans
 
@@ -57,7 +56,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — refresh bug open (doesn't refresh after "Apply Pending Updates"/"Create Content Tasks", root cause not found, needs a live repro). Admin date edit is live but its Save hasn't been used yet; first real re-date doubles as the repro.
 - **Woo API push** (`jlmops/plans/WOO_API_PUSH_PLAN.md`) — live; new-product and existing-product push paths confirmed working. Open: the `date_created` ("Published" date from the originating task) not yet smoke-tested live; RankMath meta push deferred (manual for now).
-- **Vintage-mismatch snapshot fix** (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — live; vintage-mismatch tasks read live data instead of a creation-time snapshot. Not yet smoke-tested (needs a real vintage change; Next Action 12).
+- **Vintage-mismatch snapshot fix** (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — live; vintage-mismatch tasks read live data instead of a creation-time snapshot. Not yet smoke-tested (needs a real vintage change; Next Action 13).
 
 ## Current State
 

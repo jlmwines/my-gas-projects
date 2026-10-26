@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-25/26 — Hebrew typo sweep, HE gifts page fix
+
+- Shipped: HE gifts page empty sections fixed (theme, live); manager-approved HE typo fixes on 5 posts + 2 pages; low-acidity line on 66 products; grape spellings settled (lookup authority; Colombard→קולומבר, Bobal→בובאל) and applied to live names, descriptions and the Evyatar post.
+- WebDetM `wdm_NameHe` reconciled with site via full-sheet CSV import (54 names; 39 site-edited names had never reached WebDetM). Live HE names and WebDetM now match.
+- Gotchas: Sheets CSV import reformats `wdm_ABV` display (value unchanged) and trims cell whitespace; Drive doc for the Evyatar HE post may still say קולומבאר.
+- Alpha Omega Chenin had a wrong `wdm_SKU` (user fixed); no validation caught it, logged in BUGS.md. Review-process redesign (Next Action 12) not started.
+
 ## 2026-10-23 — Alert auto-resolve coverage check
 
 - Confirmed @594 auto-closes only the failed-job sweep alert; logged BUGS.md entry for the other system-failure contexts that never self-resolve.
