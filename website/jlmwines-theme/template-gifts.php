@@ -38,13 +38,13 @@ $help_image_url = '/wp-content/uploads/2023/08/evyatar-cohen-jlmwines-1-1024x557
 
 // ─── Copy ──────────────────────────────────────────────────────────
 $hero_headline = $is_he
-    ? 'שלחו מתנות יין בארץ'
+    ? 'שליחת מתנות יין ברחבי הארץ'
     : 'Send Wine Gifts in Israel';
 $hero_body = $is_he
     ? 'שלחו מתנה של יין טוב (ואולי עוד) עם מכתב אישי לכל כתובת בישראל. הוסיפו לעגלה, תנו לנו את הכתובת עם פרטי המשלוח והוסיפו את המסר האישי. אנחנו נטפל בשאר!'
     : "Send a gift of wine or more with your personal message to any destination in Israel. Load your cart, fill in the shipping address, and add your personal message. We'll do the rest!";
 
-$cta_text = $is_he ? 'עיין בהכל' : 'See All';
+$cta_text = $is_he ? 'עיינו בהכל' : 'See All';
 
 $sections = [
     [
@@ -80,7 +80,7 @@ $sections = [
 ];
 
 // "Easy" block copy
-$easy_heading   = $is_he ? 'בקלות' : 'Easy';
+$easy_heading   = $is_he ? 'שלחו מתנה בקלות' : 'Easy';
 $easy_intro     = $is_he ? 'בזמן התשלום הזינו:' : 'During checkout enter:';
 $easy_bullets   = $is_he
     ? ['ההודעה האישית שלך.', 'כתובת למשלוח מתנה.', 'שם הנמען וטלפון מקומי.']
@@ -88,7 +88,7 @@ $easy_bullets   = $is_he
 
 // Help block copy
 $help_heading = $is_he ? 'אפשר לעזור?'                       : 'Need help?';
-$help_body    = $is_he ? 'נוכל לעזור בבחירת ושליחה מתנות.'    : 'We can help with choosing a gift, and sending it.';
+$help_body    = $is_he ? 'נוכל לעזור בבחירה ושליחה של מתנות.' : 'We can help with choosing a gift, and sending it.';
 $help_cta     = $is_he ? 'שאלו אותנו!'                        : 'Ask us!';
 $help_anchor  = $is_he ? 'footer-contact-he'                  : 'footer-contact';
 ?>
@@ -121,16 +121,19 @@ $help_anchor  = $is_he ? 'footer-contact-he'                  : 'footer-contact'
      * Inline closure so we can compose the page in groups separated
      * by full-width Easy / Help bands.
      */
-    $render_product_section = function ($s) use ($cta_text) {
-        $term    = get_term_by('slug', $s['category'], 'product_cat');
-        $cta_url = ($term && !is_wp_error($term)) ? get_term_link($term) : '';
+    $render_product_section = function ($s) use ($cta_text, $is_he) {
+        // WPML scopes HE queries to HE terms, whose slugs carry a -he suffix;
+        // the EN slug matches nothing there and the section renders empty.
+        $category = $is_he ? $s['category'] . '-he' : $s['category'];
+        $term     = get_term_by('slug', $category, 'product_cat');
+        $cta_url  = ($term && !is_wp_error($term)) ? get_term_link($term) : '';
         ?>
         <div id="<?php echo esc_attr($s['anchor']); ?>" class="page-gifts-section-anchor"></div>
         <?php
         if (function_exists('jlmwines_render_product_loop')) {
             jlmwines_render_product_loop([
                 'type'                 => 'category',
-                'category'             => $s['category'],
+                'category'             => $category,
                 'limit'                => 6,
                 'columns'              => 6,
                 'heading'              => $s['heading'],

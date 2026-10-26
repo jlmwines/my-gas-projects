@@ -19,7 +19,7 @@ One current-state line per business area. The umbrella has no single phase label
 | Last Active | 2026-10-23 |
 | Revenue | Steady |
 | Deploy Version | jlmops @594 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-10-23 · theme 2026-10-21 (Israel-only checkout guard, no version bump) |
+| Deploy Date | jlmops 2026-10-23 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -43,7 +43,9 @@ The live "what now" — daily review reads these first.
 9. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
 10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager).
 11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.
-12. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
+12. **Hebrew site typos — remaining 24 with the manager** (Drive sheet `website-typos-he-2026-10-22`, id `1JHtOaiu46jZx9apLn2M0zd1X9EIlDOoTfV7liJ8_KDI`): blog/page wording plus the "pick one" spelling decisions (Colombard, Grenache, Petite Sirah, etc.). Earlier rows fixed by the user. Track only.
+13. **Valid business review process** — `/review-deep` trend reads are invalid (no YoY on seasonal data, snapshot inputs, short summer-only history, stale/broken KPIs interpreted). Deficiencies and candidate requirements → `plans/REVIEW_PROCESS_PLAN.md`; design not started.
+14. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
 
 ## Active Plans
 
