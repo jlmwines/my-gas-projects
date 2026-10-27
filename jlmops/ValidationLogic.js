@@ -678,7 +678,23 @@ const ValidationLogic = (function() {
 function validateDatabaseSchemaFromUI() {
     try {
         const sessionId = 'UI_SchemaValidation_' + Date.now(); // Generate a simple session ID for UI calls
-        return ValidationLogic.validateDatabaseSchema(sessionId);
+        const result = ValidationLogic.validateDatabaseSchema(sessionId);
+        // Write the result into the health task so the dashboard's Schema Validation
+        // row reflects a manual re-run, not only the last housekeeping run.
+        try {
+            const healthTask = TaskService.findOpenTaskByType('task.system.health_status', '_SYSTEM');
+            if (healthTask) {
+                const notes = healthTask.notes ? JSON.parse(healthTask.notes) : {};
+                notes.last_housekeeping = notes.last_housekeeping || {};
+                notes.last_housekeeping.schema_status = result.status;
+                notes.last_housekeeping.schema_critical = (result.discrepancies || []).filter(d => d.severity === 'CRITICAL').length;
+                notes.last_housekeeping.schema_timestamp = new Date().toISOString();
+                TaskService.updateTaskNotes(healthTask.id, JSON.stringify(notes));
+            }
+        } catch (healthError) {
+            console.error('Could not record schema result on health task: ' + healthError.message);
+        }
+        return result;
     } catch (error) {
         console.error('Error validating database schema from UI: ' + error.message);
         return {

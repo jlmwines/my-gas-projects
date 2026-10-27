@@ -196,11 +196,13 @@ function _getSystemHealthData_v2(allTasks, allConfig) {
       housekeeping: {
         status: hkStatus,
         timestamp: hk.timestamp || null,
-        failures: hk.phase3_failures || null
+        failures: ((hk.phase1_failures || []).concat(hk.phase3_failures || [])).length
+          ? (hk.phase1_failures || []).concat(hk.phase3_failures || [])
+          : null
       },
       schemaValidation: {
         status: (hk.schema_status === 'OK' || hk.schema_status === 'PASSED') ? 'ok' : (hk.schema_critical > 0 ? 'error' : 'partial'),
-        timestamp: hk.timestamp || null,
+        timestamp: hk.schema_timestamp || hk.timestamp || null,
         critical: hk.schema_critical ?? 0
       },
       dataValidation: {

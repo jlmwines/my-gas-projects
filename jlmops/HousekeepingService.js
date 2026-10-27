@@ -831,7 +831,7 @@ function HousekeepingService() {
         status = allFailures.length > 0 ? 'failed' : 'partial';
       }
 
-      TaskService.upsertSingletonTask(
+      const healthTask = TaskService.upsertSingletonTask(
         'task.system.health_status',
         '_SYSTEM',
         'System Health',
@@ -845,6 +845,7 @@ function HousekeepingService() {
             validation_issues: validationResult ? validationResult.failureCount : -1,
             schema_status: schemaResult ? schemaResult.status : 'error',
             schema_critical: criticalSchemaIssues,
+            schema_timestamp: new Date().toISOString(),
             phase1_failures: phase1Failures.length > 0 ? phase1Failures : null,
             phase3_failures: phase3Failures.length > 0 ? phase3Failures : null,
             failed_job_count: failedJobsSummary ? failedJobsSummary.failedJobCount : null,
@@ -853,6 +854,13 @@ function HousekeepingService() {
           }
         }
       );
+      // The singleton keeps its creation-time start/due dates (due_pattern immediate), so
+      // task lists showed the first-ever run. Re-date it to this run. Health task only:
+      // the bundle singletons need their real due dates to go overdue.
+      if (healthTask && healthTask.id) {
+        const today = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'yyyy-MM-dd');
+        TaskService.updateTaskDates(healthTask.id, today, today);
+      }
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Could not update health task: ${e.message}`);
     }
