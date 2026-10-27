@@ -27,7 +27,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-07-16: "System Health Status" task's displayed date is frozen at original creation, not last-run.
 - [ ] 2026-07-16: Woo Orders heartbeat shows red every morning before ~08:00 IL — staleness threshold isn't business-hours-aware.
 - [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates"/"Create Content Tasks". `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
-- [ ] 2026-07-02: `ConfigService.loadConfig` drops the second (P03/P04) key-value pair for non-schema settings — worked around for `ga4_audience_report` only.
+- [ ] 2026-07-02: `ConfigService.loadConfig` reads only the first key-value pair of non-schema settings (P03-P10 dropped). `jlmops/plans/CONFIG_MULTI_PAIR_PARSE_PLAN.md`.
 - [ ] 2026-06-16: Product Replacement reads dead WebProdM columns (`wpm_WebIdEn`/`wpm_WebIdHe`) — not yet traced whether it breaks the reassign step.
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
