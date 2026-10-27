@@ -16,7 +16,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 - [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS skipped the first data row; row numbers off by one. Fixed @597, verify on next housekeeping run.
 - [ ] 2026-10-23: Stale failure alerts stay on Admin dash. Fixed @599; verify live, clean up old ones. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
-- [ ] 2026-10-18: Woo API calls intermittently get 2xx HTML instead of JSON (suspect SiteGround anti-bot). @580 logs it; see commit.
 - [ ] 2026-10-13: Welcome-outreach tasks fired for first-time gift purchasers. Fixed @597 (first order a gift = no welcome); verify on next real gift order.
 - [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`).
 - [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization.
@@ -38,6 +37,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 _One line each; full root-cause analysis lives in the git commit._
 
+- [x] 2026-10-18: Woo 2xx HTML instead of JSON: 1 hit in 7 days (SiteGround bot page), retry handled it. Closed; @580 logging stays. Ticket SG if frequent.
 - [x] 2026-06-16: Product Replacement read dead `wpm_WebIdEn/He` (blank web IDs, dead web-ID match). Fixed @600, lookup confirmed live 2026-10-27.
 - [x] 2026-10-27: WebDetM duplicate web ID / SKU mismatch went unflagged — KEY_UNIQUENESS + SKU-match rules @595, write-path guard @596, verified clean.
 - [x] 2026-10-22: `SysCampaigns` duplicated all-digit campaign id daily (61 rows) — fixed @591, extra rows deleted by user.
