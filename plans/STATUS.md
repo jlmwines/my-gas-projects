@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-27. jlmops @603 live (failure alerts auto-resolve; Product Replacement shows real web IDs; Correct Product Name confirms before saving; Woo Orders heartbeat business-hours aware; health panel dates/schema/failure list fixed; @597-@603 fixes await live confirmation); non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
+**Updated:** 2026-10-27. jlmops @603 live with a batch of bug fixes (@597-@603) awaiting live confirmation after tonight's housekeeping; non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
 
 ## At a glance
 

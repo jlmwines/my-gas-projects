@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-27 (3) — bug sweep @599-@603, push-posts fix, Woo non-JSON closed
+
+- Shipped: failure alerts auto-resolve on next success + 7-day quiet close (@599); Product Replacement real web IDs (@600, confirmed live); Correct Product Name confirm (@601); Woo Orders heartbeat business-hours aware via new `BusinessHours.js` (@602); health task re-dated, manual schema run updates dashboard, phase-1 failures listed (@603).
+- push-posts.js: category lists (region posts keep Regions + Wine Basics), basics manifest paths fixed. Woo non-JSON bug closed (1 hit/7 days, retry handled).
+- Parked: config multi-pair parse (`CONFIG_MULTI_PAIR_PARSE_PLAN.md`, needs in-depth planning). Held: failure-task linked-entity bug until @599 confirmed.
+- Next: confirm the 8 fixes awaiting verification (BUGS.md says what confirms each); failure-alert plan step 4 cleanup needs a fresh SysTasks export.
+- Noticed, undecided: each housekeeping run replaces the health task's notes, wiping urgentAlerts nightly.
+- FAQ: will be a page (not a post), linked from the nav menu, not the category strip.
+
 ## 2026-10-27 (2) — jlmops @597-@598 fixes, code-edit gate, non-wine description backfill
 
 - Shipped: audit first-row fix + no welcome for first-time gift buyers (@597); daily maintenance counts phase-1 steps returning false as failures, normal skips return 'skipped' (@598). All three await live confirmation (BUGS.md says what confirms each).
