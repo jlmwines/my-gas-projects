@@ -28,7 +28,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-07-16: Woo Orders heartbeat shows red every morning before ~08:00 IL — staleness threshold isn't business-hours-aware.
 - [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates"/"Create Content Tasks". `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
 - [ ] 2026-07-02: `ConfigService.loadConfig` reads only the first key-value pair of non-schema settings (P03-P10 dropped). `jlmops/plans/CONFIG_MULTI_PAIR_PARSE_PLAN.md`.
-- [ ] 2026-06-16: Product Replacement read dead `wpm_WebIdEn/He`: web IDs blank in UI, web-ID match dead (SKU path fine). Fixed @600; verify IDs show in Replace.
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
 - [ ] 2026-08-21: Daily maintenance phase 1 missed steps that catch and return false. Fixed @598 (normal skips return 'skipped'); verify Health task after next run.
@@ -39,6 +38,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 _One line each; full root-cause analysis lives in the git commit._
 
+- [x] 2026-06-16: Product Replacement read dead `wpm_WebIdEn/He` (blank web IDs, dead web-ID match). Fixed @600, lookup confirmed live 2026-10-27.
 - [x] 2026-10-27: WebDetM duplicate web ID / SKU mismatch went unflagged — KEY_UNIQUENESS + SKU-match rules @595, write-path guard @596, verified clean.
 - [x] 2026-10-22: `SysCampaigns` duplicated all-digit campaign id daily (61 rows) — fixed @591, extra rows deleted by user.
 - [x] 2026-10-12: Admin attach of a manager-owned Doc failed at `setOwner` — now attaches a copy. Verified live, jlmops @576. `jlmops/docs/DATA_MODEL.md`.
