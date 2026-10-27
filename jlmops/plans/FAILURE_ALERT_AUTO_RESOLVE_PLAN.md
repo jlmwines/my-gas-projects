@@ -49,7 +49,7 @@ Each success point above must be confirmed by reading the function before it is 
 
 1. Trace each category-A success path (one function at a time); record the exact line.
 2. Implement category A in one change set; Tier-1 test for `resolveFailure` round-trip if not already covered.
-3. Category B: 7-day quiet-period auto-close in housekeeping (needs the last-occurrence time from the task notes; confirm `reportFailure` records it, add it if not).
+3. Category B: 7-day quiet-period auto-close in housekeeping, keyed on the failure task's `notes.lastUpdated` (verified 2026-10-27: `_createFailureTask` sets it on creation and on every repeat occurrence; `notes.failures[].timestamp` holds each occurrence too). Both category-B contexts report at `High`, so each creates a task plus a health alert; `resolveFailure` clears both.
 4. Deploy via `deploy.ps1`; verify with a real cycle: an open failure for a context closes after that context's next success (`jlmops-status.md` + Admin dashboard).
 5. Update `jlmops/docs/ARCHITECTURE.md` §4.2: the report/resolve pairing is a rule for every context; close the bug; archive this plan.
 
