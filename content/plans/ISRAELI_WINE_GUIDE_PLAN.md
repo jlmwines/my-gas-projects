@@ -126,14 +126,15 @@ Encyclopedic, evergreen, SEO-friendly. These are the building blocks that theme 
 - Terroir diversity explanation
 - How to use this guide
 
-**Hub backbone — three coexisting region systems** (per the authoritative source, Adam Montefiore, *Israel Wine Regions*, 2023). The overview post's spine is that "Israeli wine regions" means three different things, and the post untangles them:
-1. **The legal 5-region appellations** (decided mid-1970s; registered with the US TTB and the EU): Galilee, Shomron, Samson, Judean Hills, Negev. This is what prints on *export* bottles. Quirk worth explaining: Golan Heights is registered as a *sub-region of Galilee* for export law only, though it's geographically distinct.
-2. **The IPEVO professional map** (2020; the winemakers'/viticulturists' association): 6 regions / 15 sub-regions — and this is the taxonomy this guide uses for its six spokes. It matches the Israel Wine Board map (wineboard.co.il/map).
-3. **The "main quality regions"** — where the best wine actually comes from today: Upper Galilee, Upper Golan, Zichron–Hanadiv Valley, Judean Foothills, Judean Hills, Mitzpe Ramon.
+**Hub backbone: the official ministry map, and how our regions relate to it.** In 2026 Israel adopted a new official wine map of **8 regions / 18 sub-regions** (Golan, Galilee, Rift Valleys, Mt. Carmel, Coastal Plain, Foothills, Central Mountains, Negev), drafted by a committee of the Health Ministry, the Agriculture & Food Security Ministry, the Israel Wine & Vine Council and IPEVO, and launched at the Agriculture Ministry. Source: Adam Montefiore (a committee member), *Jerusalem Post* Wine Talk, 2026-10-10, jpost.com/food-recipes/article-911007. Label rules: naming a region is optional domestically and mandatory for export; a region or sub-region may be named when 85% of the grapes come from it, otherwise the label says "Israel." It replaces the 1977 official map (Samson, Shomron and other biblical-name zones, drawn in horizontal bands) and the 2020 IPEVO professional map (15 regions).
 
-Friendly framing for the anti-snob voice: a reader doesn't need the legal detail to enjoy the wine, but it explains why the label says "Galilee" when the bottle is really from the Golan — and that's a satisfying thing to understand. Keep the legalese light; lead with geography people can picture.
+**Our six region spokes stay as they are.** The ministry map is a licensing and labeling system; our spokes group wines that share real character. The overview post introduces the ministry map plainly, then shows where each of our region posts sits on it. It does not reorganize the series around it.
 
-**Individual Posts (6 — official map of major regions; sub-regions are sections within the parent post):**
+Also usable as context: Montefiore's "main quality regions" (*Israel Wine Regions*, 2023), where the best wine comes from today: Upper Galilee, Upper Golan, Zichron-Hanadiv Valley, Judean Foothills, Judean Hills, Mitzpe Ramon.
+
+Friendly framing for the anti-snob voice: a reader doesn't need the regulations to enjoy the wine, but knowing what the region on a label means (and the 85% rule behind it) is a satisfying thing to understand. Keep the legalese light; lead with geography people can picture.
+
+**Individual Posts (6, our six regions; sub-regions are sections within the parent post):**
 
 | Region | Sub-regions (IPEVO 2020) | Notes |
 |--------|-------------|-------|
