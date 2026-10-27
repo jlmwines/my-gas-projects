@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-27. jlmops @599 live (failure alerts now auto-resolve; @597-@599 fixes await live confirmation); non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
+**Updated:** 2026-10-27. jlmops @600 live (failure alerts auto-resolve; Product Replacement shows real web IDs; @597-@600 fixes await live confirmation); non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @599 · theme v1.2.32 |
+| Deploy Version | jlmops @600 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-27 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -84,7 +84,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Product verification** — live end-to-end and in normal use, including manager review and reverted-task admin handling. Counting is quantity-only; product facts (vintage etc.) belong to verification alone. System doc → `jlmops/docs/WORKFLOWS.md`.
 - **Category data / Configuration-as-Data compliance** (`jlmops/plans/CONFIG_COMPLIANCE_PLAN.md`) — `SysCategories` is the live category authority (owner-curated, carries the WC term ID), read through shared `ConfigService` lookups by product descriptions, CRM enrichment and stock-deficiency logic. Only remaining step: removing `SysLkp_Texts`' superseded category rows, held for a production soak (owner call, not a blocker).
 - **Product-detail load performance** — live and smoke-tested clean. Product-editor tasks (add/vintage-drift/verify-conversion) read a creation-time snapshot instead of live sheets; the verify batch-walk bulk-prefetches once at walk-start instead of per step; category-stock health is computed by housekeeping and cached, not live on widget load; `WebAppTasks.getOpenTasks` is genuinely cached now (was a module-level variable that never persisted across calls). System doc → `jlmops/docs/DATA_MODEL.md` (`st_DetailSnapshot`), `jlmops/docs/WORKFLOWS.md` §16; plans archived (`jlmops/plans/_archive/PRODUCT_DETAIL_SNAPSHOT_PLAN.md`, `_archive/VERIFY_DETAIL_SPEEDUP_PLAN.md`).
-- **SKU management** — Vendor SKU Update and Trim Safety not yet tested; Product Replacement tested and working, though its product search reads dead WebProdM columns (`plans/BUGS.md`).
+- **SKU management** — Vendor SKU Update and Trim Safety not yet tested; Product Replacement tested and working; its web IDs (EN `wpm_ID`, HE WebXltM `wxm_ID`) fixed @600, not yet seen live.
 - **Admin Inventory** — live and working. Comax Sync file-link buttons (Open File/Copy Filename) re-implemented from `AdminProductsView._renderFileActions`; view loads clean but the buttons await a live Comax export to test against (original failure's cause never found). Server-side error isolation for the review/manager-queue cards still isn't read by the client.
 - **UI T4.3 count-entry modal** — shipped, unsmoked; verify on a phone when count tasks next appear.
 - **`st_DoneDate` set without `st_Status='Done'`** — at least one Manager-assigned row carries a done date while still Assigned, so it surfaces as open. Watch whether the pattern spreads; if so, fix the write path or the dashboard filter.
