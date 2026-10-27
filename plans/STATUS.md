@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-27. jlmops @596 live (WebDetM duplicate/SKU validation, write-path guard, sorted WebDetM), theme v1.2.32; October AYIW email scheduled for 2026-11-03; insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits.
+**Updated:** 2026-10-27. jlmops @598 live (audit first-row, gift-buyer welcome, maintenance failure-detection fixes awaiting live confirmation); non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @596 · theme v1.2.32 |
+| Deploy Version | jlmops @598 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-27 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -40,7 +40,7 @@ The live "what now" — daily review reads these first.
 6. **Current focus (post-holidays, user 2026-10-15):** publish content (blog pipeline + monthly newsletter); update and verify products (verification flow, `jlmops/docs/WORKFLOWS.md`); add new wines to fill category gaps.
 7. **Physical inventory — due now that the holidays have passed.** Full count sweep via Admin Inventory's count-task creation (full-sweep mode, batched alphabetically across sessions; design archived at `jlmops/plans/_archive/INVENTORY_COUNT_TASK_REDESIGN.md`). Counting is quantity-only.
 8. **Coastal Plain (post 2026-10-29), Golan Heights (2026-11-16), and Judea/Foothills (2026-12-14) region posts, per JLMops_Publishing.** Coastal Plain body locked, extracts with the manager for review; Golan Heights body drafted, awaiting lock; Judea not drafted. Negev, Galilee, and Central Mountains are published. Sources, slot table, and calendar-row state → `content/plans/REGION_POSTS_PLAN.md`.
-9. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
+9. **After the region posts: the ministry-map anchor, then People.** The anchor introduces the 2026 official map (8 regions, 18 sub-regions) and places our six region posts on it; People profiles are the richer next category (subjects can supply images and share). Grapes anchor stays drafted on the shelf (`content/grapes/grapes-en.post.md`). Plan → `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`.
 10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager).
 11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.
 12. **Valid business review process** — `/review-deep` trend reads are invalid (no YoY on seasonal data, snapshot inputs, short summer-only history, stale/broken KPIs interpreted). Deficiencies and candidate requirements → `plans/REVIEW_PROCESS_PLAN.md`; design not started.
@@ -56,6 +56,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — refresh bug open (doesn't refresh after "Apply Pending Updates"/"Create Content Tasks", root cause not found, needs a live repro). Admin date edit is live but its Save hasn't been used yet; first real re-date doubles as the repro.
 - **Woo API push** (`jlmops/plans/WOO_API_PUSH_PLAN.md`) — live; new-product and existing-product push paths confirmed working. Open: the `date_created` ("Published" date from the originating task) not yet smoke-tested live; RankMath meta push deferred (manual for now).
+- **WebDetM description backfill** (`jlmops/plans/WEBDETM_DESCRIPTION_BACKFILL_PLAN.md`) — non-wine only. Pass 1 (fill blanks from live) imported and verified; Pass 2 (HTML cleanup) file built and reviewed, import + post-import check pending. Bundles/Ilana's have no description text anywhere.
 - **Vintage-mismatch snapshot fix** (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — live; vintage-mismatch tasks read live data instead of a creation-time snapshot. Not yet smoke-tested (needs a real vintage change; Next Action 13).
 
 ## Current State

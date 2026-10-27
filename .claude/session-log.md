@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-27 (2) — jlmops @597-@598 fixes, code-edit gate, non-wine description backfill
+
+- Shipped: audit first-row fix + no welcome for first-time gift buyers (@597); daily maintenance counts phase-1 steps returning false as failures, normal skips return 'skipped' (@598). All three await live confirmation (BUGS.md says what confirms each).
+- New hook `jlmops-code-auth-gate.js`: one approval per turn for jlmops code edits, replacing per-edit `ask` rules.
+- WebDetM non-wine descriptions: Pass 1 (21 blank fields filled from live) imported and verified; Pass 2 (58 cells, HTML cleaned, lists/media/strong/red kept) built and reviewed; confirm import with a fresh export.
+- Guide plan updated to the 2026 ministry wine map (8 regions/18 sub-regions); our six region spokes unchanged. Grapes shelved; next after regions: map anchor, then People.
+- Next: check bundle plugin before/after text for bundle descriptions (not urgent); bundles/Ilana's need new description copy.
+
 ## 2026-10-27 — WebDetM key integrity, October AYIW email
 
 - Shipped (jlmops @595-@596): KEY_UNIQUENESS validation (WebDetM web ID + SKU, WebProdM ID), WebDetM-vs-WebProdM SKU rule, B2 filter fix (Comax stores כן, not 1), write-path guard on suggestion/details accept, housekeeping sorts WebDetM. All verified clean; plan archived.

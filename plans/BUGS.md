@@ -58,7 +58,7 @@ _One line each; full root-cause analysis lives in the git commit._
 
 ### Open
 
-- [ ] 2026-06-16: Gift + accessory descriptions blanked on the site — restored text must land in WebDetM `wdm_DescriptionEn/He` or the next overlay re-blanks it.
+- [ ] 2026-06-16: Non-wine descriptions blanked by pushes (WebDetM empty). Recoverable text backfilled; bundles/Ilana's need new copy. `jlmops/plans/WEBDETM_DESCRIPTION_BACKFILL_PLAN.md`.
 - [ ] 2026-05-11: Auto-push short URL redirects to RankMath (deferred) — manual paste acceptable at current volume (5-10/month).
 
 ### Resolved
