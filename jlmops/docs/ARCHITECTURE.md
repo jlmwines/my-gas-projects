@@ -153,7 +153,7 @@ To keep the core services clean, we use an adapter/formatter pattern to handle m
 
 *   **`ComaxAdapter`**: Ingests raw, Hebrew-language CSV data from Comax. It cleans the data (e.g., handles `null` inventory), translates headers, and produces clean, standardized product objects for the rest of the system to use.
 *   **`WebAdapter`**: Ingests raw data from WooCommerce CSV files. It is responsible for parsing the input file and mapping its columns to the wider schema of the corresponding staging sheet (e.g., `WebProdS_EN`). This adapter is key to the system's resilience, as it isolates the core logic from changes in the external file format.
-*   **`WooCommerceFormatter`**: Takes the clean, processed product objects from our system and formats them into the complex, multi-column CSV file required by WooCommerce for import. This includes handling special flags like `IsSoldIndividually`.
+*   **`WooCommerceFormatter`**: Builds the product description HTML (`formatDescriptionHTML`) used by the Woo API push, the manager preview and the description backfill export. Its full-product CSV builder (`formatProductsForExport`) is unused. "Sold individually" is pull-only: `WooProductPullService` mirrors the site's setting into `wps_SoldIndividually`/`wpm_SoldIndividually`; jlmops never writes it, and `wdm_IsSoldIndividually` is unused.
 
 ### 2.4. Migration Utilities (New)
 

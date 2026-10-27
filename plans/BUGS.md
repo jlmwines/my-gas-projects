@@ -33,7 +33,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
 - [ ] 2026-08-21: Daily maintenance phase 1 missed steps that catch and return false. Fixed @598 (normal skips return 'skipped'); verify Health task after next run.
 - [ ] 2026-10-19 (low): Bundle descriptions never land in `WebProdM.wpm_PostContent`; bundle detail view (`WebAppBundles.js:102`) shows none. WordPress is the only copy.
-- [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead — no UI, no push. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
+- [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead: no UI, no push; site value is pull-only. `jlmops/docs/ARCHITECTURE.md` (WooCommerceFormatter).
 
 ### Resolved (recent)
 
