@@ -15,7 +15,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 ### Open
 
 - [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS skipped the first data row; row numbers off by one. Fixed @597, verify on next housekeeping run.
-- [ ] 2026-10-23: Stale system-failure alerts stay on Admin dash; only 2 contexts call `NotificationService.resolveFailure`. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
+- [ ] 2026-10-23: Stale failure alerts stay on Admin dash. Fixed @599; verify live, clean up old ones. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
 - [ ] 2026-10-18: Woo API calls intermittently get 2xx HTML instead of JSON (suspect SiteGround anti-bot). @580 logs it; see commit.
 - [ ] 2026-10-13: Welcome-outreach tasks fired for first-time gift purchasers. Fixed @597 (first order a gift = no welcome); verify on next real gift order.
 - [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`).
