@@ -14,10 +14,10 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 ### Open
 
-- [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS loops start at index 1, but `_getSheetDataAsMap` values start at sheet row 2 — first data row never checked; reported row numbers off by one.
+- [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS skipped the first data row; row numbers off by one. Fixed @597, verify on next housekeeping run.
 - [ ] 2026-10-23: Stale system-failure alerts stay on Admin dash; only 2 contexts call `NotificationService.resolveFailure` (sweep @594, contacts verify).
 - [ ] 2026-10-18: Woo API calls intermittently get 2xx HTML instead of JSON (suspect SiteGround anti-bot). @580 logs it; see commit.
-- [ ] 2026-10-13: Welcome-outreach tasks fire for first-time gift purchasers — they have no own-use experience to follow up on; exclude gift orders. `CONTACT_MANAGER_PLAN.md`.
+- [ ] 2026-10-13: Welcome-outreach tasks fired for first-time gift purchasers. Fixed @597 (first order a gift = no welcome); verify on next real gift order.
 - [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`).
 - [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization.
 - [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects — low priority, revisit only if it causes real confusion.
@@ -31,7 +31,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-06-16: Product Replacement reads dead WebProdM columns (`wpm_WebIdEn`/`wpm_WebIdHe`) — not yet traced whether it breaks the reassign step.
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
-- [ ] 2026-08-21: `performDailyMaintenance`'s `phase1Tasks` loop only detects failures that *throw* — most catch internally, unchecked.
+- [ ] 2026-08-21: Daily maintenance phase 1 missed steps that catch and return false. Fixed @598 (normal skips return 'skipped'); verify Health task after next run.
 - [ ] 2026-10-19 (low): Bundle descriptions never land in `WebProdM.wpm_PostContent`; bundle detail view (`WebAppBundles.js:102`) shows none. WordPress is the only copy.
 - [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead — no UI, no push. `jlmops/plans/WOO_API_PUSH_PLAN.md`.
 
