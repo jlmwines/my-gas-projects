@@ -625,6 +625,7 @@ const OrchestratorService = (function() {
    */
   function setJobRowStatus(jobQueueSheet, jobQueueHeaders, jobId, fn) {
     for (let attempt = 1; attempt <= 3; attempt++) {
+      let completedJobType = null;
       const outcome = LockHelpers.withScriptLock('job-queue-status:' + jobId, 5000, function() {
         const lookup = _getJobRowByJobId(jobQueueSheet, jobQueueHeaders, jobId);
         if (!lookup.found) return { applied: false };
@@ -636,9 +637,15 @@ const OrchestratorService = (function() {
           jobQueueSheet.getRange(lookup.sheetRow, colIdx + 1).setValue(updates[header]);
         });
         SpreadsheetApp.flush();
+        if (updates.status === 'COMPLETED') completedJobType = lookup.row.job_type;
         return { applied: true };
       });
-      if (outcome !== null) return outcome;
+      if (outcome !== null) {
+        // A completed job of this type clears any stuck-job failure reported for it
+        // (zombie killer / poll reaper). Outside the lock: resolveFailure reads SysTasks.
+        if (outcome.applied && completedJobType) NotificationService.resolveFailure(`job.${completedJobType}`);
+        return outcome;
+      }
       if (attempt < 3) Utilities.sleep(3000);
     }
     throw new Error(`Could not acquire job-queue lock for job ${jobId} after 3 attempts.`);
@@ -1374,6 +1381,9 @@ const OrchestratorService = (function() {
 
               if (advanceResult.applied) {
                 logger.info(serviceName, functionName, `Comax import completed for session ${sessionId}. Advancing to VALIDATING.`);
+                // start_comax_import has no success branch of its own; its success lands here.
+                NotificationService.resolveFailure('sync.comax_product_import', sessionId);
+                NotificationService.resolveFailure('sync.start_comax_import', sessionId);
                 // Queue validation job and process immediately
                 finalizeSync(sessionId);
                 processPendingJobs();
@@ -1447,6 +1457,7 @@ const OrchestratorService = (function() {
 
            if (advanceResult.applied) {
              logger.info(serviceName, functionName, `Validation completed for session ${sessionId}. Advancing to WAITING_WEB_EXPORT.`);
+             NotificationService.resolveFailure('validation.master_master', sessionId);
            }
         }
       }
@@ -1474,6 +1485,7 @@ const OrchestratorService = (function() {
               });
 
               if (advanceResult.applied) {
+                NotificationService.resolveFailure('sync.web_inventory_push', sessionId);
                 try {
                   TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', sessionId);
                 } catch (taskError) {

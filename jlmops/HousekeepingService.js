@@ -772,6 +772,8 @@ function HousekeepingService() {
       NotificationService.reportFailure('tests.empty_or_null_result',
         'Unit test suite returned no results (null or total=0) — Phase 2 cannot be trusted green.',
         'High', { passed: testResult ? testResult.passed : null, total: testResult ? testResult.total : null }, sessionId);
+    } else {
+      NotificationService.resolveFailure('tests.empty_or_null_result', sessionId);
     }
 
     try {
@@ -808,6 +810,7 @@ function HousekeepingService() {
       { name: 'reconcileLibraryDuplicates', fn: () => LibraryService.reconcileLibraryDuplicates() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
       { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() },
+      { name: 'closeQuietFailures', fn: () => this.closeQuietFailures() },
       { name: 'refreshKpiBlock', fn: () => StatusReportService.refreshKpiBlock(sessionId) },
       { name: 'applyPendingCalendarUpdates', fn: () => StatusReportService.applyPendingCalendarUpdates(sessionId) }
     ];
@@ -2122,6 +2125,31 @@ function HousekeepingService() {
   };
 
   const JOB_QUEUE_RETENTION_DAYS = 30;
+
+  /**
+   * Auto-closes failure tasks for one-off event contexts (no natural "next
+   * success" to resolve on) once 7 days pass with no new occurrence, keyed on the
+   * task's notes.lastUpdated (set by NotificationService on every occurrence).
+   * FAILURE_ALERT_AUTO_RESOLVE_PLAN.md, category B.
+   */
+  const QUIET_CLOSE_CONTEXTS = ['sync.web_export.state_clobber', 'integration.woo.response_oversize'];
+  const QUIET_CLOSE_DAYS = 7;
+
+  this.closeQuietFailures = function() {
+    const functionName = 'closeQuietFailures';
+    const cutoff = Date.now() - QUIET_CLOSE_DAYS * 24 * 60 * 60 * 1000;
+    let closed = 0;
+    WebAppTasks.getOpenTasksByTypeId('task.system.failure').forEach(task => {
+      let notes;
+      try { notes = JSON.parse(task.st_Notes || '{}'); } catch (e) { return; }
+      if (!QUIET_CLOSE_CONTEXTS.includes(notes.context)) return;
+      const last = new Date(notes.lastUpdated || notes.firstOccurrence);
+      if (isNaN(last.getTime()) || last.getTime() > cutoff) return;
+      if (NotificationService.resolveFailure(notes.context, null, 'auto-quiet')) closed++;
+    });
+    logger.info('HousekeepingService', functionName, `Quiet-period sweep: ${closed} failure task(s) auto-closed.`);
+    return true;
+  };
 
   /**
    * Sweeps SysJobQueue for accumulating FAILED rows so they surface in the daily

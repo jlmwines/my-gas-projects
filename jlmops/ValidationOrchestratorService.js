@@ -119,6 +119,9 @@ const ValidationOrchestratorService = (function() {
         // Current convention is COMPLETED unless critical quarantine
         finalStatus = 'COMPLETED';
     }
+    if (!quarantineTriggered) {
+        NotificationService.resolveFailure(`validation.${suiteName}`, sessionId);
+    }
 
     logger.info(serviceName, functionName, `Validation complete. Failures: ${failureCount}. Quarantine: ${quarantineTriggered}.`, { sessionId: sessionId, finalStatus: finalStatus });
 

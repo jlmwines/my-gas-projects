@@ -236,9 +236,10 @@ const NotificationService = (function() {
    * No-op (returns false) if no open failure task exists for the context.
    * @param {string} context - The same context string passed to reportFailure.
    * @param {string} sessionId - Optional session ID for correlation.
+   * @param {string} resolvedBy - Optional label recorded in the task notes (default 'auto').
    * @returns {boolean} True if an open failure task was found and resolved.
    */
-  function resolveFailure(context, sessionId) {
+  function resolveFailure(context, sessionId, resolvedBy) {
     const fnName = 'resolveFailure';
     let resolved = false;
     try {
@@ -247,7 +248,7 @@ const NotificationService = (function() {
       if (existingTask) {
         const notes = _parseNotes(existingTask.notes);
         notes.resolvedAt = new Date().toISOString();
-        notes.resolvedBy = 'auto';
+        notes.resolvedBy = resolvedBy || 'auto';
         notes.resolutionSessionId = sessionId || null;
         TaskService.updateTaskNotes(existingTask.id, JSON.stringify(notes));
         TaskService.completeTask(existingTask.id);

@@ -53,8 +53,8 @@ Every success point above was confirmed by reading its function (2026-10-27).
 ## Steps
 
 1. ~~Trace each category-A success path; record the exact line.~~ Done 2026-10-27 (table above).
-2. Implement category A in one change set; Tier-1 test for `resolveFailure` round-trip if not already covered.
-3. Category B: 7-day quiet-period auto-close in housekeeping, keyed on the failure task's `notes.lastUpdated` (verified 2026-10-27: `_createFailureTask` sets it on creation and on every repeat occurrence; `notes.failures[].timestamp` holds each occurrence too). Both category-B contexts report at `High`, so each creates a task plus a health alert; `resolveFailure` clears both.
+2. Implement category A in one change set. **Built 2026-10-27, not yet deployed.** All rows of the table wired; `status_export.refresh` split into `_health`/`_kpi` (an open task under the old `refresh` key, if any, will not auto-close: handle in step 4 cleanup). No Tier-1 test added: `resolveFailure` reads SysTasks, so it is Tier-4 territory (I/O, mocking-layer decision pending in `TEST_SUITE_EXTENSION_PLAN.md`); verified live instead (step 4).
+3. **Built 2026-10-27, not yet deployed** (`HousekeepingService.closeQuietFailures`, daily phase 3; `resolveFailure` gained an optional `resolvedBy` label). Category B: 7-day quiet-period auto-close in housekeeping, keyed on the failure task's `notes.lastUpdated` (verified 2026-10-27: `_createFailureTask` sets it on creation and on every repeat occurrence; `notes.failures[].timestamp` holds each occurrence too). Both category-B contexts report at `High`, so each creates a task plus a health alert; `resolveFailure` clears both.
 4. Deploy via `deploy.ps1`; verify with a real cycle: an open failure for a context closes after that context's next success (`jlmops-status.md` + Admin dashboard).
 5. Update `jlmops/docs/ARCHITECTURE.md` §4.2: the report/resolve pairing is a rule for every context; close the bug; archive this plan.
 

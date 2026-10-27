@@ -572,9 +572,10 @@ const StatusReportService = (function() {
       const kpiInner = _readSection(file.getBlob().getDataAsString(), 'kpi');
       file.setContent(_composeDoc(healthInner, kpiInner));
       logger.info(SERVICE_NAME, fnName, 'Status file (health) refreshed: ' + file.getUrl(), { sessionId: sessionId });
+      NotificationService.resolveFailure('status_export.refresh_health', sessionId);
       return { success: true, fileId: file.getId() };
     } catch (e) {
-      NotificationService.reportFailure('status_export.refresh',
+      NotificationService.reportFailure('status_export.refresh_health',
         'Status export (health) regeneration failed: ' + e.message, 'Normal', { error: e.message }, sessionId);
       return { success: false, error: e.message };
     }
@@ -594,9 +595,10 @@ const StatusReportService = (function() {
       const healthInner = _readSection(file.getBlob().getDataAsString(), 'health');
       file.setContent(_composeDoc(healthInner, kpiInner));
       logger.info(SERVICE_NAME, fnName, 'Status file (KPI) refreshed: ' + file.getUrl(), { sessionId: sessionId });
+      NotificationService.resolveFailure('status_export.refresh_kpi', sessionId);
       return { success: true, fileId: file.getId() };
     } catch (e) {
-      NotificationService.reportFailure('status_export.refresh',
+      NotificationService.reportFailure('status_export.refresh_kpi',
         'Status export (KPI) regeneration failed: ' + e.message, 'Normal', { error: e.message }, sessionId);
       return { success: false, error: e.message };
     }
@@ -732,6 +734,7 @@ const StatusReportService = (function() {
       logger.info(SERVICE_NAME, fnName,
         'Calendar merge: ' + filesProcessed + ' file(s), ' + rowsMerged + ' row(s) merged, ' + rowsSkipped + ' skipped',
         { sessionId: sessionId });
+      NotificationService.resolveFailure('status_export.calendar_merge', sessionId);
       return { success: true, filesProcessed: filesProcessed, rowsMerged: rowsMerged, rowsSkipped: rowsSkipped };
     } catch (e) {
       NotificationService.reportFailure('status_export.calendar_merge',

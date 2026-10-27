@@ -109,6 +109,7 @@ function importWebProductsBackend() {
       }
     } else {
       logger.info(serviceName, functionName, `Web products import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
+      NotificationService.resolveFailure('sync.import_web_products', sessionId);
       SyncStateService.mutateSyncStateBestEffort(function(state) {
         if (state.stage !== expectedCurrentStage) {
           throw new SyncStateService.SyncStageStaleError(
@@ -221,6 +222,7 @@ function importWebOrdersBackend() {
       }
     } else {
       logger.info(serviceName, functionName, `API order pull complete: ${pullResult.message}`);
+      NotificationService.resolveFailure('sync.import_web_orders', sessionId);
 
       // Calculate pending orders and set up step 3
       const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
@@ -312,6 +314,7 @@ function exportComaxOrdersBackend() {
     const result = orderService.exportOrdersToComax(sessionId);
 
     if (result.success) {
+      NotificationService.resolveFailure('sync.export_comax_orders', sessionId);
       const exportedCount = result.exportedCount || 0;
       SyncStateService.mutateSyncStateBestEffort(function(state) {
         if (state.stage !== expectedCurrentStage) {
@@ -1384,6 +1387,7 @@ function apiPullAllBackend() {
         );
       }
     } else {
+      NotificationService.resolveFailure('sync.api_pull_all', sessionId);
       // Pipeline complete — determine next stage based on pending orders
       const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
       const invoiceCount = OrchestratorService.getInvoiceFileCount();
