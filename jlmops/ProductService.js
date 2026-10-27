@@ -756,6 +756,7 @@ const ProductService = (function() {
 
     const existingData = masterSheet.getDataRange().getValues();
     const skuIndex = masterHeaders.indexOf('wdm_SKU');
+    _assertSkuWebIdConsistent(existingData, skuIndex, masterHeaders.indexOf('wdm_WebIdEn'), sku, rowData['wdm_WebIdEn'], 'WebDetM');
     let rowIndex = -1;
 
     if (existingData.length > 1) {
@@ -1200,6 +1201,18 @@ const ProductService = (function() {
     const functionName = 'acceptProductSuggestion';
     logger.info(serviceName, functionName, `Accepting suggestion for SKU ${sku}`, { sessionId: sessionId, sku: sku, suggestionTaskId: suggestionTaskId });
     try {
+      // 0. Refuse before any write if the web ID already belongs to another SKU — the seeds
+      // below find rows by SKU and would append duplicates (WEBDETM_KEY_INTEGRITY_PLAN.md).
+      if (wpmId) {
+        const guardConfig = ConfigService.getAllConfig();
+        const guardSpreadsheet = SheetAccessor.getDataSpreadsheet();
+        [['WebDetM', 'wdm_SKU', 'wdm_WebIdEn'], ['WebProdM', 'wpm_SKU', 'wpm_ID']].forEach(([sheetKey, skuCol, idCol]) => {
+          const headers = guardConfig[`schema.data.${sheetKey}`].headers.split(',');
+          const sheet = guardSpreadsheet.getSheetByName(guardConfig['system.sheet_names'][sheetKey]);
+          _assertSkuWebIdConsistent(sheet.getDataRange().getValues(), headers.indexOf(skuCol), headers.indexOf(idCol), sku, wpmId, sheetKey);
+        });
+      }
+
       // 1. Complete the suggestion task
       TaskService.completeTask(suggestionTaskId); // TaskService needs sessionId too
 
@@ -1979,6 +1992,37 @@ const ProductService = (function() {
       }
     }
     return null;
+  }
+
+  /**
+   * Throws when writing (sku, webId) would leave two rows with one web ID, or a row whose
+   * SKU and web ID disagree. Writers find their row by SKU, so a new SKU carrying an
+   * existing web ID would otherwise append a duplicate (jlmops/plans/WEBDETM_KEY_INTEGRITY_PLAN.md).
+   * @param {Array[]} data Sheet values including the header row (getDataRange().getValues()).
+   * @param {number} skuIdx 0-based SKU column index.
+   * @param {number} idIdx 0-based web ID column index.
+   * @param {string} sku The SKU being written.
+   * @param {string} webId The web ID being written; empty skips the check.
+   * @param {string} sheetLabel Sheet name for the error message.
+   */
+  function _assertSkuWebIdConsistent(data, skuIdx, idIdx, sku, webId, sheetLabel) {
+    const id = String(webId || '').trim();
+    if (!id || skuIdx < 0 || idIdx < 0) return;
+    const targetSku = String(sku).trim();
+    let skuRow = null;
+    let idRow = null;
+    for (let i = 1; i < data.length; i++) { // Skip header
+      if (!skuRow && String(data[i][skuIdx]).trim() === targetSku) skuRow = data[i];
+      if (!idRow && String(data[i][idIdx]).trim() === id) idRow = data[i];
+    }
+    if (skuRow) {
+      const rowId = String(skuRow[idIdx]).trim();
+      if (rowId && rowId !== id) {
+        throw new Error(`${sheetLabel}: SKU ${targetSku} is already linked to web ID ${rowId}, not ${id}.`);
+      }
+    } else if (idRow) {
+      throw new Error(`${sheetLabel}: web ID ${id} already belongs to SKU ${String(idRow[skuIdx]).trim()}. To change a product's SKU, use Product Replacement.`);
+    }
   }
 
   /**

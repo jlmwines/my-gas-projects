@@ -726,6 +726,7 @@ function HousekeepingService() {
       { name: 'purgeOldJobs', fn: () => this.purgeOldJobs() },
       { name: 'manageFileLifecycle', fn: () => this.manageFileLifecycle() },
       { name: 'cleanupImportFiles', fn: () => this.cleanupImportFiles() },
+      { name: 'sortWebDetM', fn: () => this.sortWebDetM() },
       { name: 'formatDataSheets', fn: () => this.formatDataSheets() }
     ];
 
@@ -2622,6 +2623,29 @@ function HousekeepingService() {
    * Sets: top alignment, wrapped text, 21px row height.
    * Targets: WebOrdM, WebOrdS, WebOrdItemsM, SysOrdLog, CmxProdM, CmxProdS, WebProdM, WebProdS_EN, WebXltM, WebXltS
    */
+  /**
+   * Sorts WebDetM by wdm_NameEn for human editing. WebDetM is written row by row (never
+   * rewritten by the sync like WebProdM/CmxProdM), so it drifts out of order. Safe because
+   * no code holds WebDetM row numbers across calls (WEBDETM_KEY_INTEGRITY_PLAN.md Stage 4).
+   * Native Range.sort moves cell formats with their rows. Throws on failure so the
+   * phase 1 loop records it.
+   */
+  this.sortWebDetM = function() {
+    const functionName = 'sortWebDetM';
+    const allConfig = ConfigService.getAllConfig();
+    const headers = allConfig['schema.data.WebDetM'].headers.split(',');
+    const nameIdx = headers.indexOf('wdm_NameEn');
+    if (nameIdx === -1) throw new Error('wdm_NameEn not found in WebDetM schema');
+
+    const sheet = SheetAccessor.getDataSpreadsheet().getSheetByName(allConfig['system.sheet_names'].WebDetM);
+    if (!sheet) throw new Error('WebDetM sheet not found');
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 3) return; // header + at most one row
+
+    sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).sort({ column: nameIdx + 1, ascending: true });
+    logger.info('HousekeepingService', functionName, `Sorted ${lastRow - 1} WebDetM rows by wdm_NameEn.`);
+  };
+
   this.formatDataSheets = function() {
     const functionName = 'formatDataSheets';
     logger.info('HousekeepingService', functionName, 'Starting data sheet formatting');

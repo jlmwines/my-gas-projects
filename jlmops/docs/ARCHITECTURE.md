@@ -122,6 +122,8 @@ Daily maintenance runs in three phases:
 - `archiveCompletedOrders()` - Move old orders to archive
 - `manageFileLifecycle()` - Trash old export files
 - `cleanupImportFiles()` - Archive processed import files
+- `sortWebDetM()` - Sort WebDetM by `wdm_NameEn` (native `Range.sort`). WebDetM is written row by row, unlike WebProdM/CmxProdM, which the sync import re-sorts on every run. No code holds WebDetM row numbers across calls, so re-sorting is safe.
+- `formatDataSheets()` - Top-align and normalize row height on the data sheets
 
 **Phase 2: Validation & Testing**
 - Run `master_master` validation suite

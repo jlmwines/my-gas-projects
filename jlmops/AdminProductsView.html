@@ -2336,6 +2336,9 @@
           document.getElementById('modal-status').innerHTML = '';
           TaskWidgets.toast('Error: ' + res.message, 'error');
         }
+      }).withFailureHandler(err => {
+        document.getElementById('modal-status').innerHTML = '';
+        TaskWidgets.toast('Error: ' + err.message, 'error');
       }).WebAppProducts_handleAdminAccept(AdminProductsView.currentTaskId, AdminProductsView.currentSku, formData);
         });
     };

@@ -1,6 +1,6 @@
 # WebDetM Key Integrity Plan
 
-Status: **Stages 1-2 and the B2 fix live @595, config rebuilt; first housekeeping run 2026-10-27 raised no tasks (expected, data already fixed). Stage 3 traced and designed, Stage 4 (sorting) designed; neither built.** Goal: every WebDetM row has a unique `wdm_WebIdEn`, its `wdm_SKU` matches WebProdM, and validation flags it when not. Covers the two BUGS.md entries dated 2026-10-26 and 2026-10-27.
+Status: **Stages 1-2 and the B2 fix live @595, config rebuilt; first housekeeping run 2026-10-27 raised no tasks (expected, data already fixed). Stages 3 (write-path guard) and 4 (WebDetM sort) built 2026-10-27, guard tested locally against the WebDetM export; awaiting deploy and a housekeeping run that shows WebDetM sorted.** Goal: every WebDetM row has a unique `wdm_WebIdEn`, its `wdm_SKU` matches WebProdM, and validation flags it when not. Covers the two BUGS.md entries dated 2026-10-26 and 2026-10-27.
 
 ## What was found (2026-10-27)
 

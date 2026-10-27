@@ -217,6 +217,8 @@ Admin opens the suggestion in AdminProductsView → New Products → Candidates 
 - Inserts **WebDetM** row: SKU, EN/HE names, `wdm_WebIdEn`
 - Sets `cpm_IsWeb=true` in CmxProdM (the JLMops-side mirror only — separate from the checkbox above, which covers the actual Comax ERP)
 
+Before any of that, the accept is refused (nothing written) if the entered Woo Post ID already belongs to a different SKU in WebDetM or WebProdM, or the SKU is already linked to a different ID. Giving an existing web product a new SKU (e.g. a new vintage) goes through Product Replacement, not onboarding. Stage 3's detail accept (`acceptProductDetails`) applies the same check to WebDetM.
+
 ### 14.2 Stage 2 — Detail submission (manager)
 
 Manager opens the product in ManagerProductsView → Detail Updates tab (surfaced via the `task.onboarding.add_product` task pack). Fills in product details (region, grape varieties, tasting notes, kashrut, etc.) in WebDetS staging and submits. Task status moves to Review.
