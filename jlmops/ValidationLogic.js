@@ -284,10 +284,9 @@ const ValidationLogic = (function() {
     if (!sourceSheetData) return { status: 'ERROR', message: `Sheet data missing`, discrepancies: [] };
 
     const sourceSheetHeaders = sourceSheetData.headers; // Array of headers
-    const sourceSheetValues = sourceSheetData.values;   // 2D array, row 0 is headers
+    const sourceSheetValues = sourceSheetData.values;   // data rows only; values[0] is sheet row 2
 
-    // Iterate through data (starting from row 1)
-    for (let i = 1; i < sourceSheetValues.length; i++) { 
+    for (let i = 0; i < sourceSheetValues.length; i++) {
       const row = sourceSheetValues[i];
       // Build rowObj for context
       const rowObj = {};
@@ -296,7 +295,7 @@ const ValidationLogic = (function() {
       for (let j = 0; j < row.length; j++) {
         if (sourceSheetHeaders[j] && (row[j] === null || String(row[j]).trim() === '')) {
           discrepancies.push({
-              key: `Row ${i + 1}`,
+              key: `Row ${i + 2}`,
               name: _extractName(rowObj), // Updated to use rowObj
               details: `Empty cell in column '${sourceSheetHeaders[j]}'.`,
               data: rowObj
@@ -350,9 +349,10 @@ const ValidationLogic = (function() {
     const keyColName = rule.source_key || headers[0];
     const keyIdx = headers.indexOf(keyColName);
 
-    for (let i = 1; i < values.length; i++) {
+    // values is data rows only; values[0] is sheet row 2
+    for (let i = 0; i < values.length; i++) {
         const row = values[i];
-        const rowObj = {}; 
+        const rowObj = {};
         headers.forEach((h, k) => rowObj[h] = row[k]);
         
         const val1_part1 = row[fieldIdx];
@@ -366,7 +366,7 @@ const ValidationLogic = (function() {
         }
 
         if (conditionMet) {
-            const key = (keyIdx > -1) ? row[keyIdx] : `Row ${i+1}`;
+            const key = (keyIdx > -1) ? row[keyIdx] : `Row ${i+2}`;
             
             discrepancies.push({
                 key: key,

@@ -1071,7 +1071,10 @@ function HousekeepingService() {
       const orderData = orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, womHeaders.length).getValues();
 
       // Group completed orders by email, find earliest completed order date per email.
+      // Also note whether that earliest order was a gift: a first-time gift buyer
+      // has no own-use experience to follow up on, so no welcome task.
       const earliestCompletedByEmail = {};
+      const earliestIsGiftByEmail = {};
       orderData.forEach(row => {
         const status = String(row[idx.wom_Status] || '').toLowerCase().trim();
         if (status !== 'completed') return;
@@ -1081,6 +1084,11 @@ function HousekeepingService() {
         if (isNaN(d.getTime())) return;
         if (!earliestCompletedByEmail[email] || d < earliestCompletedByEmail[email]) {
           earliestCompletedByEmail[email] = d;
+          earliestIsGiftByEmail[email] = ContactService._isGiftOrder({
+            customerNote: row[idx.wom_CustomerNote] || '',
+            billingLastName: row[idx.wom_BillingLastName] || '',
+            shippingLastName: row[idx.wom_ShippingLastName] || ''
+          });
         }
       });
 
@@ -1140,10 +1148,11 @@ function HousekeepingService() {
       const welcomedSet = new Set(welcomedEmails);
 
       // Filter to emails whose earliest completed order is on/after the floor,
-      // within the recency window, and not already welcomed.
+      // within the recency window, not already welcomed, and not a gift.
       const eligibleEmails = Object.keys(earliestCompletedByEmail).filter(email => {
         const fcd = earliestCompletedByEmail[email];
-        return fcd >= floorDate && fcd >= sevenDaysAgo && !welcomedSet.has(email);
+        return fcd >= floorDate && fcd >= sevenDaysAgo && !welcomedSet.has(email)
+          && !earliestIsGiftByEmail[email];
       });
 
       // Auto-populate start (today) + due (today + 4 days) so the welcome task
