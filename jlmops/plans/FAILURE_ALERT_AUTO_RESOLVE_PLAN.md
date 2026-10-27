@@ -14,20 +14,25 @@ Not a source of this bug: daily-maintenance phase-1/phase-3 failures (incl. the 
 
 **A. Repeating operation, clear success point: resolve on next success**
 
-| Context | Reported at | Success point to resolve at |
+Success points traced 2026-10-27 (step 1 done). Line numbers are as of commit `a97e16b`.
+
+| Context | Reported at | Resolve at (success point) |
 |---|---|---|
-| `sync.import_web_products` | `WebAppSync.js:102` | same function, success path |
-| `sync.import_web_orders` | `WebAppSync.js:214` | same |
-| `sync.export_comax_orders` | `WebAppSync.js:348` | same |
-| `sync.start_comax_import` | `WebAppSync.js:538` | same |
-| `sync.api_pull_all` | `WebAppSync.js:1378` | same |
-| `sync.comax_product_import` | `OrchestratorService.js:1397` | job completes |
-| `sync.web_inventory_push` | `OrchestratorService.js:1520` | push completes |
-| `job.<jobType>` | `OrchestratorService.js:741, 1315` | next COMPLETED job of that type |
-| `validation.<suite>` (incl. `master_master`, also `OrchestratorService.js:1428`) | `ValidationOrchestratorService.js:110` | suite run with no failures |
-| `status_export.refresh` | `StatusReportService.js:577, 599` | next successful refresh |
-| `status_export.calendar_merge` | `StatusReportService.js:737` | next successful merge |
-| `tests.empty_or_null_result` | `HousekeepingService.js:772` | next run with `total > 0` |
+| `sync.import_web_products` | `WebAppSync.js:102` (import failed and FAILED write didn't land) | `WebAppSync.js:110` `else` branch (import succeeded) |
+| `sync.import_web_orders` | `WebAppSync.js:214` (same shape) | `WebAppSync.js:222` `else` branch |
+| `sync.export_comax_orders` | `WebAppSync.js:348` (same shape) | `WebAppSync.js:314` `if (result.success)` branch |
+| `sync.start_comax_import` | `WebAppSync.js:538` (same shape) | no success branch here: success is handed to `_checkAndAdvanceSyncState`; resolve with `sync.comax_product_import` at `OrchestratorService.js:1375` |
+| `sync.api_pull_all` | `WebAppSync.js:1378` (same shape) | `WebAppSync.js:1386` `else` branch |
+| `sync.comax_product_import` | `OrchestratorService.js:1397` | `OrchestratorService.js:1375` (`advanceResult.applied` to VALIDATING) |
+| `validation.master_master` | `OrchestratorService.js:1428` (job FAILED) and `ValidationOrchestratorService.js:110` (quarantine) | `OrchestratorService.js:1448` (`advanceResult.applied` to WAITING_WEB_EXPORT) |
+| `validation.<suite>` (all suites) | `ValidationOrchestratorService.js:110` (quarantine) | `ValidationOrchestratorService.js:117` path: suite finished without quarantine |
+| `sync.web_inventory_push` | `OrchestratorService.js:1520` | `OrchestratorService.js:1476` (`advanceResult.applied` to COMPLETE) |
+| `job.<jobType>` | `OrchestratorService.js:741` (zombie killer), `:1315` (poll reaper) | `OrchestratorService.setJobRowStatus` (`:626`): after a write that sets `status: 'COMPLETED'`, resolve `job.<row.job_type>`. Single point: every job processor's terminal write goes through it. Resolve **after** the lock closure returns, never inside it |
+| `status_export.refresh` | `StatusReportService.js:577` (health) and `:599` (KPI) | **split into `status_export.refresh_health` / `status_export.refresh_kpi`**, each resolved on its own success (`:574` / `:596`). Shared today, so a 15-min health success would clear a still-failing daily KPI refresh |
+| `status_export.calendar_merge` | `StatusReportService.js:737` | `StatusReportService.js:735` (success return) |
+| `tests.empty_or_null_result` | `HousekeepingService.js:772` | same `if` at `:770`: `else` branch (`total > 0`) |
+
+Context-to-task key note: `resolveFailure` finds the task by `_entityIdFromContext` (context minus first segment). `validation.master_master` from both reporters maps to the same task, which is intended.
 
 **B. One-off events, no natural success point**
 
@@ -36,7 +41,7 @@ Not a source of this bug: daily-maintenance phase-1/phase-3 failures (incl. the 
 | `sync.web_export.state_clobber` | `WebAppSync.js:662` (race detected) |
 | `integration.woo.response_oversize` | `WooApiService.js:142` |
 
-Each success point above must be confirmed by reading the function before it is changed; this table is from the call-site survey, not a full trace.
+Every success point above was confirmed by reading its function (2026-10-27).
 
 ## Approach
 
@@ -47,7 +52,7 @@ Each success point above must be confirmed by reading the function before it is 
 
 ## Steps
 
-1. Trace each category-A success path (one function at a time); record the exact line.
+1. ~~Trace each category-A success path; record the exact line.~~ Done 2026-10-27 (table above).
 2. Implement category A in one change set; Tier-1 test for `resolveFailure` round-trip if not already covered.
 3. Category B: 7-day quiet-period auto-close in housekeeping, keyed on the failure task's `notes.lastUpdated` (verified 2026-10-27: `_createFailureTask` sets it on creation and on every repeat occurrence; `notes.failures[].timestamp` holds each occurrence too). Both category-B contexts report at `High`, so each creates a task plus a health alert; `resolveFailure` clears both.
 4. Deploy via `deploy.ps1`; verify with a real cycle: an open failure for a context closes after that context's next success (`jlmops-status.md` + Admin dashboard).
