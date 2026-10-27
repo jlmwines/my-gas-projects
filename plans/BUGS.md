@@ -23,8 +23,8 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects — low priority, revisit only if it causes real confusion.
 - [ ] 2026-07-23: `doGet`'s role check is a login gate, not an authorization boundary. `CODE_AUDIT_FIX_SEQUENCE.md` Session R.
 - [ ] 2026-07-20: Admin Products "Correct Product Name" applies with no confirmation step. Fixed @601 (confirm before save); verify live.
-- [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh on Admin Dev re-run. Fixed (UI run writes health task), awaiting deploy.
-- [ ] 2026-07-16: "System Health Status" task date frozen at creation. Fixed (re-dated each housekeeping run), awaiting deploy.
+- [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh on Admin Dev re-run. Fixed @603 (UI run writes health task); verify.
+- [ ] 2026-07-16: "System Health Status" task date frozen at creation. Fixed @603 (re-dated each run); verify after tonight.
 - [ ] 2026-07-16: Woo Orders heartbeat red overnight/weekends (flat 60-min threshold vs business-hours pull). Fixed @602 (`BusinessHours.js`); verify tomorrow morning.
 - [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates"/"Create Content Tasks". `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
 - [ ] 2026-07-02: `ConfigService.loadConfig` reads only the first key-value pair of non-schema settings (P03-P10 dropped). `jlmops/plans/CONFIG_MULTI_PAIR_PARSE_PLAN.md`.

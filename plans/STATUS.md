@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-27. jlmops @602 live (failure alerts auto-resolve; Product Replacement shows real web IDs; Correct Product Name confirms before saving; Woo Orders heartbeat business-hours aware; @597-@602 fixes await live confirmation); non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
+**Updated:** 2026-10-27. jlmops @603 live (failure alerts auto-resolve; Product Replacement shows real web IDs; Correct Product Name confirms before saving; Woo Orders heartbeat business-hours aware; health panel dates/schema/failure list fixed; @597-@603 fixes await live confirmation); non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @602 · theme v1.2.32 |
+| Deploy Version | jlmops @603 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-27 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
