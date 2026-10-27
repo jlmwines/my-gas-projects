@@ -105,7 +105,11 @@ The system runs validation suites at strategic points to ensure data integrity.
 - `EXISTENCE_CHECK`: Verify records exist across sheets
 - `FIELD_COMPARISON`: Compare field values between sheets
 - `INTERNAL_AUDIT`: Check data quality within a single sheet
-- `ROW_COUNT`: Detect unexpected row count changes
+- `ROW_COUNT_COMPARISON`: Detect unexpected row count changes
+- `SCHEMA_COMPARISON`: Compare column sets between two schemas
+- `DATA_COMPLETENESS`: Flag empty cells in a sheet
+
+EXISTENCE_CHECK and FIELD_COMPARISON read per-key Maps built by `buildMapFromData`; a duplicate key is overwritten by the later row, so these rules cannot see duplicates.
 
 ### 2.5.6. Housekeeping Phases
 

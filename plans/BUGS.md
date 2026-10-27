@@ -14,8 +14,8 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 ### Open
 
-- [ ] 2026-10-26: No validation flags a WebDetM SKU mismatch. B3/B4 join WebDetM↔WebProdM on web ID only; nothing compares `wdm_SKU` to `wpm_SKU` (Alpha Omega Chenin went unflagged).
-- [ ] 2026-10-27: Duplicate `wdm_WebIdEn` must be forbidden; no validation test type checks key uniqueness (Gros Black Onyx had a stale 2nd row). See commit.
+- [ ] 2026-10-26: No validation flags a WebDetM SKU mismatch. B3/B4 join WebDetM↔WebProdM on web ID only; nothing compares `wdm_SKU` to `wpm_SKU`. `jlmops/plans/WEBDETM_KEY_INTEGRITY_PLAN.md`.
+- [ ] 2026-10-27: Duplicate `wdm_WebIdEn` must be forbidden; no validation checks key uniqueness. `jlmops/plans/WEBDETM_KEY_INTEGRITY_PLAN.md`.
 - [ ] 2026-10-23: Stale system-failure alerts stay on Admin dash; only 2 contexts call `NotificationService.resolveFailure` (sweep @594, contacts verify).
 - [ ] 2026-10-18: Woo API calls intermittently get 2xx HTML instead of JSON (suspect SiteGround anti-bot). @580 logs it; see commit.
 - [ ] 2026-10-13: Welcome-outreach tasks fire for first-time gift purchasers — they have no own-use experience to follow up on; exclude gift orders. `CONTACT_MANAGER_PLAN.md`.
