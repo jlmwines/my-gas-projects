@@ -56,6 +56,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — refresh bug open (doesn't refresh after "Apply Pending Updates"/"Create Content Tasks", root cause not found, needs a live repro). Admin date edit is live but its Save hasn't been used yet; first real re-date doubles as the repro.
 - **Woo API push** (`jlmops/plans/WOO_API_PUSH_PLAN.md`) — live; new-product and existing-product push paths confirmed working. Open: the `date_created` ("Published" date from the originating task) not yet smoke-tested live; RankMath meta push deferred (manual for now).
+- **WebDetM key integrity** (`jlmops/plans/WEBDETM_KEY_INTEGRITY_PLAN.md`) — duplicate-key and WebDetM SKU-mismatch validation deployed @595, B2 filter fixed; open: config rebuild + first run check, Stage 3 write-path guard.
 - **Vintage-mismatch snapshot fix** (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — live; vintage-mismatch tasks read live data instead of a creation-time snapshot. Not yet smoke-tested (needs a real vintage change; Next Action 13).
 
 ## Current State

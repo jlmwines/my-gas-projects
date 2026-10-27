@@ -1,6 +1,6 @@
 # WebDetM Key Integrity Plan
 
-Status: **draft, not started.** Goal: every WebDetM row has a unique `wdm_WebIdEn`, its `wdm_SKU` matches WebProdM, and validation flags it when not. Covers the two BUGS.md entries dated 2026-10-26 and 2026-10-27.
+Status: **Stages 1-2 and the B2 fix deployed @595; awaiting `rebuildSysConfigFromSource()` and a first `master_master` run. Stage 3 not started.** Goal: every WebDetM row has a unique `wdm_WebIdEn`, its `wdm_SKU` matches WebProdM, and validation flags it when not. Covers the two BUGS.md entries dated 2026-10-26 and 2026-10-27.
 
 ## What was found (2026-10-27)
 
