@@ -600,19 +600,10 @@ function HousekeepingService() {
       return;
     }
 
-    // Cadence guard: Israeli business hours. Apps Script trigger API can't
-    // combine 20-min interval with day-of-week, so we gate in code.
-    //   Sun-Thu: 08:00-20:00 IL (12 hours, ~36 productive fires/day)
-    //   Fri:     08:00-13:00 IL (5 hours, ~15 productive fires/day)
-    //   Sat:     off
-    const dayName = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'EEE');
-    const hour = parseInt(Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'H'), 10);
-    const isSunThu = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu'].indexOf(dayName) >= 0;
-    const isFri = dayName === 'Fri';
-    const inWindow = (isSunThu && hour >= 8 && hour < 20) || (isFri && hour >= 8 && hour < 13);
-    if (!inWindow) {
-      logger.info('HousekeepingService', functionName,
-        `Outside business window (${dayName} ${hour}h). Skipping.`);
+    // Cadence guard: Israeli business hours (BusinessHours.js). Apps Script trigger
+    // API can't combine 20-min interval with day-of-week, so we gate in code.
+    if (!BusinessHours.isInWindow(new Date())) {
+      logger.info('HousekeepingService', functionName, 'Outside business window. Skipping.');
       return;
     }
 

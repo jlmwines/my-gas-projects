@@ -113,13 +113,17 @@ function _getIntegrationHeartbeats_v2(allConfig) {
       return isNaN(n) ? fallback : n;
     };
 
-    const build = (rawTs, thresholdMin) => {
+    // businessHoursOnly: the source is only pulled inside the business window
+    // (BusinessHours.js), so staleness counts only in-window minutes; overnight and
+    // weekend gaps don't turn it red. ageMin stays wall-clock for display.
+    const build = (rawTs, thresholdMin, businessHoursOnly) => {
       const ts = rawTs ? String(rawTs) : null;
       if (!ts) return { ts: null, ageMin: null, stale: true, thresholdMin: thresholdMin };
       const parsed = new Date(ts);
       if (isNaN(parsed)) return { ts: ts, ageMin: null, stale: true, thresholdMin: thresholdMin };
       const ageMin = Math.floor((now - parsed.getTime()) / 60000);
-      return { ts: parsed.toISOString(), ageMin: ageMin, stale: ageMin > thresholdMin, thresholdMin: thresholdMin };
+      const staleAgeMin = businessHoursOnly ? BusinessHours.minutesInWindowBetween(parsed, new Date(now)) : ageMin;
+      return { ts: parsed.toISOString(), ageMin: ageMin, stale: staleAgeMin > thresholdMin, thresholdMin: thresholdMin };
     };
 
     const productsThr = toThreshold(hb.products_threshold_min, 1440);
@@ -129,7 +133,7 @@ function _getIntegrationHeartbeats_v2(allConfig) {
     return {
       available: true,
       sources: [
-        { key: 'orders', label: 'Woo Orders', hb: build(woo.orders_last_pull, ordersThr) },
+        { key: 'orders', label: 'Woo Orders', hb: build(woo.orders_last_pull, ordersThr, true) },
         { key: 'products', label: 'Woo Products', hb: build(woo.products_last_pull, productsThr) },
         { key: 'mailchimp_subscribers', label: 'Mailchimp Subscribers', hb: build(mcSubs.value, mailchimpThr) },
         { key: 'mailchimp_campaigns', label: 'Mailchimp Campaigns', hb: build(mcCamps.value, mailchimpThr) }
