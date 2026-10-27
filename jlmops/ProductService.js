@@ -1803,15 +1803,14 @@ const ProductService = (function() {
 
       let updatedSheets = [];
 
-      // 1. Find and update WebProdM by wpm_WebIdEn or wpm_WebIdHe
+      // 1. Find and update WebProdM by web ID (EN = wpm_ID; HE = WebXltM wxm_ID) or old SKU
       const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       if (!webProdSheet) {
         return { success: false, message: 'WebProdM sheet not found.' };
       }
 
       const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
-      const webIdEnIdx = webProdHeaders.indexOf('wpm_WebIdEn');
-      const webIdHeIdx = webProdHeaders.indexOf('wpm_WebIdHe');
+      const webIdEnIdx = webProdHeaders.indexOf('wpm_ID');
       const webProdSkuIdx = webProdHeaders.indexOf('wpm_SKU');
 
       const webProdData = webProdSheet.getDataRange().getValues();
@@ -1819,12 +1818,19 @@ const ProductService = (function() {
       const webIdStr = webProductId ? String(webProductId).trim() : '';
       const oldSkuStr = oldSku ? String(oldSku).trim() : '';
 
+      // A Hebrew web ID lives only in WebXltM; resolve it to its SKU.
+      let heIdSku = '';
+      if (webIdStr) {
+        const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+        const xltHit = _findRowBySku(spreadsheet.getSheetByName('WebXltM'), xltHeaders.indexOf('wxm_ID'), webIdStr);
+        if (xltHit) heIdSku = String(xltHit.values[xltHeaders.indexOf('wxm_SKU')] || '').trim();
+      }
+
       for (let i = 1; i < webProdData.length; i++) {
-        const idEn = String(webProdData[i][webIdEnIdx]).trim();
-        const idHe = String(webProdData[i][webIdHeIdx]).trim();
+        const idEn = webIdEnIdx >= 0 ? String(webProdData[i][webIdEnIdx]).trim() : '';
         const rowSku = String(webProdData[i][webProdSkuIdx]).trim();
         // Match by web ID or by old SKU
-        if ((webIdStr && (idEn === webIdStr || idHe === webIdStr)) || (oldSkuStr && rowSku === oldSkuStr)) {
+        if ((webIdStr && (idEn === webIdStr || (heIdSku && rowSku === heIdSku))) || (oldSkuStr && rowSku === oldSkuStr)) {
           webProdRowIdx = i;
           // Use passed oldSku or get from sheet
           if (!oldSku) {
@@ -2183,17 +2189,19 @@ const ProductService = (function() {
       const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
       const wpmSkuIdx = webProdHeaders.indexOf('wpm_SKU');
-      const wpmWebIdEnIdx = webProdHeaders.indexOf('wpm_WebIdEn');
-      const wpmWebIdHeIdx = webProdHeaders.indexOf('wpm_WebIdHe');
+      const wpmIdIdx = webProdHeaders.indexOf('wpm_ID');
 
       if (webProdSheet && lookupSku) {
         const webProdData = webProdSheet.getDataRange().getValues();
         for (let i = 1; i < webProdData.length; i++) {
           if (String(webProdData[i][wpmSkuIdx]).trim() === lookupSku) {
+            // EN id = wpm_ID; HE id lives only in WebXltM (wxm_ID).
+            const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+            const xltHit = _findRowBySku(spreadsheet.getSheetByName('WebXltM'), xltHeaders.indexOf('wxm_SKU'), lookupSku);
             webData = {
               sku: lookupSku,
-              webIdEn: webProdData[i][wpmWebIdEnIdx] || '',
-              webIdHe: webProdData[i][wpmWebIdHeIdx] || '',
+              webIdEn: wpmIdIdx >= 0 ? (webProdData[i][wpmIdIdx] || '') : '',
+              webIdHe: xltHit ? (xltHit.values[xltHeaders.indexOf('wxm_ID')] || '') : '',
               nameEn: '',
               nameHe: ''
             };
@@ -2252,12 +2260,24 @@ const ProductService = (function() {
       const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
       const wpmSkuIdx = webProdHeaders.indexOf('wpm_SKU');
-      const wpmWebIdEnIdx = webProdHeaders.indexOf('wpm_WebIdEn');
-      const wpmWebIdHeIdx = webProdHeaders.indexOf('wpm_WebIdHe');
+      const wpmIdIdx = webProdHeaders.indexOf('wpm_ID');
 
       if (!webProdSheet) return [];
 
       const webProdData = webProdSheet.getDataRange().getValues();
+
+      // HE ids live only in WebXltM (wxm_ID), keyed here by SKU.
+      const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+      const xltSkuIdx = xltHeaders.indexOf('wxm_SKU');
+      const xltIdIdx = xltHeaders.indexOf('wxm_ID');
+      const xltSheet = spreadsheet.getSheetByName('WebXltM');
+      const heIdBySku = new Map();
+      if (xltSheet && xltSkuIdx >= 0 && xltIdIdx >= 0) {
+        xltSheet.getDataRange().getValues().slice(1).forEach(r => {
+          const s = String(r[xltSkuIdx] || '').trim();
+          if (s) heIdBySku.set(s, r[xltIdIdx] || '');
+        });
+      }
 
       // Get WebDetM for names
       const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
@@ -2289,8 +2309,8 @@ const ProductService = (function() {
             details.nameHe.includes(searchTerm)) {
           results.push({
             sku: sku,
-            webIdEn: webProdData[i][wpmWebIdEnIdx] || '',
-            webIdHe: webProdData[i][wpmWebIdHeIdx] || '',
+            webIdEn: wpmIdIdx >= 0 ? (webProdData[i][wpmIdIdx] || '') : '',
+            webIdHe: heIdBySku.get(sku) || '',
             nameEn: details.nameEn,
             nameHe: details.nameHe
           });

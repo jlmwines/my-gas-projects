@@ -71,10 +71,11 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
     *   `pa_LastDetailAudit`: Timestamp of the last product detail audit.
 
 
-**Example:** The concept of a product's web ID (`WebIdEn`) would have a different column name in each sheet it appears in:
+**Example:** The concept of a product's English web ID has a different column name in each sheet it appears in:
 
-*   In `WebProdM`, its name is `wpm_WebIdEn`.
+*   In `WebProdM`, its name is `wpm_ID` (the WooCommerce post ID; there is no `wpm_WebIdEn`).
 *   In `WebDetM`, its name is `wdm_WebIdEn`.
+*   The Hebrew web ID lives only in `WebXltM` as `wxm_ID`.
 
 This convention makes it immediately clear which sheet a given column belongs to when viewing code or logs.
 
