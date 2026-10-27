@@ -25,7 +25,13 @@ If the row for a web product still holds an old SKU, a write under the new SKU f
 
 **Stage 1: SKU mismatch rule (config only).** Add a `master_master` FIELD_COMPARISON rule in `config/validation.json`: `sheet_A` WebDetM, `key_A` `wdm_WebIdEn`, `sheet_B` WebProdM, `key_B` `wpm_ID`, `compare_fields` `wdm_SKU,wpm_SKU`, task type `task.validation.master_master_discrepancy`, title "Details SKU Mismatch". B7 already proves master-to-master FIELD_COMPARISON works. Ship via `generate-config.js`, `clasp push`, `rebuildSysConfigFromSource()`.
 
-**Stage 2: KEY_UNIQUENESS rule type (code).** Add `_executeKeyUniqueness` to `ValidationLogic.js` and a `case 'KEY_UNIQUENESS'` in `runValidationSuite`'s switch. It reads the raw rows from `sheetDataCache[rule.source_sheet]` (not the prebuilt maps, which already dropped duplicates), counts non-empty `rule.source_key` values, and emits one discrepancy per duplicated key with the row numbers and SKUs in `details`. Add the rule: `source_sheet` WebDetM, `source_key` `wdm_WebIdEn`, `master_master`, title "Duplicate Details Row". Candidate: the same rule for WebProdM `wpm_ID`, and WebDetM `wdm_SKU`, if the user wants them. Deploy with `deploy.ps1`.
+**Stage 2: KEY_UNIQUENESS rule type (code).** Add `_executeKeyUniqueness` to `ValidationLogic.js` and a `case 'KEY_UNIQUENESS'` in `runValidationSuite`'s switch. It reads the raw rows from `sheetDataCache[rule.source_sheet]` (not the prebuilt maps, which already dropped duplicates), counts non-empty `rule.source_key` values, and emits one discrepancy per duplicated key with the row numbers and SKUs in `details`. Add three `master_master` rules, task type `task.validation.master_master_discrepancy` (decided 2026-10-27):
+
+- WebDetM `wdm_WebIdEn`, title "Duplicate Details Row"
+- WebDetM `wdm_SKU`, title "Duplicate Details SKU"
+- WebProdM `wpm_ID`, title "Duplicate Web Product Row"
+
+Deploy with `deploy.ps1`.
 
 **Stage 3: write-path guard (code).** Before changing anything, trace both writers: whether a web ID is available at each call, and whether `_upsertMasterProductRow` overwrites `wdm_WebIdEn` with blank when `finalData` lacks it. Intended change: find the row by `wdm_WebIdEn` when a web ID is known, fall back to SKU only when it is not, and refuse to append when that web ID already has a row under a different SKU (return an error instead). Deploy with `deploy.ps1`.
 
