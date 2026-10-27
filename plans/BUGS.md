@@ -22,7 +22,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization.
 - [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects — low priority, revisit only if it causes real confusion.
 - [ ] 2026-07-23: `doGet`'s role check is a login gate, not an authorization boundary. `CODE_AUDIT_FIX_SEQUENCE.md` Session R.
-- [ ] 2026-07-20: Admin Products "Correct Product Name" applies with no confirmation step. Fixed (confirm before save), awaiting deploy.
+- [ ] 2026-07-20: Admin Products "Correct Product Name" applies with no confirmation step. Fixed @601 (confirm before save); verify live.
 - [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh when re-run from Admin Dev — only housekeeping updates its cached status.
 - [ ] 2026-07-16: "System Health Status" task's displayed date is frozen at original creation, not last-run.
 - [ ] 2026-07-16: Woo Orders heartbeat shows red every morning before ~08:00 IL — staleness threshold isn't business-hours-aware.
