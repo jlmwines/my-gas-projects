@@ -1280,25 +1280,27 @@
             return;
         }
 
-        const statusDiv = document.getElementById('correct-name-status');
-        statusDiv.textContent = 'Saving...';
-        statusDiv.className = 'mr-auto small text-info';
-        document.getElementById('correct-name-save-btn').disabled = true;
+        TaskWidgets.confirm(`Rename SKU ${sel.sku} in WebProdM and WebDetM?`, function() {
+            const statusDiv = document.getElementById('correct-name-status');
+            statusDiv.textContent = 'Saving...';
+            statusDiv.className = 'mr-auto small text-info';
+            document.getElementById('correct-name-save-btn').disabled = true;
 
-        google.script.run.withSuccessHandler(res => {
-            if (res.success) {
-                AdminProductsView.showCorrectNameSummary(res);
-                AdminProductsView.loadSkuUpdates();
-            } else {
-                statusDiv.textContent = res.message;
+            google.script.run.withSuccessHandler(res => {
+                if (res.success) {
+                    AdminProductsView.showCorrectNameSummary(res);
+                    AdminProductsView.loadSkuUpdates();
+                } else {
+                    statusDiv.textContent = res.message;
+                    statusDiv.className = 'mr-auto small text-danger';
+                    document.getElementById('correct-name-save-btn').disabled = false;
+                }
+            }).withFailureHandler(err => {
+                statusDiv.textContent = 'Error: ' + err.message;
                 statusDiv.className = 'mr-auto small text-danger';
                 document.getElementById('correct-name-save-btn').disabled = false;
-            }
-        }).withFailureHandler(err => {
-            statusDiv.textContent = 'Error: ' + err.message;
-            statusDiv.className = 'mr-auto small text-danger';
-            document.getElementById('correct-name-save-btn').disabled = false;
-        }).WebAppProducts_correctProductName(sel.sku, nameEn, nameHe);
+            }).WebAppProducts_correctProductName(sel.sku, nameEn, nameHe);
+        });
     };
 
     AdminProductsView.showCorrectNameSummary = function(res) {
