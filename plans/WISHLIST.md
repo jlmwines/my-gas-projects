@@ -17,7 +17,7 @@ Projects: jlmops, web, marketing, content
 - [ ] Mailchimp export from CRM
 - [ ] Recommendation engine
 - [ ] AI/Claude integration
-- [ ] 2026-10-26: Keep WebDetM sorted by `wdm_NameEn` for human editing (e.g. a housekeeping step). Check first that no code holds WebDetM row numbers across calls.
+- [ ] 2026-10-26: Keep WebDetM sorted by `wdm_NameEn` for human editing. Designed as Stage 4 of `jlmops/plans/WEBDETM_KEY_INTEGRITY_PLAN.md`.
 - [ ] 2026-05-15: Single-product ops view: Comax + Woo state, last updates, image and live-page link on one screen, for triage. No plan doc yet.
 - [ ] 2026-05-15: **Outreach to unpaid orders / abandoned carts / consummated-but-not-paid.** Identify customers who intended to buy but didn't complete payment (pending orders, on-hold, abandoned carts if trackable). High-intent contacts worth reaching. Check what data we already have (WebOrdM has pending/on-hold; abandoned cart data may require a Woo API extension or plugin). Once trackable, ship as a new topic on `task.contact.outreach` so the manager surfaces and contacts them through the same Action Panel flow. (Broader scope than the @110-@111 pending-payment auto-followup which only covers `pending` Woo status.)
 
