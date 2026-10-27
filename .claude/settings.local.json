@@ -132,7 +132,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(php *)",
       "Read(//c/Users/B/.local/bin/**)",
-      "Read(//c/Users/B/.local/share/claude/versions/**)"
+      "Read(//c/Users/B/.local/share/claude/versions/**)",
+      "WebFetch(domain:www.jpost.com)"
     ],
     "deny": [
       "Bash(git -C:*)",
@@ -140,11 +141,6 @@
       "Bash(git push --force:*)",
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)"
-    ],
-    "ask": [
-      "Edit(//c/Users/B/projects/jlmwines/jlmops/*.js)",
-      "Edit(//c/Users/B/projects/jlmwines/jlmops/*.html)",
-      "Edit(//c/Users/B/projects/jlmwines/jlmops/config/**)"
     ]
   },
   "outputStyle": "default",

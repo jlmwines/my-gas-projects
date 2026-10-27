@@ -78,6 +78,30 @@
               "C:/Users/B/projects/jlmwines/.claude/hooks/bugs-wishlist-hygiene-guard.js"
             ],
             "statusMessage": "Checking bugs.md/wishlist.md line length"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/jlmops-code-auth-gate.js",
+              "pre"
+            ],
+            "statusMessage": "Checking jlmops code-edit authorization"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/jlmops-code-auth-gate.js",
+              "post"
+            ]
           }
         ]
       }
@@ -92,6 +116,14 @@
               "C:/Users/B/projects/jlmwines/.claude/hooks/content-task-protocol-check.js"
             ],
             "statusMessage": "Checking content-task protocol"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/jlmops-code-auth-gate.js",
+              "reset"
+            ]
           }
         ]
       }
