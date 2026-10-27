@@ -77,9 +77,10 @@ _One line each; full root-cause analysis lives in the git commit._
 
 ### Open
 
-- [ ] 2026-10-14: `push-posts.js` re-push of Negev/Galilee drops their Wine Basics category (single ID per language). `website/BLOG_CATEGORIES_PLAN.md`.
-- [ ] 2026-08-17: `push-posts.js` MANIFEST paths stale for 9 basics posts (old flat path, not `content/basics/<topic>/`). Fixed for negev/galilee only.
+(none)
 
 ### Resolved
 
+- [x] 2026-10-14: `push-posts.js` re-push dropped Wine Basics (single category ID). Now takes a list; region posts carry both (2026-10-27). `PUBLISHING.md`.
+- [x] 2026-08-17: `push-posts.js` MANIFEST paths stale for 10 basics posts. Fixed to `basics/<topic>/`; all 13 entries resolve (2026-10-27).
 - [x] 2026-08-17: `negev` MANIFEST entry pointed at the wrong path — fixed alongside adding the `galilee` entry.

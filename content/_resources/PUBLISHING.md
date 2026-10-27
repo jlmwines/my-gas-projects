@@ -54,4 +54,4 @@ The script gets the words, the featured image, and the category onto the post; a
 3. **WPML link** — link the HE and EN posts as translations of each other.
 4. **Publish** — when reviewed (the script never publishes).
 
-(Featured image is set by the push when `## FEATURED MEDIA` is present; category is set when the manifest entry has `enCategoryId`/`heCategoryId`.)
+(Featured image is set by the push when `## FEATURED MEDIA` is present; categories are set when the manifest entry has `enCategoryId`/`heCategoryId`, a single ID or a list. The push **replaces** the post's whole category list, so list every category it should keep: region posts use `[1272, 947]` / `[1273, 948]` (Regions + Wine Basics). An entry with no category IDs leaves categories untouched.)

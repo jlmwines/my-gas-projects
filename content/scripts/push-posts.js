@@ -26,71 +26,71 @@ const MANIFEST = [
     name: 'acidity',
     enSlug: 'white-rose-wine-acidity', enId: 58896,
     heSlug: 'white-rose-wine-acidity', heId: 58964,
-    enFile: 'Acidity EN_2025-01-12.post.md',
-    heFile: 'Acidity HE_2025-01-12.post.md'
+    enFile: 'basics/acidity/Acidity EN_2025-01-12.post.md',
+    heFile: 'basics/acidity/Acidity HE_2025-01-12.post.md'
   },
   {
     name: 'complexity',
     enSlug: 'wine-complexity', enId: 62594,
     heSlug: 'wine-complexity', heId: 62614,
-    enFile: 'Complexity EN_2025-01-12.post.md',
-    heFile: 'Complexity HE.post.md'
+    enFile: 'basics/complexity/Complexity EN_2025-01-12.post.md',
+    heFile: 'basics/complexity/Complexity HE.post.md'
   },
   {
     name: 'intensity',
     enSlug: 'red-wine-intensity', enId: 62818,
     heSlug: 'red-wine-intensity', heId: 62833,
-    enFile: 'Intensity EN 2026-01-15 A.post.md',
-    heFile: 'Intensity HE.post.md'
+    enFile: 'basics/intensity/Intensity EN 2026-01-15 A.post.md',
+    heFile: 'basics/intensity/Intensity HE.post.md'
   },
   {
     name: 'pairing',
     enSlug: 'pairing-food-and-wine', enId: 65344,
     heSlug: 'pairing-food-and-wine', heId: 65348,
-    enFile: 'Pairing EN_2026-01-06.post.md',
-    heFile: 'Pairing HE.post.md'
+    enFile: 'basics/pairing/Pairing EN_2026-01-06.post.md',
+    heFile: 'basics/pairing/Pairing HE.post.md'
   },
   {
     name: 'good-wine',
     enSlug: 'what-makes-a-wine-good', enId: 65321,
     heSlug: 'what-makes-a-wine-good', heId: 65335,
-    enFile: 'What is a Good Wine EN_2026-01-06.post.md',
-    heFile: 'What is a Good Wine HE.post.md'
+    enFile: 'basics/good wine/What is a Good Wine EN_2026-01-06.post.md',
+    heFile: 'basics/good wine/What is a Good Wine HE.post.md'
   },
   {
     name: 'selection',
     enSlug: 'how-we-choose-wines', enId: 65338,
     heSlug: 'how-we-choose-wines', heId: 65342,
-    enFile: 'Your Private Selection EN_2026-01-06.post.md',
-    heFile: 'Your Private Selection HE.post.md'
+    enFile: 'basics/how we select/Your Private Selection EN_2026-01-06.post.md',
+    heFile: 'basics/how we select/Your Private Selection HE.post.md'
   },
   {
     name: 'price',
     enSlug: 'does-higher-price-mean-better-wine', enId: 65779,
     heSlug: 'does-higher-price-mean-better-wine', heId: 65809,
-    enFile: 'Price vs Quality EN 2026-01-18 B.post.md',
-    heFile: 'Price vs Quality HE 2026-01-18 B.post.md'
+    enFile: 'basics/price/Price vs Quality EN 2026-01-18 B.post.md',
+    heFile: 'basics/price/Price vs Quality HE 2026-01-18 B.post.md'
   },
   {
     name: 'evyatar',
     enSlug: 'about-evyatar', enId: 66867,
     heSlug: 'about-evyatar', heId: 67158,
-    enFile: 'About Evyatar EN_2026-01-08.post.md',
-    heFile: 'About Evyatar HE.post.md'
+    enFile: 'basics/about evyatar/About Evyatar EN_2026-01-08.post.md',
+    heFile: 'basics/about evyatar/About Evyatar HE.post.md'
   },
   {
     name: 'context',
     enSlug: 'context', enId: 67403,
     heSlug: 'context', heId: 67405,
-    enFile: 'Context EN.post.md',
-    heFile: 'Context HE.post.md'
+    enFile: 'basics/context/Context EN.post.md',
+    heFile: 'basics/context/Context HE.post.md'
   },
   {
     name: 'handling',
     enSlug: 'how-to-store-open-serve-wine', enId: 67497,
     heSlug: 'how-to-store-open-serve-wine', heId: 67500,
-    enFile: 'Handling EN.post.md',
-    heFile: 'Handling HE.post.md',
+    enFile: 'basics/handling/Handling EN.post.md',
+    heFile: 'basics/handling/Handling HE.post.md',
     enCategoryId: 947, heCategoryId: 948   // Basics / יסודות (WPML-translated terms)
   },
   {
@@ -99,7 +99,7 @@ const MANIFEST = [
     heSlug: 'blog-negev', heId: 67602,
     enFile: 'regions/negev/negev-en.post.md',
     heFile: 'regions/negev/negev-he.post.md',
-    enCategoryId: 1272, heCategoryId: 1273   // Regions / אזורים (WPML-translated terms)
+    enCategoryId: [1272, 947], heCategoryId: [1273, 948]   // Regions + Wine Basics (live, verified 2026-10-27)
   },
   {
     name: 'galilee',
@@ -107,15 +107,15 @@ const MANIFEST = [
     heSlug: 'galilee-wine', heId: 67739,   // WPML translation stub, created by user in wp-admin (translations can't be created via REST API)
     enFile: 'regions/galilee/galilee-en.post.md',
     heFile: 'regions/galilee/galilee-he.post.md',
-    enCategoryId: 1272, heCategoryId: 1273   // Regions / אזורים (WPML-translated terms)
+    enCategoryId: [1272, 947], heCategoryId: [1273, 948]   // Regions + Wine Basics (live, verified 2026-10-27)
   },
   {
     name: 'central-mountains',
     enSlug: 'central-mountains-wine', enId: 67855,
     heSlug: 'central-mountains-wine', heId: 67857,   // WPML translation stub, created by user in wp-admin
     enFile: 'regions/central-mountains/central-mountains-en.post.md',
-    heFile: 'regions/central-mountains/central-mountains-he.post.md'
-    // No category IDs: drafts already carry Regions + Wine Basics; a push would replace them with one.
+    heFile: 'regions/central-mountains/central-mountains-he.post.md',
+    enCategoryId: [1272, 947], heCategoryId: [1273, 948]   // Regions + Wine Basics (live, verified 2026-10-27)
   }
 ];
 
@@ -177,9 +177,11 @@ async function pushPost(wp, entry, lang) {
   };
   if (parsed.featuredMedia) payload.featured_media = parsed.featuredMedia;
 
-  // Optional per-language category (manifest opt-in — replaces existing categories).
+  // Optional per-language category or list of categories (manifest opt-in). WordPress
+  // REPLACES the post's whole category list with this, so list every category the post
+  // should keep (e.g. region posts: Regions + Wine Basics).
   var categoryId = isHe ? entry.heCategoryId : entry.enCategoryId;
-  if (categoryId) payload.categories = [categoryId];
+  if (categoryId) payload.categories = Array.isArray(categoryId) ? categoryId : [categoryId];
 
   var result;
   if (postId) {
