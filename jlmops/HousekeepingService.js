@@ -730,9 +730,14 @@ function HousekeepingService() {
       { name: 'formatDataSheets', fn: () => this.formatDataSheets() }
     ];
 
+    // Most steps catch their own errors and return false rather than throwing,
+    // so an explicit false counts as a failure too. Normal skips return 'skipped'.
     for (const task of phase1Tasks) {
       try {
-        task.fn();
+        if (task.fn() === false) {
+          phase1Failures.push(task.name);
+          logger.error('HousekeepingService', functionName, `${task.name} reported failure (returned false).`);
+        }
       } catch (e) {
         phase1Failures.push(task.name);
         logger.error('HousekeepingService', functionName, `${task.name} failed: ${e.message}`);
@@ -1821,10 +1826,11 @@ function HousekeepingService() {
 
     // Sync-state guard (D2): skip this destructive read-clear-rewrite while the
     // daily sync is mid-flight, so it can't race the sync's own writes to WebOrdM.
+    // 'skipped', not false: performDailyMaintenance counts false as a failure.
     if (SyncStateService.isSyncActive()) {
       logger.info('HousekeepingService', functionName,
         `Daily sync in progress (${SyncStateService.getActiveSession().stage}). Skipping.`);
-      return false;
+      return 'skipped';
     }
 
     try {
@@ -2051,10 +2057,11 @@ function HousekeepingService() {
 
     // Sync-state guard (D2): skip this destructive read-clear-rewrite while the
     // daily sync is mid-flight.
+    // 'skipped', not false: performDailyMaintenance counts false as a failure.
     if (SyncStateService.isSyncActive()) {
       logger.info('HousekeepingService', 'archiveCompletedTasks',
         `Daily sync in progress (${SyncStateService.getActiveSession().stage}). Skipping.`);
-      return false;
+      return 'skipped';
     }
 
     let movedCount = 0;
@@ -2244,11 +2251,12 @@ function HousekeepingService() {
     logger.info('HousekeepingService', functionName, 'Starting purge of old job queue entries.');
 
     // Sync-state guard (D2): skip this destructive read-clear-rewrite while the
-    // daily sync is mid-flight.
+    // daily sync is mid-flight. 'skipped', not false: performDailyMaintenance
+    // counts false as a failure.
     if (SyncStateService.isSyncActive()) {
       logger.info('HousekeepingService', functionName,
         `Daily sync in progress (${SyncStateService.getActiveSession().stage}). Skipping.`);
-      return false;
+      return 'skipped';
     }
 
     try {
@@ -2332,7 +2340,7 @@ function HousekeepingService() {
 
       if (result === null) {
         logger.info('HousekeepingService', functionName, 'Could not acquire lock; skipping this run.');
-        return false;
+        return 'skipped';
       }
 
       if (result.purged === 0) {
