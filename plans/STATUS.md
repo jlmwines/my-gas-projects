@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-26. jlmops @594 live, theme v1.2.32; Hebrew site typo sweep complete (products, WebDetM names/descriptions, posts, pages); insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits.
+**Updated:** 2026-10-27. jlmops @596 live (WebDetM duplicate/SKU validation, write-path guard, sorted WebDetM), theme v1.2.32; October AYIW email scheduled for 2026-11-03; insert, What's in the Box post and FAQ in the library awaiting Evyatar's edits.
 
 ## At a glance
 
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-10-26 |
+| Last Active | 2026-10-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @594 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-10-23 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
+| Deploy Version | jlmops @596 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-10-27 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |

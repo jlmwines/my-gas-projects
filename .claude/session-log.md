@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-27 — WebDetM key integrity, October AYIW email
+
+- Shipped (jlmops @595-@596): KEY_UNIQUENESS validation (WebDetM web ID + SKU, WebProdM ID), WebDetM-vs-WebProdM SKU rule, B2 filter fix (Comax stores כן, not 1), write-path guard on suggestion/details accept, housekeeping sorts WebDetM. All verified clean; plan archived.
+- October AYIW EN+HE email HTML built (`content/newsletter/2026-10/`), CTA "Read more" to Wine Talk; scheduled for 2026-11-03.
+- Gotcha: validation lookups collapse duplicate keys (last row wins) — only KEY_UNIQUENESS sees duplicates. A new vintage SKU on an existing Woo product must go through Product Replacement; onboarding now refuses it.
+- New bug logged: INTERNAL_AUDIT/DATA_COMPLETENESS skip the first data row. Portfolio CALENDAR.md edit (AYIW row) left uncommitted: `git -C` is denied.
+
 ## 2026-10-25/26 — Hebrew typo sweep, HE gifts page fix
 
 - Shipped: HE gifts page empty sections fixed (theme, live); manager-approved HE typo fixes on 5 posts + 2 pages; low-acidity line on 66 products; grape spellings settled (lookup authority; Colombard→קולומבר, Bobal→בובאל) and applied to live names, descriptions and the Evyatar post.
