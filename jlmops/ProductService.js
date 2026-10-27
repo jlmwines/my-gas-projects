@@ -1202,7 +1202,7 @@ const ProductService = (function() {
     logger.info(serviceName, functionName, `Accepting suggestion for SKU ${sku}`, { sessionId: sessionId, sku: sku, suggestionTaskId: suggestionTaskId });
     try {
       // 0. Refuse before any write if the web ID already belongs to another SKU — the seeds
-      // below find rows by SKU and would append duplicates (WEBDETM_KEY_INTEGRITY_PLAN.md).
+      // below find rows by SKU and would append duplicates (docs/WORKFLOWS.md §14.1).
       if (wpmId) {
         const guardConfig = ConfigService.getAllConfig();
         const guardSpreadsheet = SheetAccessor.getDataSpreadsheet();
@@ -1997,7 +1997,7 @@ const ProductService = (function() {
   /**
    * Throws when writing (sku, webId) would leave two rows with one web ID, or a row whose
    * SKU and web ID disagree. Writers find their row by SKU, so a new SKU carrying an
-   * existing web ID would otherwise append a duplicate (jlmops/plans/WEBDETM_KEY_INTEGRITY_PLAN.md).
+   * existing web ID would otherwise append a duplicate (docs/WORKFLOWS.md §14.1).
    * @param {Array[]} data Sheet values including the header row (getDataRange().getValues()).
    * @param {number} skuIdx 0-based SKU column index.
    * @param {number} idIdx 0-based web ID column index.

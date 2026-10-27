@@ -14,8 +14,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 ### Open
 
-- [ ] 2026-10-26: No validation flags a WebDetM SKU mismatch. B3/B4 join WebDetM↔WebProdM on web ID only; nothing compares `wdm_SKU` to `wpm_SKU`. `jlmops/plans/WEBDETM_KEY_INTEGRITY_PLAN.md`.
-- [ ] 2026-10-27: Duplicate `wdm_WebIdEn` must be forbidden; no validation checks key uniqueness. `jlmops/plans/WEBDETM_KEY_INTEGRITY_PLAN.md`.
 - [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS loops start at index 1, but `_getSheetDataAsMap` values start at sheet row 2 — first data row never checked; reported row numbers off by one.
 - [ ] 2026-10-23: Stale system-failure alerts stay on Admin dash; only 2 contexts call `NotificationService.resolveFailure` (sweep @594, contacts verify).
 - [ ] 2026-10-18: Woo API calls intermittently get 2xx HTML instead of JSON (suspect SiteGround anti-bot). @580 logs it; see commit.
@@ -41,6 +39,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 _One line each; full root-cause analysis lives in the git commit._
 
+- [x] 2026-10-27: WebDetM duplicate web ID / SKU mismatch went unflagged — KEY_UNIQUENESS + SKU-match rules @595, write-path guard @596, verified clean.
 - [x] 2026-10-22: `SysCampaigns` duplicated all-digit campaign id daily (61 rows) — fixed @591, extra rows deleted by user.
 - [x] 2026-10-12: Admin attach of a manager-owned Doc failed at `setOwner` — now attaches a copy. Verified live, jlmops @576. `jlmops/docs/DATA_MODEL.md`.
 - [x] 2026-09-03: Welcome task fired for repeat customers with an archived first order — fixed @575, verified live 2026-10-10. `CONTACT_MANAGER_PLAN.md`.

@@ -2626,7 +2626,7 @@ function HousekeepingService() {
   /**
    * Sorts WebDetM by wdm_NameEn for human editing. WebDetM is written row by row (never
    * rewritten by the sync like WebProdM/CmxProdM), so it drifts out of order. Safe because
-   * no code holds WebDetM row numbers across calls (WEBDETM_KEY_INTEGRITY_PLAN.md Stage 4).
+   * no code holds WebDetM row numbers across calls (docs/ARCHITECTURE.md §2.5.6).
    * Native Range.sort moves cell formats with their rows. Throws on failure so the
    * phase 1 loop records it.
    */

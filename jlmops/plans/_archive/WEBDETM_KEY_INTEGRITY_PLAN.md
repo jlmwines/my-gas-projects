@@ -1,6 +1,6 @@
 # WebDetM Key Integrity Plan
 
-Status: **Stages 1-2 and the B2 fix live @595, config rebuilt; first housekeeping run 2026-10-27 raised no tasks (expected, data already fixed). Stages 3 (write-path guard) and 4 (WebDetM sort) built 2026-10-27, guard tested locally against the WebDetM export; deployed @596; awaiting a housekeeping run that shows WebDetM sorted.** Goal: every WebDetM row has a unique `wdm_WebIdEn`, its `wdm_SKU` matches WebProdM, and validation flags it when not. Covers the two BUGS.md entries dated 2026-10-26 and 2026-10-27.
+Status: **Done and archived 2026-10-27.** All stages live (@595, @596) and verified on housekeeping runs. Durable facts live in `jlmops/docs/ARCHITECTURE.md` §2.5.5-2.5.6 and `jlmops/docs/WORKFLOWS.md` §14.1. Goal: every WebDetM row has a unique `wdm_WebIdEn`, its `wdm_SKU` matches WebProdM, and validation flags it when not. Covers the two BUGS.md entries dated 2026-10-26 and 2026-10-27.
 
 ## What was found (2026-10-27)
 
