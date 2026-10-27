@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-27. jlmops @598 live (audit first-row, gift-buyer welcome, maintenance failure-detection fixes awaiting live confirmation); non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
+**Updated:** 2026-10-27. jlmops @599 live (failure alerts now auto-resolve; @597-@599 fixes await live confirmation); non-wine WebDetM descriptions backfilled and cleaned; October AYIW email scheduled for 2026-11-03.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-10-27 |
 | Revenue | Steady |
-| Deploy Version | jlmops @598 · theme v1.2.32 |
+| Deploy Version | jlmops @599 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-27 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -56,6 +56,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — refresh bug open (doesn't refresh after "Apply Pending Updates"/"Create Content Tasks", root cause not found, needs a live repro). Admin date edit is live but its Save hasn't been used yet; first real re-date doubles as the repro.
 - **Woo API push** (`jlmops/plans/WOO_API_PUSH_PLAN.md`) — live; new-product and existing-product push paths confirmed working. Open: the `date_created` ("Published" date from the originating task) not yet smoke-tested live; RankMath meta push deferred (manual for now).
+- **Failure alert auto-resolve** (`jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`) — live @599: each failure context resolves on its next success, one-off events auto-close after 7 quiet days. Open: live verification, one-time cleanup of already-stale failure tasks, docs graduation.
 - **WebDetM description backfill** (`jlmops/plans/WEBDETM_DESCRIPTION_BACKFILL_PLAN.md`) — non-wine only. Pass 1 (fill blanks from live) imported and verified; Pass 2 (HTML cleanup) file built and reviewed, import + post-import check pending. Bundles/Ilana's have no description text anywhere.
 - **Vintage-mismatch snapshot fix** (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — live; vintage-mismatch tasks read live data instead of a creation-time snapshot. Not yet smoke-tested (needs a real vintage change; Next Action 13).
 
