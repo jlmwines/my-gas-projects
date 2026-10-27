@@ -25,17 +25,17 @@ If the row for a web product still holds an old SKU, a write under the new SKU f
 
 **Stage 1: SKU mismatch rule (config only).** Add a `master_master` FIELD_COMPARISON rule in `config/validation.json`: `sheet_A` WebDetM, `key_A` `wdm_WebIdEn`, `sheet_B` WebProdM, `key_B` `wpm_ID`, `compare_fields` `wdm_SKU,wpm_SKU`, task type `task.validation.master_master_discrepancy`, title "Details SKU Mismatch". B7 already proves master-to-master FIELD_COMPARISON works. Ship via `generate-config.js`, `clasp push`, `rebuildSysConfigFromSource()`.
 
-**Stage 2: KEY_UNIQUENESS rule type (code).** Add `_executeKeyUniqueness` to `ValidationLogic.js` and a `case 'KEY_UNIQUENESS'` in `runValidationSuite`'s switch. It reads the raw rows from `sheetDataCache[rule.source_sheet]` (not the prebuilt maps, which already dropped duplicates), counts non-empty `rule.source_key` values, and emits one discrepancy per duplicated key with the row numbers and SKUs in `details`. Add three `master_master` rules, task type `task.validation.master_master_discrepancy` (decided 2026-10-27):
+**Stage 2: KEY_UNIQUENESS rule type (code).** Add `_executeKeyUniqueness` to `ValidationLogic.js` and a `case 'KEY_UNIQUENESS'` in `runValidationSuite`'s switch. It reads the raw rows from `sheetDataCache[rule.source_sheet]` (not the prebuilt maps, which already dropped duplicates), counts non-empty `rule.source_key` values, and emits one discrepancy per duplicated key with the row numbers and SKUs in `details`. Add three `master_master` rules (decided 2026-10-27):
 
 - WebDetM `wdm_WebIdEn`, title "Duplicate Details Row"
 - WebDetM `wdm_SKU`, title "Duplicate Details SKU"
 - WebProdM `wpm_ID`, title "Duplicate Web Product Row"
 
-Deploy with `deploy.ps1`.
+They use a new task type, `task.validation.duplicate_key`, added to `config/taskDefinitions.json` as a copy of `master_master_discrepancy`. Reason: `TaskService.createTask` skips creation when an open task has the same type and entity ID, and the entity here is the web ID, the same as the Stage 1 SKU-mismatch task. A duplicate row that also mismatches on SKU (the Gros case) would otherwise raise only one task. Product views pick up any `task.validation.*` type by prefix, so no UI change is needed.
 
 **Stage 3: write-path guard (code).** Before changing anything, trace both writers: whether a web ID is available at each call, and whether `_upsertMasterProductRow` overwrites `wdm_WebIdEn` with blank when `finalData` lacks it. Intended change: find the row by `wdm_WebIdEn` when a web ID is known, fall back to SKU only when it is not, and refuse to append when that web ID already has a row under a different SKU (return an error instead). Deploy with `deploy.ps1`.
 
-Order: 1, then 2, then 3. Stages 1 and 2 detect, Stage 3 prevents. Each stage gets its own OK and verification before the next.
+Stages 1 and 2 ship together in one cycle: edit `validation.json` and `taskDefinitions.json`, run `node jlmops/generate-config.js`, add the executor, run `deploy.ps1` (its `clasp push` carries code and generated config), then run `rebuildSysConfigFromSource()` in `SetupConfig.gs`. Stage 3 follows with its own OK, after its trace.
 
 ## Verification
 
