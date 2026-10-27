@@ -121,6 +121,18 @@
     ],
     [
         "task.template",
+        "task.validation.duplicate_key",
+        "Task for when a key that must be unique appears on more than one row of a master sheet.",
+        "stable",
+        "topic", "System",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day",
+        "pack_form", "skeleton"
+    ],
+    [
+        "task.template",
         "task.validation.comax_master_discrepancy",
         "Task for when an active Comax product is missing from staging.",
         "stable",

@@ -385,6 +385,51 @@ const ValidationLogic = (function() {
     };
   }
 
+  // Reads raw rows, not prebuiltMaps: buildMapFromData keeps only the last row per key,
+  // so duplicates are already gone from the maps. sheetDataCache values start at sheet row 2.
+  function _executeKeyUniqueness(rule, dataMaps, prebuiltMaps, sessionId) {
+    const discrepancies = [];
+    const sourceSheetData = dataMaps[rule.source_sheet];
+
+    if (!sourceSheetData) return { status: 'ERROR', message: `Sheet data missing`, discrepancies: [] };
+
+    const headers = sourceSheetData.headers;
+    const values = sourceSheetData.values;
+    const keyIdx = headers.indexOf(rule.source_key);
+    if (keyIdx === -1) return { status: 'ERROR', message: `Key column '${rule.source_key}' not found`, discrepancies: [] };
+
+    const rowsByKey = new Map();
+    for (let i = 0; i < values.length; i++) {
+        const key = String(values[i][keyIdx] ?? '').trim();
+        if (!key) continue;
+        if (!rowsByKey.has(key)) rowsByKey.set(key, []);
+        rowsByKey.get(key).push(i);
+    }
+
+    for (const [key, rowIndexes] of rowsByKey.entries()) {
+        if (rowIndexes.length < 2) continue;
+        const rows = rowIndexes.map(i => {
+            const rowObj = {};
+            headers.forEach((h, k) => rowObj[h] = values[i][k]);
+            return rowObj;
+        });
+        const skuCol = headers.find(h => h.endsWith('_SKU'));
+        const rowList = rowIndexes.map((i, n) => `row ${i + 2}` + (skuCol ? ` (${rows[n][skuCol]})` : '')).join(', ');
+        discrepancies.push({
+            key: key,
+            name: _extractName(rows[0]),
+            details: `${rule.source_key} '${key}' appears on ${rowIndexes.length} rows: ${rowList}`,
+            data: rows[0]
+        });
+    }
+
+    return {
+        status: discrepancies.length > 0 ? 'FAILED' : 'PASSED',
+        message: discrepancies.length > 0 ? `${discrepancies.length} duplicate keys.` : 'Passed.',
+        discrepancies: discrepancies
+    };
+  }
+
   function _executeGeneric(rule, sessionId) {
       return { status: 'SKIPPED', message: `Executor for ${rule.test_type} not yet implemented in ValidationLogic.`, discrepancies: [] };
   }
@@ -479,6 +524,9 @@ const ValidationLogic = (function() {
                     break;
                 case 'INTERNAL_AUDIT':
                     result = _executeInternalAudit(rule, sheetDataCache, prebuiltMaps, sessionId);
+                    break;
+                case 'KEY_UNIQUENESS':
+                    result = _executeKeyUniqueness(rule, sheetDataCache, prebuiltMaps, sessionId);
                     break;
                 default:
                     result = _executeGeneric(rule, sessionId);

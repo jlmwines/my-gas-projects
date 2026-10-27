@@ -35,6 +35,8 @@ They use a new task type, `task.validation.duplicate_key`, added to `config/task
 
 **Stage 3: write-path guard (code).** Before changing anything, trace both writers: whether a web ID is available at each call, and whether `_upsertMasterProductRow` overwrites `wdm_WebIdEn` with blank when `finalData` lacks it. Intended change: find the row by `wdm_WebIdEn` when a web ID is known, fall back to SKU only when it is not, and refuse to append when that web ID already has a row under a different SKU (return an error instead). Deploy with `deploy.ps1`.
 
+**B2 filter fix (config only, same cycle).** Rule B2 (`validation.master.comax_sku_missing_web`) filters on `cpm_IsWeb,1`, but Comax stores `כן`/`לא`, so B2 has never fired. Change the filter to `cpm_IsWeb,כן`. Offline preview on 2026-10-27 exports: zero hits. Comax-internal SKU and WebXltM duplicate checks were considered and dropped (Comax and WPML enforce those keys; the sheets are sync-written by key).
+
 Stages 1 and 2 ship together in one cycle: edit `validation.json` and `taskDefinitions.json`, run `node jlmops/generate-config.js`, add the executor, run `deploy.ps1` (its `clasp push` carries code and generated config), then run `rebuildSysConfigFromSource()` in `SetupConfig.gs`. Stage 3 follows with its own OK, after its trace.
 
 ## Verification

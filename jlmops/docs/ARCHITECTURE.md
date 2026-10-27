@@ -108,8 +108,9 @@ The system runs validation suites at strategic points to ensure data integrity.
 - `ROW_COUNT_COMPARISON`: Detect unexpected row count changes
 - `SCHEMA_COMPARISON`: Compare column sets between two schemas
 - `DATA_COMPLETENESS`: Flag empty cells in a sheet
+- `KEY_UNIQUENESS`: Flag a `source_key` value that appears on more than one row (raises `task.validation.duplicate_key`)
 
-EXISTENCE_CHECK and FIELD_COMPARISON read per-key Maps built by `buildMapFromData`; a duplicate key is overwritten by the later row, so these rules cannot see duplicates.
+EXISTENCE_CHECK and FIELD_COMPARISON read per-key Maps built by `buildMapFromData`; a duplicate key is overwritten by the later row, so these rules cannot see duplicates. KEY_UNIQUENESS reads the raw rows for that reason; `master_master` runs it on WebDetM `wdm_WebIdEn` and `wdm_SKU` and WebProdM `wpm_ID`.
 
 ### 2.5.6. Housekeeping Phases
 
