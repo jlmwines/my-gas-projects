@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-28. Coastal Plain live; Golan Heights body expanded and in the Library as a Doc awaiting admin attach + manager lock; jlmops @603 fixes awaiting live confirmation; config multi-pair plan awaiting approval.
+**Updated:** 2026-10-28. Coastal Plain live; Golan Heights body expanded and in the Library as a Doc awaiting admin attach + manager lock; jlmops @603 fixes awaiting live confirmation; config multi-pair fix approved, parked for a quiet day.
 
 ## At a glance
 

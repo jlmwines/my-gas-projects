@@ -1,6 +1,6 @@
 # Config Multi-Pair Rows Fix
 
-Fix for the BUGS.md entry "`ConfigService.loadConfig` reads only the first key-value pair of non-schema settings" (2026-07-02). Status: **draft, independently reviewed 2026-10-27 (verdict: sound with changes, all incorporated). Awaiting user approval.** Nothing changed yet. Recommendation: normalise the config data to one key-value pair per row and add a generator lint; **no runtime code change**.
+Fix for the BUGS.md entry "`ConfigService.loadConfig` reads only the first key-value pair of non-schema settings" (2026-07-02). Status: **draft, independently reviewed 2026-10-27 (verdict: sound with changes, all incorporated). Approved, parked for a quiet day (user 2026-10-28): low urgency, no live impact; do it before anyone tunes CRM thresholds, and don't reorder GA4/GSC workbook tabs meanwhile.** Nothing changed yet. Recommendation: normalise the config data to one key-value pair per row and add a generator lint; **no runtime code change**.
 
 ## The SysConfig row model (what the code actually does)
 
