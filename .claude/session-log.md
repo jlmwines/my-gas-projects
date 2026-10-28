@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-28 (2) — Daily review, Golan Heights body to Library, vineyard images
+
+- Golan Heights: new title "Wine's Big Surprise: The Golan Heights"; body expanded (~1,000 words: Rothschild link, founders, Yarden award, winemakers). Doc placed in Library `blog/blog-region-golan-heights/`; admin attaches, manager edits/locks.
+- Pre-lock bodies go to a Library Doc for the manager, never WP preview; no NOTES section in post files (memories saved).
+- Seven seasonal vineyard photos moved to `content/vineyard/`; video link in VINEYARD_DIARY_PLAN.
+- Inventory count / product updates / new products delayed by manager bandwidth (publishing first), not deliberate; catch-up expected soon.
+- Next: attach Golan Doc; @597-@603 live checks; config plan approval.
+
 ## 2026-10-28 — Coastal Plain published, config plan reviewed
 
 - Coastal Plain region post live EN+HE (67930/67932); companion email HTML built; RankMath meta handed to user to paste (not REST-writable).

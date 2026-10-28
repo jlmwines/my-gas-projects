@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-28. Coastal Plain region post live (EN+HE); jlmops @603 fixes awaiting live confirmation; config multi-pair fix planned and reviewed, awaiting user approval.
+**Updated:** 2026-10-28. Coastal Plain live; Golan Heights body expanded and in the Library as a Doc awaiting admin attach + manager lock; jlmops @603 fixes awaiting live confirmation; config multi-pair plan awaiting approval.
 
 ## At a glance
 
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-10-27 |
+| Last Active | 2026-10-28 |
 | Revenue | Steady |
 | Deploy Version | jlmops @603 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-27 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
@@ -32,14 +32,14 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
-1. **Monthly AYIW email** — October issue (`email-ayiw-2026-10`, "Making Wine - After the Harvest") EN+HE scheduled in Mailchimp for 2026-11-03; HTML at `content/newsletter/2026-10/`, CTA "Read more" to the Wine Talk page. AYIW is becoming a rolling diary post, "Vine, Barrel, Bottle" (`content/plans/VINEYARD_DIARY_PLAN.md`); waiting on whether Evyatar has photos.
+1. **Monthly AYIW email** — October issue (`email-ayiw-2026-10`, "Making Wine - After the Harvest") EN+HE scheduled in Mailchimp for 2026-11-03; HTML at `content/newsletter/2026-10/`, CTA "Read more" to the Wine Talk page. AYIW is becoming a rolling diary post, "Vine, Barrel, Bottle" (`content/plans/VINEYARD_DIARY_PLAN.md`); seasonal vineyard photos and a video link now on hand (`content/vineyard/`, plan Open list).
 2. **Branded shipping cartons — custom-printed plan canceled (2026-07-30); switched to natural brown cartons + a large logo stamp.** The original vendor's shipping cost for custom-printed cartons ran way over the cartons' own cost; after negotiating, that plan was dropped in favor of plain natural-brown cartons with the JLM mark large-stamped on. Size: 6-bottle cartons (user, 2026-10-21). Partner-owned. Track only: nudge in daily review; re-flag if the stamped cartons slip. No Claude action.
 3. **Flyer advertising — Round 1 (Talbiye) done; Round 2 cancelled** (user, 2026-10-21): the website new-visitor popup + `50NEW` discount make another round unnecessary. Plan → `marketing/plans/FLYER_PLAN.md`.
 4. **Thursday-evening in-shop tastings — manager-led, replacing Google Search Ads as the current growth push.** Tastings resume after a years-long gap, announced via organic social media (no paid ads). Seen as a boon for both shop and web. No plan doc yet.
 5. **Server-side authorization program** — the code audit's one unresolved finding: `doGet` is a login gate, not an authorization boundary; the role-switcher is client-side only and no mutating endpoint re-checks caller role. Needs a dedicated `AUTHORIZATION_PLAN.md` (sketch in `jlmops/plans/CODE_AUDIT_FIX_SEQUENCE.md` Session R) — a program, not a quick session.
 6. **Current focus (post-holidays, user 2026-10-15):** publish content (blog pipeline + monthly newsletter); update and verify products (verification flow, `jlmops/docs/WORKFLOWS.md`); add new wines to fill category gaps.
 7. **Physical inventory — due now that the holidays have passed.** Full count sweep via Admin Inventory's count-task creation (full-sweep mode, batched alphabetically across sessions; design archived at `jlmops/plans/_archive/INVENTORY_COUNT_TASK_REDESIGN.md`). Counting is quantity-only.
-8. **Golan Heights (2026-11-16) and Judea/Foothills (2026-12-14) region posts, per JLMops_Publishing.** Golan Heights body drafted, awaiting lock; Judea not drafted. Negev, Galilee, Central Mountains, and Coastal Plain are published (Coastal companion email HTML ready for Mailchimp). Sources, slot table, and calendar-row state → `content/plans/REGION_POSTS_PLAN.md`.
+8. **Golan Heights (2026-11-16) and Judea/Foothills (2026-12-14) region posts, per JLMops_Publishing.** Golan Heights body ("Wine's Big Surprise: The Golan Heights", ~1,000 words) is a Library Doc in `blog/blog-region-golan-heights/`; admin attaches it via "Attach new version", then manager edits and locks. Judea not drafted. Negev, Galilee, Central Mountains, and Coastal Plain are published (Coastal companion email HTML ready for Mailchimp). Sources, slot table, and calendar-row state → `content/plans/REGION_POSTS_PLAN.md`.
 9. **After the region posts: the ministry-map anchor, then People.** The anchor introduces the 2026 official map (8 regions, 18 sub-regions) and places our six region posts on it; People profiles are the richer next category (subjects can supply images and share). Grapes anchor stays drafted on the shelf (`content/grapes/grapes-en.post.md`). Plan → `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`.
 10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager).
 11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.

@@ -1,51 +1,71 @@
 ## TITLE
-The Plateau That Changed Israeli Wine: The Golan Heights
+Wine's Big Surprise: The Golan Heights
 
 
 ## BODY
 
-This is the region where Israeli wine stopped being an afterthought and became something the rest of the world had to take seriously.
+Fifty years ago, nobody was growing wine grapes on the Golan Heights. The plateau was apple country. Today it's one of the most important wine regions in Israel, and how that happened is one of the best surprises in Israeli wine.
 
 **At a Glance**
-Where: a volcanic plateau in the far north, rising in elevation from south to north, roughly 500-1,200m above sea level.
-Climate: cool breezes off snow-capped Mount Hermon, wild and heavily agricultural terrain.
+Where: a plateau in the far north, rising in elevation from south to north, roughly 500-1,200m above sea level.
+Sub-regions: Upper Golan and Lower Golan.
+Landscape: wild, beautiful, and heavily agricultural.
+Climate: cool, with breezes off snow-capped Mount Hermon.
 Soil: mainly volcanic - more limestone in the south, more volcanic further north, around three dormant volcanic sites.
 
 
-**The Story**
+**A Plateau of Apples**
 
-The Golan barely has an ancient wine story worth telling - and that's the point. This is a region defined almost entirely by what happened here in the last fifty years, not the last two thousand.
+In the early 1970s, the Golan was known for its orchards. Apples grew well up there, and that's what most farmers planted. Then a visitor came with a different idea. Cornelius Ough, a grape and wine expert from the University of California at Davis - one of the best-known wine schools in the world - looked at the plateau and told the growers something they didn't expect to hear: this land would be good for wine grapes too.
 
-In the early 1970s, Cornelius Ough, a viticulture expert from UC Davis, came to a plateau that was mostly apple orchards and told growers something they hadn't expected to hear: this land could make serious wine too. The first vines went in in 1976, and for a while the grapes were simply sold off to Carmel, one ingredient among many in someone else's wine.
+It was a bold suggestion. Israel's modern wine industry had started nearly a century earlier, in the 1880s, when Baron Edmond de Rothschild chose the warm coast to restart winemaking in the land, and by 1892 Carmel had built its cellars in Zichron Ya'acov. For close to a hundred years, that's where Israeli wine mostly lived: on the coast and the nearby hills, where it was warm. Now an expert from California was pointing to a cool, high plateau in the far north - a completely different idea of where good wine could come from.
 
-That changed in 1983. The growers who'd planted those first vines broke away from their contract with Carmel and started their own winery instead - Golan Heights Winery, and its first vintage that year didn't just prove the plateau could grow grapes, it proved Israeli wine could compete on quality with anywhere in the world. It's a single winery, but the reason the whole region's story runs through it is that it didn't just make good wine - it changed what everyone believed Israeli wine could be, and then it ran a winemaking school to teach that standard to the growers and wineries that followed. Today there are wineries spread the length of the plateau, from south to north.
+The growers took it seriously. In 1976, the first vines went into the ground.
 
 
-**Why the Volcanic Plateau Matters**
+**From Grape Growers to Winemakers**
 
-The Golan's elevation isn't uniform - it climbs steadily from south to north, and that gradient does real work. The higher northern stretches, up toward 1,200m, sit closest to Mount Hermon and catch the coolest air in the region, cooler nights that slow ripening and hold onto freshness the way altitude does everywhere else in Israel's wine country.
+At first, the Golan growers did what grape growers usually do: they sold their fruit. All of it went to Carmel - the same winery Rothschild had started on the coast - where it became part of wines made far from the plateau. The grapes were good, but the growers were only one part of someone else's story.
 
-The volcanic soil underneath tells its own story of change: black basalt and volcanic tuff dominate, laid down by the plateau's three dormant volcanic sites, with limestone mixing in more as you move south. Volcanic soil drains well and holds heat differently than limestone or terra rossa, giving Golan wines a mineral edge that growers elsewhere in Israel don't have access to.
+At some point, they decided that wasn't enough. They broke their contract with Carmel and set out to build a winery of their own. That's a big step for a group of farmers - growing grapes is one job, and making and selling wine is another job entirely.
+
+They did it together. Eight Golan communities - four kibbutzim and four moshavim - joined forces and built the winery in Katzrin, and they still own it today. Golan Heights Winery made its first wine in 1983. As far as we're concerned, a glorious year for humanity.
+
+
+**The Surprise Goes Global**
+
+The growers brought in winemakers trained in California, keeping the UC Davis connection that started the whole idea. American winemaker Peter Stern helped bring New World methods to the winery in its early years, and Victor Schoenfeld, another UC Davis graduate, has led the winemaking for more than thirty years.
+
+It didn't take long for the world to notice. The winery's Yarden Cabernet Sauvignon 1984 won a gold medal and the Winiarski Trophy at a major international competition - widely remembered as the first big international win for an Israeli wine. A brand-new winery, from a plateau that had been growing apples a few years earlier, had beaten wines from much older and better-known places. That was the big surprise, and it made people everywhere take a fresh look at Israeli wine.
+
+You may already know the winery's wines by their labels: Yarden, Gamla, and Hermon.
+
+
+**Why So Much About One Winery?**
+
+You might wonder why a story about a whole region keeps coming back to a single winery. The answer is simple: it made a difference.
+
+Golan Heights Winery showed what grapes from this plateau could do, and that changed how people thought about Israeli wine. Just as important, it didn't keep what it learned to itself. The winery ran a winemaking school for other wineries and growers, sharing its know-how with people who went on to plant vineyards and make wine of their own.
+
+That's a big part of why the surprise didn't stop with one winery. Today there are many wineries throughout the Golan, from the south of the plateau all the way to the north.
+
+
+**Why the Plateau Works**
+
+The Golan isn't flat. It climbs steadily as you head north, from around 500 meters in the south to about 1,200 meters in the north. Higher ground means cooler air, and cooler nights help grapes ripen slowly and keep their freshness - the same reason altitude matters across Israel's wine country. Many of the Golan's best wines come from the higher Upper Golan, where vineyards sit from around 600 meters up to 1,200.
+
+The ground changes too. In the south there's more limestone. Heading north, the soil turns more and more volcanic, with black basalt and volcanic tuff, shaped by three dormant volcanic sites. Put together, the height, the cool air, and the mix of soils give growers a lot to work with on one plateau.
 
 
 **What to Expect in the Glass**
 
-The Golan's cooler climate and volcanic soil favor the same international varieties that do well in classic cool-climate regions worldwide - structured reds with real aging potential, and whites with genuine freshness and lift, rather than the riper, warmer-climate character you'd find lower down or further south. It's the closest thing Israel has to a textbook cool-climate wine region, built almost entirely in the last five decades.
+Cooler conditions suit wines with freshness and balance. The Golan is best known for Bordeaux-style reds like Cabernet Sauvignon, with structure that lets them age, and for whites that feel crisp and lively rather than heavy. Some grapes need the cold even more: Gewürztraminer, for example, really comes into its own in the chilly northern Golan, where it keeps the bright, flowery aromas it's known for.
+
+And because the plateau rises so much from south to north, wines from different parts of the Golan can be quite different from each other - a good excuse to try more than one.
 
 
 **Wineries to Visit**
 
-- Golan Heights Winery - the winery that started it all, still the region's central name.
-- Odem Mountain - up near the plateau's highest, coolest ground.
-- Family Baum - a tiny, personal winery experience.
-
-
-## NOTES
-- Seed content: manager-provided seed file `content/regions/golan heights/blog-region-golan heights seed content.txt`, same folder as this post file (folder name uses spaces, as the manager created it — a session initially drafted this file into a new `content/regions/golan-heights/` folder matching the site's hyphenated naming convention instead of using the existing folder; corrected 2026-08-18 after being told not to invent folder names).
-- Opening archetype per `content/plans/ISRAELI_WINE_GUIDE_PLAN.md` §Regions: modern-revolution (thin ancient history, the story is entirely the 1976/1983 modern leap — no biblical/tribal framing forced in, per that doc's guidance).
-- Sub-regions per guide plan: Upper Golan, Lower Golan.
-- Elevation range (500-1,200m) matches the guide plan's own figures (Central Golan 600-700m + Northern Golan 750-1,200m) — the seed file's own "(fact check)" flag on this number can be cleared, it's corroborated by the plan doc's Montefiore-sourced table.
-- Tribal geography deliberately omitted from the body — guide plan notes it as a light option (half-tribe of Manasseh/biblical Bashan) but the modern-revolution archetype's whole point is minimal ancient framing; can add a one-liner later if the manager wants it.
-- Word count ~470 words — under the 800-1,200 target; may need expansion once the manager reviews (seed content was leaner than Galilee's own source doc).
-- Winery "based here" vs "farms vineyards here" distinction (guide plan) not yet verified for this list — seed just says "visit," not confirmed as farm-vs-based; check before publishing.
-- Session stops here per `content/CLAUDE.md` step 3a — Title + Body only, waiting for the manager to lock it before any derivative fields are drafted.
+- Golan Heights Winery - the winery that started it all, and still the region's best-known name.
+- Odem Mountain - up north, near the plateau's higher, cooler ground.
+- Family Baum - tiny and personal, a very different visit from the big names.

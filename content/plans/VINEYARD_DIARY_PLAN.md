@@ -17,7 +17,7 @@ One evergreen, bilingual Wine Talk post collecting the monthly AYIW entries as E
 ## Open
 
 - Evyatar's notes for March, April and May (needed before publishing), and who collects them each month going forward.
-- Images: whether Evyatar has photos (one exists for June, `content/newsletter/2026-06/fruit set.jpg`).
+- Images: kept local in `content/vineyard/` until used (no Library image plan yet). Seasonal shots on hand: pruning (winter), canopy work (summer), white grapes in hand and on the winery conveyor (harvest), young vine in autumn leaves, Evyatar walking the vineyard, a group toast in the young vineyard, plus `vineyard 01-04.jpg` and the June `content/newsletter/2026-06/fruit set.jpg`. Video for possible stills or embedding: https://www.youtube.com/watch?v=QZuOl8UA9Z0
 - Build: a script that generates the layout from the twelve entries plus the current month, versus hand edits.
 - Check that the theme's Wine Talk listing honors WordPress sticky posts.
 
