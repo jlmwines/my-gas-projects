@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-10-28 — Coastal Plain published, config plan reviewed
+
+- Coastal Plain region post live EN+HE (67930/67932); companion email HTML built; RankMath meta handed to user to paste (not REST-writable).
+- Config multi-pair plan independently reviewed, findings folded in (SysLibrary row, full-width lint, lint-first, tab names checked before apply). Awaiting user approval to start; step 2 needs a live SysConfig export.
+- Lesson (memory saved): supplied inputs are not a go-ahead to build; "draft/show EN|HE" means build + push to WP draft and send the preview link. User reviews only via WP preview, never .md.
+- Next: config plan approval; @597-@603 live confirmations; Golan Heights body lock.
+
 ## 2026-10-27 (3) — bug sweep @599-@603, push-posts fix, Woo non-JSON closed
 
 - Shipped: failure alerts auto-resolve on next success + 7-day quiet close (@599); Product Replacement real web IDs (@600, confirmed live); Correct Product Name confirm (@601); Woo Orders heartbeat business-hours aware via new `BusinessHours.js` (@602); health task re-dated, manual schema run updates dashboard, phase-1 failures listed (@603).
