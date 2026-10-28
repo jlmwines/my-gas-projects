@@ -11,7 +11,7 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Seven seasonal vineyard photos moved to `content/vineyard/`; video link in VINEYARD_DIARY_PLAN.
 - Inventory count / product updates / new products delayed by manager bandwidth (publishing first), not deliberate; catch-up expected soon.
 - Config multi-pair fix approved, parked for a quiet day (no live impact). Wishlist reviewed: nothing urgent.
-- Next: attach Golan Doc; @597-@603 live checks.
+- Golan Doc attached by user. Next: manager edit/lock of Golan body; @597-@603 live checks.
 
 ## 2026-10-28 — Coastal Plain published, config plan reviewed
 
