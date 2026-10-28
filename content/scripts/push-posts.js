@@ -116,6 +116,14 @@ const MANIFEST = [
     enFile: 'regions/central-mountains/central-mountains-en.post.md',
     heFile: 'regions/central-mountains/central-mountains-he.post.md',
     enCategoryId: [1272, 947], heCategoryId: [1273, 948]   // Regions + Wine Basics (live, verified 2026-10-27)
+  },
+  {
+    name: 'coastal-plain',
+    enSlug: 'coastal-plain-wine', enId: 67930,
+    heSlug: 'coastal-plain-wine', heId: 67932,   // WPML translation stub, created by user in wp-admin
+    enFile: 'regions/coastal plains/coastal-plain-en.post.md',
+    heFile: 'regions/coastal plains/coastal-plain-he.post.md',
+    enCategoryId: [1272, 947], heCategoryId: [1273, 948]   // Regions + Wine Basics (stubs verified 2026-10-28)
   }
 ];
 
