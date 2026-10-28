@@ -10,7 +10,8 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Pre-lock bodies go to a Library Doc for the manager, never WP preview; no NOTES section in post files (memories saved).
 - Seven seasonal vineyard photos moved to `content/vineyard/`; video link in VINEYARD_DIARY_PLAN.
 - Inventory count / product updates / new products delayed by manager bandwidth (publishing first), not deliberate; catch-up expected soon.
-- Next: attach Golan Doc; @597-@603 live checks; config plan approval.
+- Config multi-pair fix approved, parked for a quiet day (no live impact). Wishlist reviewed: nothing urgent.
+- Next: attach Golan Doc; @597-@603 live checks.
 
 ## 2026-10-28 — Coastal Plain published, config plan reviewed
 
