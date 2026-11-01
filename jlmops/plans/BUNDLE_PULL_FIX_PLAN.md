@@ -1,6 +1,6 @@
-# Bundle Web Sync + Any-Wine Fix
+# Bundle Web Sync + Slot Category Rules
 
-Replaces the bundle "web → ops" machinery with a safe design: a dedicated web snapshot (`WebBundles`), per-bundle writes that can never touch other bundles, and an everyday-wine default for "any category" slots. Status: **draft; reviews 1-3 folded in 2026-11-01; awaiting user approval.** Nothing built. Prompted by the 2026-10-30 incident (14 bundles wiped to 1, restored by hand from version history).
+Replaces the bundle "web → ops" machinery with a safe design: a dedicated web snapshot (`WebBundles`), per-bundle writes that can never touch other bundles, and a required category on every slot ("any wine" is no longer valid). Status: **draft; reviews 1-4 folded in 2026-11-01; awaiting user approval.** Nothing built. Prompted by the 2026-10-30 incident (14 bundles wiped to 1, restored by hand from version history).
 
 ## 1. What happened (log-verified, `JLMops_Logs - SysLog` export)
 
@@ -23,7 +23,8 @@ Facts the design relies on: HE woosb products carry the EN id in `translations.e
 - Bundle sheets are the only authority for bundle state. `WebProdM`/`WebXltM` are product data; bundle code reads them only for per-wine facts (WC id, price, title, categories, stock) and never writes them.
 - Pull from Web pulls bundle data and never alters product data.
 - Every operation works on one bundle without touching any other bundle.
-- Edits are exported immediately and verified by Pull + Review. No reliance on housekeeping to repair bundle state.
+- Maintenance (common) and hand edits (rare) are exported by the admin immediately after the change and verified by Pull + Review; export stays the existing manual step. No reliance on housekeeping to repair bundle state.
+- Every slot names a category; "any wine" is not a valid slot (user 2026-11-01).
 
 ## 4. Design
 
@@ -44,10 +45,11 @@ Facts the design relies on: HE woosb products carry the EN id in `translations.e
 **F. Toolbar scope.** No selection checkboxes (D3). Toolbar Maintain acts on all (already only on deficient bundles); no toolbar Re-roll (all-bundle re-roll is not a real use, user 2026-11-01); editor buttons act on the open bundle.
 
 **G. Category rules in `_matchesSlotCriteria`** (so picker, generator and deficiency check agree):
-1. **Blank `sbs_Category` and `sbs_Category2` → everyday wine:** WC categories are a flat list with no primary flag, so this is set logic: the product has one of {Dry Red, Dry White, Rosé} and none of the non-everyday wine types {Dessert, Semi-Dry, Fortified}. Supplementary categories (Sparkling, Gift Boxed) are ignored for inclusion and exclusion (user 2026-11-01).
-2. **Semi-Dry exclusion (user 2026-11-01):** a product tagged Semi-Dry is eligible only if the slot names Semi-Dry in `sbs_Category` or `sbs_Category2`. Applies to every slot, not just blank ones; this is what keeps "Rosé | Semi-Dry" and white/semi-dry wines out of everyday and plain Rosé/White slots.
+1. **Blank `sbs_Category` is invalid (user 2026-11-01).** A slot with no category matches nothing: Maintain/Re-roll skip it and report it, the editor picker shows no candidates, and `checkBundleHealth` flags the bundle "Needs attention" with a "slot has no category" reason. None are expected once D4 is done. (`sbs_Category2` may stay blank.)
+2. **Semi-Dry exclusion (user 2026-11-01):** a product tagged Semi-Dry is eligible only if the slot names Semi-Dry in `sbs_Category` or `sbs_Category2`. Applies to every slot; this keeps "Rosé | Semi-Dry" and white/semi-dry wines out of plain Rosé/White slots.
 3. Category 1 and 2 are both required (AND, `BundleService.js:873-874`): a Rosé + Semi-Dry slot fills only with semi-dry rosés. Category names are matched after Unicode normalization and trimming on both sides (`WebCat` lists Rosé twice; possible Rose/Rosé variants).
-4. Any-category slots now holding something else show "Needs attention" once `checkBundleHealth` runs (it writes `needs_update_status`, `HousekeepingService.js:1776`; called by Review only).
+4. Slots whose current product no longer matches show "Needs attention" once `checkBundleHealth` runs (it writes `needs_update_status`, `HousekeepingService.js:1776`; called by Review only).
+5. Bundles created by Pull (§4B) arrive with blank slot categories and are flagged by rule 1 until the admin sets them.
 
 **H. Removed.** `reimportAllBundlesBatch`, `WebAppBundles_reimportAllBundles`, `WebAppBundles_updateComposition`, both Update buttons and handlers, housekeeping `refreshBundleComposition` (keep `refreshBundlePushStatus`), `pullBundleProducts` + `_upsertBundleFieldsToMaster` (keep the exported `woosbIdsString`, used by `WooProductPullServiceTest.js`), `importBundleFromWooCommerce` + its controller and dead `_processBundleProducts`.
 
@@ -55,25 +57,25 @@ Facts the design relies on: HE woosb products carry the EN id in `translations.e
 
 ## 5. Decisions
 
-- **D1 — decided (user 2026-11-01):** everyday = has Dry Red / Dry White / Rosé and no Dessert / Semi-Dry / Fortified; Sparkling and Gift Boxed are supplementary and irrelevant; Semi-Dry excluded unless the slot names it (§4G). The "Dessert | Rosé | Sparkling" wine is excluded by Dessert. Comax-group vs web-category contradictions are a data-quality problem outside this plan (follow-up: a recurring check).
+- **D1 — decided (user 2026-11-01):** no "any wine" slots and no everyday default; every slot names a category, blank is flagged (§4G.1); Semi-Dry excluded unless the slot names it (§4G.2). Comax-group vs web-category contradictions are a data-quality problem outside this plan (follow-up: a recurring check).
 - **D2 — decided: no backup tabs.** `WebBundles` holds every bundle's web composition; the safe-write assertion protects non-target bundles; version history is the last resort.
 - **D3 — decided: no checkboxes.**
-- **D4 — decided (user 2026-11-01): user sets the 9 intentional non-everyday slots' categories in the editor** before §4G ships. All optional slots (2026-11-01 export): 61605 Cheese Please (Picual olive oil, Gift Items), 61823 Shabbat Shalom (Koroneiki olive oil, Gift Items), 66218 Elite Value (Mony M White Muscat, Dessert), 8459 Seasonal (Vintage Moscato, Dessert), 66208 Value Reds (Or Haganuz Har Meron, Dessert; Zion V.T.S Rosé, Semi-Dry), 8327 Explorer (Zion V.T.S Rosé, Semi-Dry), 54310 Special Value (Emerald Riesling, Semi-Dry), 66206 Value Whites & Rosés (Tabor Har Gewurztraminer, Semi-Dry). A slot meant for semi-dry must name Semi-Dry.
+- **D4 — decided (user 2026-11-01): user sets a category on every slot that is blank today** in the editor before deploy. Includes the 9 intentional non-everyday slots, all optional (2026-11-01 export): 61605 Cheese Please (Picual olive oil, Gift Items), 61823 Shabbat Shalom (Koroneiki olive oil, Gift Items), 66218 Elite Value (Mony M White Muscat, Dessert), 8459 Seasonal (Vintage Moscato, Dessert), 66208 Value Reds (Or Haganuz Har Meron, Dessert; Zion V.T.S Rosé, Semi-Dry), 8327 Explorer (Zion V.T.S Rosé, Semi-Dry), 54310 Special Value (Emerald Riesling, Semi-Dry), 66206 Value Whites & Rosés (Tabor Har Gewurztraminer, Semi-Dry). A slot meant for semi-dry must name Semi-Dry.
 
 ## 6. Build order (one change at a time, each verified)
 
-1. Config: `WebBundles` schema + sheet name → `node jlmops/generate-config.js`. Tests: a bundle suite registered in `TestRunner` (`TestRunner.js:21-30`; it runs inside Apps Script, also nightly from `HousekeepingService.js:752`) for the pure parts, with those helpers exported: snapshot row builder (EN/HE join, type guard, count cap, every abort rule, untranslated-bundle warning), `_replaceBundles` row merge + non-target assertion with numeric ids and dates, criteria carry by token-then-SKU, history close/append. (The §4G category tests are added in step 4, not here: `TestRunner.runAllTests` runs every suite nightly, `HousekeepingService.js:752`, so tests for unshipped code would fail every night.)
+1. Config: `WebBundles` schema + sheet name → `node jlmops/generate-config.js`. Tests: a bundle suite registered in `TestRunner` (`TestRunner.js:21-30`; it runs inside Apps Script, also nightly from `HousekeepingService.js:752`) for the pure parts, with those helpers exported: snapshot row builder (EN/HE join, type guard, count cap, every abort rule, untranslated-bundle warning), `_replaceBundles` row merge + non-target assertion with numeric ids and dates, criteria carry by token-then-SKU, history close/append, §4G category rules (blank invalid, Semi-Dry exclusion, AND, name normalization).
 2. Snapshot refresh + Pull (B), compare/discount/descriptions repoint + empty-snapshot rule + `wb_PulledAt` display (C).
 3. Safe write primitive + entry-point locks + generator compute-then-write refactor (E), Take web version (D), removals (H), nightly snapshot refresh (I).
-4. Category rules (G) + their tests, after the user has set D4's slots.
+4. Category rules (G).
 5. Docs: `WORKFLOWS.md` §15 (and `:254,281`), `DATA_MODEL.md` bundle section + `WebBundles` (`:259`), `ARCHITECTURE.md:72-76,135`, `ADMIN_BUNDLES_UI_PLAN.md` Update Composition references, stale comments (`AdminBundlesView.html:1545` text, `system.json:848`, `HousekeepingService.js:1576`, `ProductImportService.js:984`, `SyncStateService.js:333`), §2.7 drift items, BUGS entries; archive this plan.
 
-Steps 2-3 ship in **one deploy**: shipping 2 without 3 leaves the nightly rebuild and both Update buttons live, still resetting ops compositions. Step 4 can be a second deploy.
+Steps are built and verified one at a time, but the whole plan (1-4) ships in **one deploy** and is tested as a group (user 2026-11-01): partial shipping would leave the nightly rebuild and Update buttons live, or nightly tests running against unshipped code (`TestRunner.runAllTests`, `HousekeepingService.js:752`). D4 must be done before that deploy.
 
 ## 7. Deploy and live verification
 
 Before deploy: user names a version of `JLMops_Data` in version history. Code must tolerate a missing `WebBundles` schema/sheet (treated as "unknown", §4C), since `deploy.ps1` makes code live before config is rebuilt. Deploy outside the housekeeping window: `deploy.ps1` → `rebuildSysConfigFromSource()` (`SetupConfig.js`; check the log, it swallows errors) → `syncHeaders('WebBundles')` (`SetupSheets.js`) immediately, since a schema'd blank tab makes `ValidationLogic.js:606` throw (`getLastColumn()=0`) → run `runAllTests` (`TestRunner.js`) and check the bundle suite passes → first Pull.
 
-Verify: Pull fills 14 `WebBundles` rows with HE ids joined, leaves `WebProdM`/`WebXltM` unmodified (sheet edit history) and every ops composition and status unchanged; needs-push matches the pre-deploy flags; Take web version on one bundle changes only that bundle's rows; next housekeeping log shows a snapshot refresh and no bundle rebuild. After step 4: Re-roll on an any-category slot picks only everyday, non-semi-dry wines; run Review, then D4's slots are not flagged.
+Verify: Pull fills 14 `WebBundles` rows with HE ids joined, leaves `WebProdM`/`WebXltM` unmodified (sheet edit history) and every ops composition and status unchanged; needs-push matches the pre-deploy flags; Take web version on one bundle changes only that bundle's rows; next housekeeping log shows a snapshot refresh and no bundle rebuild. Run Review: no slot is flagged for a missing category, and D4's slots are not flagged; Re-roll on a plain Rosé/White slot never picks a semi-dry wine.
 
 **Rollback:** prepared before deploy (a ready commit, not edited under pressure): the pre-deploy code **with the wipe paths removed**: the housekeeping `refreshBundleComposition` call and both Update buttons (editor Update from web, `AdminBundlesView.html:1672`, and toolbar Update Composition), since a plain revert re-arms `reimportAllBundlesBatch`. The old `pullBundleProducts` returning (writes woosb fields into `WebProdM`/`WebXltM`) is pre-existing behavior and acceptable for a rollback. To roll back, deploy that commit. `WebBundles` is inert without the code; bundle sheets restorable from the named version.
