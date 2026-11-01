@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-10-28. Coastal Plain live; Golan Heights body expanded, Doc attached in the Library, awaiting manager edit + lock; jlmops @603 fixes awaiting live confirmation; config multi-pair fix approved, parked for a quiet day.
+**Updated:** 2026-11-01. Bundle web-sync redesign in planning after the 10/30 bundle wipe (restored); avoid the bundle Update buttons until it ships; Golan Heights awaits manager lock.
 
 ## At a glance
 
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-10-28 |
+| Last Active | 2026-11-01 |
 | Revenue | Steady |
 | Deploy Version | jlmops @603 · theme v1.2.32 |
 | Deploy Date | jlmops 2026-10-27 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
@@ -32,6 +32,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
+0. **Bundle web-sync redesign — planning, resume next session.** 2026-10-30 the editor's "Update from web" wiped 13 of 14 bundles (log-confirmed; user restored from version history). Until the fix ships: don't use the editor "Update from web" or toolbar "Update Composition"; "any category" Re-roll can pick non-wine. Plan (draft, independently reviewed once, review findings not yet folded in) → `jlmops/plans/BUNDLE_PULL_FIX_PLAN.md`.
 1. **Monthly AYIW email** — October issue (`email-ayiw-2026-10`, "Making Wine - After the Harvest") EN+HE scheduled in Mailchimp for 2026-11-03; HTML at `content/newsletter/2026-10/`, CTA "Read more" to the Wine Talk page. AYIW is becoming a rolling diary post, "Vine, Barrel, Bottle" (`content/plans/VINEYARD_DIARY_PLAN.md`); seasonal vineyard photos and a video link now on hand (`content/vineyard/`, plan Open list).
 2. **Branded shipping cartons — custom-printed plan canceled (2026-07-30); switched to natural brown cartons + a large logo stamp.** The original vendor's shipping cost for custom-printed cartons ran way over the cartons' own cost; after negotiating, that plan was dropped in favor of plain natural-brown cartons with the JLM mark large-stamped on. Size: 6-bottle cartons (user, 2026-10-21). Partner-owned. Track only: nudge in daily review; re-flag if the stamped cartons slip. No Claude action.
 3. **Flyer advertising — Round 1 (Talbiye) done; Round 2 cancelled** (user, 2026-10-21): the website new-visitor popup + `50NEW` discount make another round unnecessary. Plan → `marketing/plans/FLYER_PLAN.md`.
@@ -69,7 +70,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Calendar tab UX** — row click always opens the drawer (all base-slug tasks, both languages; bare drawer for Doc-less rows) with a separate Task button; admin re-dates content rows from the date cell; Library Deficiency and drawer date run on `cal_Date`; dates display in local time everywhere. Status filter and search box. All confirmed live 2026-10-21 except date-edit Save (`jlmops/docs/WORKFLOWS.md` §13.1). Refresh-after-apply bug open (Active Plans above).
 - **Back navigation** — browser back and the header ← button return to the previous view; back closes an open popup first; per-role history. Confirmed live on desktop and phone (`jlmops/docs/ARCHITECTURE.md`, Application Shell).
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR); short URLs pasted manually (auto-push deferred). Plan → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
-- **Bundles** — implemented; plan graduated to system docs (`jlmops/docs/DATA_MODEL.md` "Bundle Management Data Model", `jlmops/docs/WORKFLOWS.md` §15) and archived (`jlmops/plans/_archive/BUNDLE_PLAN.md`). Maintain/Re-roll self-check their own result against the live deficiency test and record the real reason when a slot stays deficient. Composite scoring weights (`GENERATOR_WEIGHTS` in `BundleService.js`) remain a single global tunable, not yet split per-slot/per-bundle — UI redesign tracked separately in `jlmops/plans/ADMIN_BUNDLES_UI_PLAN.md`.
+- **Bundles** — implemented; plan graduated to system docs (`jlmops/docs/DATA_MODEL.md` "Bundle Management Data Model", `jlmops/docs/WORKFLOWS.md` §15) and archived (`jlmops/plans/_archive/BUNDLE_PLAN.md`). Maintain/Re-roll self-check their own result against the live deficiency test and record the real reason when a slot stays deficient. Composite scoring weights (`GENERATOR_WEIGHTS` in `BundleService.js`) remain a single global tunable, not yet split per-slot/per-bundle — UI redesign tracked separately in `jlmops/plans/ADMIN_BUNDLES_UI_PLAN.md`. Web→ops sync is unsafe today (single-bundle Update wipes all others; pull writes product sheets) — redesign in `jlmops/plans/BUNDLE_PULL_FIX_PLAN.md`.
 - **Ops↔session bridge** — OPS writes system-health (15-min) + KPI (daily) into `jlmops-status.md`; `/review-daily` reads it each run. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.
 - **Loyalty rewards Phase 1** — live @487. Manager's Orders screen shows tier/last-order/spend/avg per row (fetched separately from the order list so it doesn't delay load) plus a CRM link and a "Log Reward" note action; no automated eligibility rule, manager judges. Not yet smoke-tested live. Plan → `marketing/plans/REWARDS_PLAN.md`.
 - **KPI Summary Tab** — live @440. All 6 `business/KPI.md` KPIs compute automatically: 4 jlmops-source ones (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement) via `SysKPISummary`, plus GA4 organic-traffic EN/HE split and organic-source engagement (bounce rate + pages/session) via a dedicated GA4 audience report. All surface in `jlmops-status.md`, no jlmops UI. Month-over-month trend surfacing also live (new customers, return rate, subscriber MoM vs. last closed month); months since 2026-08 closed naturally, so the return-rate/subscriber deltas no longer rest on the shared backfill snapshot (not separately re-verified). Schema/system doc → `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`); engineering history archived at `jlmops/plans/_archive/KPI_SUMMARY_TAB.md`; known bugs → `plans/BUGS.md`.

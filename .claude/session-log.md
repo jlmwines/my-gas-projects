@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-01 — Bundle wipe investigated, web-sync redesign in planning
+
+- 10/30 bundle wipe traced via SysLog: the editor "Update from web" ran the full rebuild with one bundle. User restored from version history. Re-roll itself was not the cause.
+- Plan `jlmops/plans/BUNDLE_PULL_FIX_PLAN.md`: WebBundles snapshot, safe per-bundle writes, any-wine default. User decisions: web category, primary category decides; no backup tabs; no checkboxes. Review 1 done; findings recorded in plan §8, not yet folded in.
+- Next: user picks how the 9 intentional non-wine/specialty slots get categories (plan §8), fold review findings in, second independent review, then approval.
+- Lesson: on a data-loss report, trace the reported path and pull the log before proposing any fix; the user rebuked jumping to a plan (and arguing about WebProdM) before understanding.
+- Also: newsletter 2026-11 QR images not generated (npx download blocked); user handled manually.
+
 ## 2026-10-28 (2) — Daily review, Golan Heights body to Library, vineyard images
 
 - Golan Heights: new title "Wine's Big Surprise: The Golan Heights"; body expanded (~1,000 words: Rothschild link, founders, Yarden award, winemakers). Doc placed in Library `blog/blog-region-golan-heights/`; admin attaches, manager edits/locks.
