@@ -944,8 +944,8 @@ const ProductService = (function() {
 
             const productTitleEn = webDetRow.wdm_NameEn || '';
             const productTitleHe = webDetRow.wdm_NameHe || (cmxRow ? cmxRow.cpm_NameHe : '');
-            const shortDescriptionEn = webDetRow.wdm_ShortDescrEn || '';
-            const shortDescriptionHe = webDetRow.wdm_ShortDescrHe || '';
+            const shortDescriptionEn = WooCommerceFormatter.formatShortDescriptionHTML(webDetRow, 'EN');
+            const shortDescriptionHe = WooCommerceFormatter.formatShortDescriptionHTML(webDetRow, 'HE');
 
             const longDescriptionEnHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
             const longDescriptionHeHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);

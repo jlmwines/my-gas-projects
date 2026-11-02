@@ -17,6 +17,41 @@ const WooCommerceFormatter = (function() {
   }
 
   /**
+   * True for a set flag in WebDetM. The manager form saves 1/0; older rows may hold TRUE.
+   * @param {*} value The stored flag value.
+   * @returns {boolean}
+   */
+  function _isFlagOn(value) {
+    if (value === true || value === 1) return true;
+    const s = String(value).trim().toLowerCase();
+    return s === '1' || s === 'true';
+  }
+
+  /**
+   * Red Heter Mechira marker, the same HTML the legacy short descriptions carry live.
+   * @param {boolean} isEn
+   * @returns {string}
+   */
+  function _heterMechiraHtml(isEn) {
+    return `<span style="color: #ff0000;">${isEn ? 'Heter Mechira' : 'היתר מכירה'}</span>`;
+  }
+
+  /**
+   * Short description for export/preview: stored text plus the red Heter Mechira marker
+   * when the flag is set, unless the text already mentions it.
+   * @param {Object} productData WebDetM row (or form data).
+   * @param {string} lang 'EN' or 'HE'.
+   * @returns {string}
+   */
+  function formatShortDescriptionHTML(productData, lang) {
+    const isEn = lang === 'EN';
+    const text = String((isEn ? productData.wdm_ShortDescrEn : productData.wdm_ShortDescrHe) || '');
+    if (!_isFlagOn(productData.wdm_HeterMechira)) return text;
+    if (/heter\s*mechira|היתר\s*מכירה/i.test(text)) return text;
+    return text ? `${text} ${_heterMechiraHtml(isEn)}` : _heterMechiraHtml(isEn);
+  }
+
+  /**
    * Generates a WooCommerce product CSV from an array of product objects.
    * @param {Array<Object>} products An array of product objects.
    * @returns {string} The CSV content as a string.
@@ -99,6 +134,7 @@ const WooCommerceFormatter = (function() {
 
   return {
     formatProductsForExport: formatProductsForExport,
+    formatShortDescriptionHTML: formatShortDescriptionHTML,
 
     /**
      * Generates a simple WooCommerce inventory update CSV matching the legacy format.
@@ -151,7 +187,7 @@ const WooCommerceFormatter = (function() {
 
         // --- Data Extraction ---
         const name = isEn ? getVal('wdm_NameEn') : getVal('wdm_NameHe');
-        const shortDescription = isEn ? getVal('wdm_ShortDescrEn') : getVal('wdm_ShortDescrHe');
+        const shortDescription = formatShortDescriptionHTML(productData, lang);
         const longDescription = isEn ? getVal('wdm_DescriptionEn') : getVal('wdm_DescriptionHe');
 
         const regionCode = getVal('wdm_Region');
@@ -299,10 +335,10 @@ const WooCommerceFormatter = (function() {
             if (kashrutNames.length > 0) {
                 col2Lines.push(`${isEn ? 'Kashrut' : 'כשרות'}: ${kashrutNames.join(', ')}`);
             }
-            if (String(heterMechira) === 'true' || heterMechira === true) {
+            if (_isFlagOn(heterMechira)) {
                 col2Lines.push(`<span style="color:#c00;"><b>${isEn ? 'Heter Mechira' : 'היתר מכירה'}</b></span>`);
             }
-            if (String(isMevushal) === 'true' || isMevushal === true) {
+            if (_isFlagOn(isMevushal)) {
                 col2Lines.push(isEn ? 'Mevushal' : 'מבושל');
             }
 
