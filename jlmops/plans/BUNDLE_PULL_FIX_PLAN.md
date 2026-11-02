@@ -1,6 +1,6 @@
 # Bundle Web Sync + Slot Category Rules
 
-Replaces the bundle "web → ops" machinery with a safe design: a dedicated web snapshot (`WebBundles`), per-bundle writes that can never touch other bundles, and a required category on every slot ("any wine" is no longer valid). Status: **draft; reviews 1-4 folded in 2026-11-01; awaiting user approval.** Nothing built. Prompted by the 2026-10-30 incident (14 bundles wiped to 1, restored by hand from version history).
+Replaces the bundle "web → ops" machinery with a safe design: a dedicated web snapshot (`WebBundles`), per-bundle writes that can never touch other bundles, and a required category on every slot ("any wine" is no longer valid). Status: **draft; final review and decisions D1-D6 folded in 2026-11-02; D4 prep done; awaiting user approval.** Nothing built. Prompted by the 2026-10-30 incident (14 bundles wiped to 1, restored by hand from version history).
 
 ## 1. What happened (log-verified, `JLMops_Logs - SysLog` export)
 
@@ -60,7 +60,9 @@ Facts the design relies on: HE woosb products carry the EN id in `translations.e
 - **D1 — decided (user 2026-11-01):** no "any wine" slots and no everyday default; every slot names a category, blank is flagged (§4G.1); Semi-Dry excluded unless the slot names it (§4G.2). Comax-group vs web-category contradictions are a data-quality problem outside this plan (follow-up: a recurring check).
 - **D2 — decided: no backup tabs.** `WebBundles` holds every bundle's web composition; the safe-write assertion protects non-target bundles; version history is the last resort.
 - **D3 — decided: no checkboxes.**
-- **D4 — decided (user 2026-11-01): user sets a category on every slot that is blank today** in the editor before deploy. Includes the 9 intentional non-everyday slots, all optional (2026-11-01 export): 61605 Cheese Please (Picual olive oil, Gift Items), 61823 Shabbat Shalom (Koroneiki olive oil, Gift Items), 66218 Elite Value (Mony M White Muscat, Dessert), 8459 Seasonal (Vintage Moscato, Dessert), 66208 Value Reds (Or Haganuz Har Meron, Dessert; Zion V.T.S Rosé, Semi-Dry), 8327 Explorer (Zion V.T.S Rosé, Semi-Dry), 54310 Special Value (Emerald Riesling, Semi-Dry), 66206 Value Whites & Rosés (Tabor Har Gewurztraminer, Semi-Dry). A slot meant for semi-dry must name Semi-Dry.
+- **D4 — done (user, 2026-11-02): every Product slot has a category.** The 2026-11-02 22:01 `SysBundleSlots` export shows no blank Product slot (99 Product, 15 Text); the user then corrected the 61823 Rosé slot's category. A slot meant for semi-dry must name Semi-Dry.
+- **D5 — decided (user 2026-11-02): no warning before Maintain.** Blank-category slots are reported by Review and in the Maintain result (§4G.1). Future option, not in this plan: a name-only slot (blank category + `sbs_NameContains`, e.g. to feature a winery) could later be made valid by changing §4G.1.
+- **D6 — decided (user 2026-11-02): no nightly bundle work** (§4I). Name: the editor undo button is "Restore to web version" (§4D).
 
 ## 6. Build order (one change at a time, each verified)
 
