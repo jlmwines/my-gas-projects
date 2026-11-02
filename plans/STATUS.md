@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-11-01. Bundle web-sync redesign in planning after the 10/30 bundle wipe (restored); avoid the bundle Update buttons until it ships; Golan Heights awaits manager lock.
+**Updated:** 2026-11-02. Bundle web-sync plan final-reviewed and awaiting approval (avoid the bundle Update buttons until it ships); Heter Mechira description fix live @604; Golan Heights awaits manager lock.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-11-01 |
 | Revenue | Steady |
-| Deploy Version | jlmops @603 · theme v1.2.32 |
-| Deploy Date | jlmops 2026-10-27 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
+| Deploy Version | jlmops @604 · theme v1.2.32 |
+| Deploy Date | jlmops 2026-11-02 · theme 2026-10-26 (HE gifts page sections fix, no version bump) |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -32,7 +32,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
-0. **Bundle web-sync redesign — planning, resume next session.** 2026-10-30 the editor's "Update from web" wiped 13 of 14 bundles (log-confirmed; user restored from version history). Until the fix ships: don't use the editor "Update from web" or toolbar "Update Composition"; "any category" Re-roll can pick non-wine. Plan (final review folded in, awaiting user approval; ships as one deploy; user sets a category on every blank slot before deploy) → `jlmops/plans/BUNDLE_PULL_FIX_PLAN.md`.
+0. **Bundle web-sync redesign — plan awaiting user approval.** 2026-10-30 the editor's "Update from web" wiped 13 of 14 bundles (log-confirmed; user restored from version history). Until the fix ships: don't use the editor "Update from web" or toolbar "Update Composition". Every Product slot now has a category (D4 done). Next after approval: step 1 config-only push (WebBundles schema + headers), then local checks against exports, then one code deploy → `jlmops/plans/BUNDLE_PULL_FIX_PLAN.md`.
 1. **Monthly AYIW email** — October issue (`email-ayiw-2026-10`, "Making Wine - After the Harvest") EN+HE scheduled in Mailchimp for 2026-11-03; HTML at `content/newsletter/2026-10/`, CTA "Read more" to the Wine Talk page. AYIW is becoming a rolling diary post, "Vine, Barrel, Bottle" (`content/plans/VINEYARD_DIARY_PLAN.md`); seasonal vineyard photos and a video link now on hand (`content/vineyard/`, plan Open list).
 2. **Branded shipping cartons — custom-printed plan canceled (2026-07-30); switched to natural brown cartons + a large logo stamp.** The original vendor's shipping cost for custom-printed cartons ran way over the cartons' own cost; after negotiating, that plan was dropped in favor of plain natural-brown cartons with the JLM mark large-stamped on. Size: 6-bottle cartons (user, 2026-10-21). Partner-owned. Track only: nudge in daily review; re-flag if the stamped cartons slip. No Claude action.
 3. **Flyer advertising — Round 1 (Talbiye) done; Round 2 cancelled** (user, 2026-10-21): the website new-visitor popup + `50NEW` discount make another round unnecessary. Plan → `marketing/plans/FLYER_PLAN.md`.
