@@ -374,18 +374,26 @@ const StatusReportService = (function() {
     if (hr === -1) return { ok: false, reason: 'header row not found' };
     const c = {
       date: H.indexOf('date'), s: H.indexOf('sessions'), u: H.indexOf('activeusers'),
-      nu: H.indexOf('newusers'), eng: H.indexOf('engagementrate'), ke: H.indexOf('keyevents'), rev: H.indexOf('totalrevenue')
+      nu: H.indexOf('newusers'), eng: H.indexOf('engagementrate'), ke: H.indexOf('keyevents'), rev: H.indexOf('totalrevenue'),
+      ch: H.indexOf('sessiondefaultchannelgroup')
     };
     const wk = _windowStart(7), mo = _monthStart();
     const blank = () => ({ s: 0, u: 0, nu: 0, ke: 0, rev: 0, engW: 0 });
     const agg = { w: blank(), m: blank() }; let maxD = null, minD = null;
     const byWeek = {}, byMonth = {};
+    // Organic Social is disregarded: Meta ads crawl/interference lands there (user 2026-11-03).
+    // Applies only once the add-on report carries the channel dimension; until then nothing is excluded.
+    const excludedByMonth = {};
     for (let i = hr + 1; i < vals.length; i++) {
       const dv = vals[i][c.date]; if (dv === '' || dv == null) continue;
       const d = _parseYmd(dv); if (!d) continue;
       if (!maxD || d > maxD) maxD = d;
       if (!minD || d < minD) minD = d;
       const sess = _num(vals[i][c.s]);
+      if (c.ch !== -1 && String(vals[i][c.ch] || '').trim().toLowerCase() === 'organic social') {
+        const k = _monthKey(d); excludedByMonth[k] = (excludedByMonth[k] || 0) + sess;
+        continue;
+      }
       const add = b => { b.s += sess; b.u += _num(vals[i][c.u]); b.nu += _num(vals[i][c.nu]); b.ke += _num(vals[i][c.ke]); b.rev += _num(vals[i][c.rev]); b.engW += _num(vals[i][c.eng]) * sess; };
       if (d >= mo) add(agg.m);
       if (d >= wk) add(agg.w);
@@ -393,7 +401,8 @@ const StatusReportService = (function() {
       add(byWeek[wKey] = byWeek[wKey] || blank());
       add(byMonth[mKey] = byMonth[mKey] || blank());
     }
-    return { ok: true, maxDate: maxD, minDate: minD, w: agg.w, m: agg.m, byWeek: byWeek, byMonth: byMonth };
+    return { ok: true, maxDate: maxD, minDate: minD, w: agg.w, m: agg.m, byWeek: byWeek, byMonth: byMonth,
+      channelSplit: c.ch !== -1, excludedByMonth: excludedByMonth };
   }
 
   /**
@@ -528,7 +537,10 @@ const StatusReportService = (function() {
     if (ga.ok) {
       const eng = w => w.s ? (w.engW / w.s * 100).toFixed(0) + '%' : '-';
       const conv = w => w.s ? (w.ke / w.s * 100).toFixed(1) + '%' : '-';
-      lines.push('- GA4 all traffic (' + _ga4Freshness(ga.maxDate, today) + '):');
+      const exMonths = Object.keys(ga.excludedByMonth).sort();
+      lines.push('- GA4 all traffic (' + _ga4Freshness(ga.maxDate, today) + '; ' + (ga.channelSplit
+        ? 'Organic Social excluded (Meta ads interference)' + (exMonths.length ? ': ' + exMonths.map(function(k) { return k + ' ' + ga.excludedByMonth[k]; }).join(', ') + ' sessions dropped' : ', none in window')
+        : '**includes Organic Social** — report has no channel dimension yet, so Meta ads interference is not removed') + '):');
       lines.push('  - 7d: ' + ga.w.s + ' sessions · ' + ga.w.u + ' users · ' + ga.w.nu + ' new · eng ' + eng(ga.w) + ' · ' + ga.w.ke + ' key events (conv ' + conv(ga.w) + ')');
       lines.push('  - MTD: ' + ga.m.s + ' sessions · ' + ga.m.u + ' users · ' + ga.m.nu + ' new · ' + ga.m.ke + ' key events (conv ' + conv(ga.m) + ') · ₪' + Math.round(ga.m.rev));
       _seriesLines(ga,
