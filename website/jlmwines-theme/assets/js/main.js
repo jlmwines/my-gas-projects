@@ -392,11 +392,11 @@
                (document.documentElement.lang || '').toLowerCase().indexOf('he') === 0;
 
     var copy = isHe ? {
-        success: 'תודה! בדקו את המייל לאישור הרשמה.',
+        success: 'תודה! נרשמתם בהצלחה.',
         already: 'אתם כבר רשומים. תודה!',
         error:   'משהו השתבש. נסו שוב או בדקו את הכתובת.'
     } : {
-        success: 'Thanks! Check your email to confirm your subscription.',
+        success: "Thanks! You're on the list.",
         already: "You're already subscribed. Thanks!",
         error:   'Something went wrong. Please try again or check the address.'
     };

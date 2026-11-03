@@ -36,7 +36,7 @@ Carryover items if you want to clean up:
 ### 0.2 — Mailchimp flow tests on staging
 - [x] **EN footer signup** → VERIFIED 2026-05-04 (theme v1.0.91): subscriber lands in Mailchimp with English Language interest correctly assigned.
 - [x] **HE footer signup** → VERIFIED 2026-05-04 (theme v1.0.91): subscriber lands with Hebrew Language interest correctly assigned.
-- [ ] **Inline confirmation message** (theme v1.0.93) — submit footer signup on EN and HE (use plus-addressed emails like `accounts+jlmtest-en-001@jlmwines.com` for repeat tests). Verify subscriber stays on jlmwines.com, sees inline message in matching language ("Thanks! Check your email to confirm…" / "תודה! בדקו את המייל לאישור הרשמה."), no redirect to Mailchimp's hosted page.
+- [ ] **Inline confirmation message** (theme v1.0.93) — submit footer signup on EN and HE (use plus-addressed emails like `accounts+jlmtest-en-001@jlmwines.com` for repeat tests). Verify subscriber stays on jlmwines.com, sees inline message in matching language ("Thanks! You're on the list." / "תודה! נרשמתם בהצלחה." - audience is single opt-in, no confirmation email; changed theme v1.2.33), no redirect to Mailchimp's hosted page.
 - [ ] ~~EN/HE checkout opt-in tests~~ → **Folded into the cutover-day test order** (Stage 2.6 — place a real test order with the opt-in box ticked, verify subscriber lands in Mailchimp with correct Language interest). Idempotency check (processing→completed) bundled into the same pass.
 - [ ] **`mailchimp-woocommerce` plugin deactivated on staging.** Replacement code shipped in v1.0.92 (`inc/mailchimp-language-group.php`). At cutover, plugin must also be deactivated on live (see Stage 2.4).
 
