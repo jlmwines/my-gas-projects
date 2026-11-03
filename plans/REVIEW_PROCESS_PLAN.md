@@ -1,6 +1,6 @@
 # Business Review Process — Plan
 
-Draft. The current `/review-deep` process does not produce valid trend reads. This doc records why, what the source data actually holds (traced 2026-11-03), and the draft design for monthly series with year-over-year. Design written at the user's request 2026-11-03; not yet approved, nothing built.
+The current `/review-deep` process does not produce valid trend reads. This doc records why, what the source data actually holds (traced 2026-11-03), and the design. Phase 1 (steps 1-3) approved and built 2026-11-03, tested locally against the exported workbooks, not yet deployed; step 4 and phase 2 not started.
 
 ## Deficiencies (found 2026-10-26)
 
@@ -33,8 +33,8 @@ Draft. The current `/review-deep` process does not produce valid trend reads. Th
 **Phase 1 first: make current and recent data accurate and available from what the sheets already hold (user 2026-11-03).** No add-on changes, no history questions.
 
 1. **GSC from the month tabs (code).** OPS stops reading `Sheet1` and reads every month tab (name pattern `Mon YYYY`): per month total clicks, impressions, impression-weighted position, plus top pages for the newest month. Today that is Aug, Sep, Oct 2026; each monthly backup adds one. The stale `otherSettings.json:94` note is rewritten.
-2. **GA4 series from the existing 90-day daily rows (code).** OPS keeps the daily rows it already reads but reports them as series instead of only 7d/MTD: the last 12 complete weeks and every complete month inside the window (today Sep and Oct 2026; Aug is partial and labeled so), for total traffic (sessions, users, new users, key events, revenue, engagement) and organic by audience (EN IL, HE IL, Not IL; same metrics plus bounce rate, pages/session).
-3. **Freshness and sanity in the export.** Each input prints its newest data date; one overdue past its refresh cadence (GSC month tab more than ~10 days into the next month; GA4 more than 3 days old) prints as STALE, not as a value. Known-broken KPIs (first-order conversion 0% with nonzero new customers) print as BROKEN until fixed. The current partial month is shown as partial and never compared.
+2. **GA4 series from the existing 90-day daily rows (code).** OPS keeps the daily rows it already reads but reports them as series instead of only 7d/MTD: the last 12 complete Sun-Sat weeks and every month inside the window (today Sep and Oct 2026 complete; Aug partial and labeled so). All traffic: weekly sessions/key events; monthly sessions, new users, key events, revenue, engagement. Organic: weekly EN/HE sessions; monthly EN/HE sessions plus combined new users, key events, revenue, bounce, pages/session. Users are left out of the series (daily active users don't add up across days).
+3. **Freshness and sanity in the export.** Each input prints its newest data date. GA4 data more than 9 days old (the add-on reports are weekly) and a missing GSC month tab (last month expected once 10+ days into the current month) print as STALE. First-order conversion at 0% with nonzero new customers prints as BROKEN. A partial month is labeled and never compared.
 4. **Review reads the series.** `/review-deep` reports these as recent direction, explicitly without seasonal adjustment until phase 2; 7d/MTD stay health figures.
 
 **Phase 2 later: year-over-year.** Needs history the sheets don't hold today: GA4 reports with dimension `yearMonth` from a fixed start date (add-on settings), and a one-time GSC backfill of earlier month tabs. Whether the sources return that far back is checked when phase 2 starts, by running it. OPS then adds the same-month-last-year column to each series.

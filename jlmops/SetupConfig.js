@@ -36760,7 +36760,7 @@ function getMasterConfiguration() {
     ],
     [
         "system.sheet.gsc_report",
-        "GSC monthly export workbook (id) + data-tab name. Read by StatusReportService.refreshKpiBlock. data_tab is the literal sheet-tab name (Sheet1), not the workbook title — a prior value ('JLM GSC Weekly', the workbook's own title) never matched any real tab, so the reader silently fell back to Sheets()[0]. Sheet1 is the single stable tab going forward (2026-07-01) — the one extra dated tab the Search Analytics for Sheets add-on had created was removed; the add-on's recurring report must write its Date-dimensioned pull into Sheet1 itself, not spawn a new tab each run.",
+        "GSC export workbook (id). Read by StatusReportService.refreshKpiBlock: the Search Analytics for Sheets monthly backup writes one page-grouped tab per month named 'Mon YYYY'; every such tab is read as a monthly series. Sheet1 (a one-time 90-day pull of unknown period) is ignored, and data_tab is no longer used (plans/REVIEW_PROCESS_PLAN.md, 2026-11-03).",
         "stable",
         "id",
         "1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc",

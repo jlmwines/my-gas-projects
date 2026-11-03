@@ -225,6 +225,70 @@ const StatusReportService = (function() {
     const d = new Date(s); return isNaN(d) ? null : d;
   }
 
+  // ── Traffic series (plans/REVIEW_PROCESS_PLAN.md phase 1) ─────────────────
+  // Pure helpers: weeks run Sunday-Saturday; a month is "complete" only when the
+  // data window covers all of it. No timezone formatting here (plain local dates).
+  function _pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function _ymd(d) { return d.getFullYear() + '-' + _pad2(d.getMonth() + 1) + '-' + _pad2(d.getDate()); }
+  function _monthKey(d) { return d.getFullYear() + '-' + _pad2(d.getMonth() + 1); }
+  function _weekStart(d) { const s = new Date(d.getFullYear(), d.getMonth(), d.getDate()); s.setDate(s.getDate() - s.getDay()); return s; }
+
+  /** Which weeks/months a [minD, maxD] daily window can report. */
+  function _seriesPlan(minD, maxD, maxWeeks) {
+    const weeks = [];
+    let ws = _weekStart(maxD);
+    const lastSat = new Date(ws); lastSat.setDate(lastSat.getDate() + 6);
+    if (lastSat > maxD) ws.setDate(ws.getDate() - 7); // newest week not complete yet
+    while (weeks.length < (maxWeeks || 12) && ws >= minD) {
+      weeks.unshift(_ymd(ws));
+      ws = new Date(ws); ws.setDate(ws.getDate() - 7);
+    }
+    const months = [];
+    let m = new Date(minD.getFullYear(), minD.getMonth(), 1);
+    while (m <= maxD) {
+      const end = new Date(m.getFullYear(), m.getMonth() + 1, 0);
+      months.push({ key: _monthKey(m), complete: m >= minD && end <= maxD });
+      m = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+    }
+    return { weeks: weeks, months: months };
+  }
+
+  /** "Oct 2026" -> "2026-10"; anything else (Sheet1, Backup Log) -> null. */
+  function _gscTabMonth(name) {
+    const m = /^([A-Za-z]{3}) (\d{4})$/.exec(String(name || '').trim());
+    if (!m) return null;
+    const i = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m[1].toLowerCase());
+    return i === -1 ? null : m[2] + '-' + _pad2(i + 1);
+  }
+
+  /** Page-grouped GSC table (header row + Page/Clicks/Impressions/Position) -> totals + pages by clicks. */
+  function _summarizeGscTable(vals) {
+    let hr = -1, H = null;
+    for (let i = 0; i < Math.min(vals.length, 15); i++) {
+      const row = vals[i].map(c => String(c).trim().toLowerCase());
+      if (row.indexOf('clicks') !== -1 && row.indexOf('impressions') !== -1) { hr = i; H = row; break; }
+    }
+    if (hr === -1) return { ok: false, reason: 'header row not found' };
+    const pgCol = H.indexOf('page'), clCol = H.indexOf('clicks'), imCol = H.indexOf('impressions'), poCol = H.indexOf('position');
+    let totClicks = 0, totImpr = 0, posW = 0;
+    const rows = [];
+    for (let i = hr + 1; i < vals.length; i++) {
+      const cl = _num(vals[i][clCol]), im = _num(vals[i][imCol]), po = poCol !== -1 ? _num(vals[i][poCol]) : 0;
+      if (!cl && !im) continue;
+      totClicks += cl; totImpr += im; posW += po * im;
+      rows.push({ page: pgCol !== -1 ? vals[i][pgCol] : '', clicks: cl, impr: im, pos: po });
+    }
+    if (!rows.length) return { ok: false, reason: 'no data rows' };
+    rows.sort(function(a, b) { return b.clicks - a.clicks; });
+    return { ok: true, totClicks: totClicks, totImpr: totImpr, avgPos: totImpr ? (posW / totImpr) : 0, top: rows.slice(0, 5) };
+  }
+
+  /** GSC month tab expected to exist by `today`: last month once 10+ days in, else the month before. */
+  function _gscExpectedMonth(today) {
+    const back = today.getDate() > 10 ? 1 : 2;
+    return _monthKey(new Date(today.getFullYear(), today.getMonth() - back, 1));
+  }
+
   // Orders + customers from WebOrdM / SysContacts (fresh aggregators; the V2
   // dashboard refactor is deferred to Tier 6.8 per the plan).
   function _internalKpisBlock(allConfig) {
@@ -314,17 +378,22 @@ const StatusReportService = (function() {
     };
     const wk = _windowStart(7), mo = _monthStart();
     const blank = () => ({ s: 0, u: 0, nu: 0, ke: 0, rev: 0, engW: 0 });
-    const agg = { w: blank(), m: blank() }; let maxD = null;
+    const agg = { w: blank(), m: blank() }; let maxD = null, minD = null;
+    const byWeek = {}, byMonth = {};
     for (let i = hr + 1; i < vals.length; i++) {
       const dv = vals[i][c.date]; if (dv === '' || dv == null) continue;
       const d = _parseYmd(dv); if (!d) continue;
       if (!maxD || d > maxD) maxD = d;
+      if (!minD || d < minD) minD = d;
       const sess = _num(vals[i][c.s]);
       const add = b => { b.s += sess; b.u += _num(vals[i][c.u]); b.nu += _num(vals[i][c.nu]); b.ke += _num(vals[i][c.ke]); b.rev += _num(vals[i][c.rev]); b.engW += _num(vals[i][c.eng]) * sess; };
       if (d >= mo) add(agg.m);
       if (d >= wk) add(agg.w);
+      const wKey = _ymd(_weekStart(d)), mKey = _monthKey(d);
+      add(byWeek[wKey] = byWeek[wKey] || blank());
+      add(byMonth[mKey] = byMonth[mKey] || blank());
     }
-    return { ok: true, maxDate: maxD, w: agg.w, m: agg.m };
+    return { ok: true, maxDate: maxD, minDate: minD, w: agg.w, m: agg.m, byWeek: byWeek, byMonth: byMonth };
   }
 
   /**
@@ -351,6 +420,7 @@ const StatusReportService = (function() {
     if (hr === -1) return { ok: false, reason: 'header row not found' };
     const c = {
       date: H.indexOf('date'), aud: H.indexOf('audiencename'), s: H.indexOf('sessions'),
+      nu: H.indexOf('newusers'), ke: H.indexOf('keyevents'), rev: H.indexOf('totalrevenue'),
       br: H.indexOf('bouncerate'), pps: H.indexOf('screenpageviewspersession')
     };
     const BUCKET = { 'he il': 'HE', 'en il': 'EN', 'not il': 'EN' };
@@ -360,38 +430,48 @@ const StatusReportService = (function() {
     // KPI #6 (organic-source engagement): session-weighted across EN+HE combined,
     // not split by language — business/KPI.md #6 doesn't call for a split.
     const eng = { w: { s: 0, brW: 0, ppsW: 0 }, m: { s: 0, brW: 0, ppsW: 0 } };
-    let maxD = null;
+    // Series buckets: EN/HE sessions plus combined new users, key events, revenue, engagement.
+    const blankSeries = () => ({ EN: 0, HE: 0, s: 0, nu: 0, ke: 0, rev: 0, brW: 0, ppsW: 0 });
+    const byWeek = {}, byMonth = {};
+    let maxD = null, minD = null;
     for (let i = hr + 1; i < vals.length; i++) {
       const dv = vals[i][c.date]; if (dv === '' || dv == null) continue;
       const d = _parseYmd(dv); if (!d) continue;
       const bucket = BUCKET[String(vals[i][c.aud] || '').trim().toLowerCase()];
       if (!bucket) continue; // excludes All Users, Purchasers, anything unrecognized
       if (!maxD || d > maxD) maxD = d;
+      if (!minD || d < minD) minD = d;
       const sess = _num(vals[i][c.s]);
       const br = c.br !== -1 ? _num(vals[i][c.br]) : 0;
       const pps = c.pps !== -1 ? _num(vals[i][c.pps]) : 0;
       const addEng = b => { b.s += sess; b.brW += br * sess; b.ppsW += pps * sess; };
       if (d >= mo) { agg.m[bucket] += sess; addEng(eng.m); }
       if (d >= wk) { agg.w[bucket] += sess; addEng(eng.w); }
+      const addSeries = b => {
+        b[bucket] += sess; addEng(b);
+        b.nu += c.nu !== -1 ? _num(vals[i][c.nu]) : 0;
+        b.ke += c.ke !== -1 ? _num(vals[i][c.ke]) : 0;
+        b.rev += c.rev !== -1 ? _num(vals[i][c.rev]) : 0;
+      };
+      const wKey = _ymd(_weekStart(d)), mKey = _monthKey(d);
+      addSeries(byWeek[wKey] = byWeek[wKey] || blankSeries());
+      addSeries(byMonth[mKey] = byMonth[mKey] || blankSeries());
     }
     const rate = b => b.s ? (b.brW / b.s) : null;
     const perSess = b => b.s ? (b.ppsW / b.s) : null;
     return {
-      ok: true, maxDate: maxD, w: agg.w, m: agg.m,
+      ok: true, maxDate: maxD, minDate: minD, w: agg.w, m: agg.m,
       engW: { bounce: rate(eng.w), pps: perSess(eng.w) },
-      engM: { bounce: rate(eng.m), pps: perSess(eng.m) }
+      engM: { bounce: rate(eng.m), pps: perSess(eng.m) },
+      byWeek: byWeek, byMonth: byMonth
     };
   }
 
-  // GSC (Search Analytics for Sheets) output. By design (per the setup guide
-  // and business/KPI.md — GSC is a page-level diagnostic tool, not a tracked
-  // trend metric; GA4 carries the trend role) the sheet is Page-grouped with
-  // NO Date column — Clicks/Impressions/Position per page, trailing 90 days.
-  // Reports total clicks/impressions + top pages by clicks (the "which content
-  // is working for organic discovery" signal), and derives a week-over-week
-  // delta by comparing against the last pull's totals stored in SysConfig
-  // (system.kpi.gsc_last_snapshot) — the sheet never needs a Date column for
-  // this, jlmops just remembers its own history across refreshes.
+  // GSC (Search Analytics for Sheets) output. The add-on's monthly backup writes
+  // one page-grouped tab per month, named "Mon YYYY" (Page/Clicks/Impressions/
+  // CTR/Position, no Date column). Sheet1 is a one-time 90-day pull of unknown
+  // period and is ignored. Each month tab is summed into a monthly series
+  // (plans/REVIEW_PROCESS_PLAN.md phase 1).
   function _shortPage(url) {
     return String(url || '').replace(/^https?:\/\/[^/]+/, '') || '/';
   }
@@ -400,76 +480,96 @@ const StatusReportService = (function() {
     if (!cfg || !cfg.id) return { ok: false, reason: 'not configured' };
     let ss;
     try { ss = SpreadsheetApp.openById(cfg.id); } catch (e) { return { ok: false, reason: 'open failed: ' + e.message }; }
-    let sheet = cfg.data_tab ? ss.getSheetByName(cfg.data_tab) : null;
-    if (!sheet) sheet = ss.getSheets()[0];
-    if (!sheet) return { ok: false, reason: 'no sheet' };
-    const vals = sheet.getDataRange().getValues();
-    let hr = -1, H = null;
-    for (let i = 0; i < Math.min(vals.length, 15); i++) {
-      const row = vals[i].map(c => String(c).trim().toLowerCase());
-      if (row.indexOf('clicks') !== -1 && row.indexOf('impressions') !== -1) { hr = i; H = row; break; }
-    }
-    if (hr === -1) return { ok: false, reason: 'header row not found' };
-    const pgCol = H.indexOf('page'), clCol = H.indexOf('clicks'), imCol = H.indexOf('impressions'), poCol = H.indexOf('position');
-    let totClicks = 0, totImpr = 0, posW = 0;
-    const rows = [];
-    for (let i = hr + 1; i < vals.length; i++) {
-      const cl = _num(vals[i][clCol]), im = _num(vals[i][imCol]), po = poCol !== -1 ? _num(vals[i][poCol]) : 0;
-      if (!cl && !im) continue;
-      totClicks += cl; totImpr += im; posW += po * im;
-      rows.push({ page: pgCol !== -1 ? vals[i][pgCol] : '', clicks: cl, impr: im, pos: po });
-    }
-    if (!rows.length) return { ok: false, reason: 'no data rows' };
-    rows.sort(function(a, b) { return b.clicks - a.clicks; });
-    const top = rows.slice(0, 5);
-    const avgPos = totImpr ? (posW / totImpr) : 0;
+    const months = [];
+    ss.getSheets().forEach(function(sh) {
+      const key = _gscTabMonth(sh.getName());
+      if (!key) return;
+      const sum = _summarizeGscTable(sh.getDataRange().getValues());
+      months.push(sum.ok ? Object.assign({ key: key }, sum) : { key: key, ok: false, reason: sum.reason });
+    });
+    if (!months.length) return { ok: false, reason: 'no month tabs ("Mon YYYY") found' };
+    months.sort(function(a, b) { return a.key < b.key ? -1 : 1; });
+    return { ok: true, months: months };
+  }
 
-    let delta = null;
-    try {
-      const prevCfg = ConfigService.getConfig('system.kpi.gsc_last_snapshot');
-      if (prevCfg && prevCfg.value) {
-        const prev = JSON.parse(prevCfg.value);
-        delta = { clicks: totClicks - prev.clicks, impr: totImpr - prev.impr, sinceDate: prev.date };
-      }
-    } catch (e) { /* no snapshot yet — first run, that's fine */ }
-    try {
-      ConfigService.setConfigLocked('system.kpi.gsc_last_snapshot', 'value', JSON.stringify({ date: _il(new Date()), clicks: totClicks, impr: totImpr }));
-    } catch (e) { /* non-fatal — trend just won't advance this cycle */ }
+  // GA4 add-on reports are named "Weekly"; data older than this many days is
+  // printed as STALE instead of being read as a value.
+  const GA4_STALE_DAYS = 9;
 
-    return { ok: true, totClicks: totClicks, totImpr: totImpr, avgPos: avgPos, top: top, delta: delta };
+  function _ga4Freshness(maxD, today) {
+    const age = Math.floor((today - maxD) / 86400000);
+    return age > GA4_STALE_DAYS
+      ? '**STALE** (data through ' + _ilDate(maxD) + ', ' + age + ' days old; values below are not current)'
+      : 'data through ' + _ilDate(maxD);
+  }
+
+  /** Weekly + monthly series lines for a reader result that has byWeek/byMonth/minDate/maxDate. */
+  function _seriesLines(r, fmtWeek, fmtMonth) {
+    const plan = _seriesPlan(r.minDate, r.maxDate, 12);
+    const out = [];
+    out.push('  - Weekly (Sun-Sat, last ' + plan.weeks.length + ' complete, week start): ' +
+      plan.weeks.map(function(k) { return k.substr(5) + ' ' + fmtWeek(r.byWeek[k]); }).join(' · '));
+    out.push('  - Monthly:');
+    plan.months.forEach(function(m) {
+      const b = r.byMonth[m.key];
+      if (!b) return;
+      out.push('    - ' + m.key + (m.complete ? '' : ' (partial, not comparable)') + ': ' + fmtMonth(b));
+    });
+    return out;
   }
 
   function _trafficBlock(allConfig) {
     const lines = ['### Traffic (GA4 + Search Console)'];
+    const today = new Date();
+    const fmtPct = v => v == null ? '-' : (v * 100).toFixed(0) + '%';
+    const fmtPps = v => v == null ? '-' : v.toFixed(1);
+    lines.push('_Series are recent direction only, not seasonally adjusted (no year-over-year yet, `plans/REVIEW_PROCESS_PLAN.md`). 7d/MTD are health figures._');
     const ga = _readGa4(allConfig['system.sheet.ga4_report']);
     if (ga.ok) {
       const eng = w => w.s ? (w.engW / w.s * 100).toFixed(0) + '%' : '-';
       const conv = w => w.s ? (w.ke / w.s * 100).toFixed(1) + '%' : '-';
-      lines.push('- GA4 (latest data ' + _ilDate(ga.maxDate) + '):');
+      lines.push('- GA4 all traffic (' + _ga4Freshness(ga.maxDate, today) + '):');
       lines.push('  - 7d: ' + ga.w.s + ' sessions · ' + ga.w.u + ' users · ' + ga.w.nu + ' new · eng ' + eng(ga.w) + ' · ' + ga.w.ke + ' key events (conv ' + conv(ga.w) + ')');
       lines.push('  - MTD: ' + ga.m.s + ' sessions · ' + ga.m.u + ' users · ' + ga.m.nu + ' new · ' + ga.m.ke + ' key events (conv ' + conv(ga.m) + ') · ₪' + Math.round(ga.m.rev));
+      _seriesLines(ga,
+        b => (b ? b.s + 's/' + b.ke + 'ke' : '-'),
+        b => b.s + ' sessions · ' + b.nu + ' new users · ' + b.ke + ' key events · ₪' + Math.round(b.rev) + ' · eng ' + eng(b)
+      ).forEach(l => lines.push(l));
+      lines.push('  - (weekly: s = sessions, ke = key events)');
     } else {
       lines.push('- GA4: no data (' + ga.reason + ')');
     }
     const gaAud = _readGa4Audience(allConfig['system.sheet.ga4_audience_report_id'], allConfig['system.sheet.ga4_audience_report_tab']);
     if (gaAud.ok) {
-      lines.push('- GA4 organic traffic by audience (latest data ' + _ilDate(gaAud.maxDate) + '):');
+      lines.push('- GA4 organic traffic by audience (' + _ga4Freshness(gaAud.maxDate, today) + '):');
       lines.push('  - 7d: ' + gaAud.w.EN + ' EN · ' + gaAud.w.HE + ' HE sessions');
       lines.push('  - MTD: ' + gaAud.m.EN + ' EN · ' + gaAud.m.HE + ' HE sessions');
-      const fmtPct = v => v == null ? '-' : (v * 100).toFixed(0) + '%';
-      const fmtPps = v => v == null ? '-' : v.toFixed(1);
       lines.push('  - Organic engagement — 7d: ' + fmtPct(gaAud.engW.bounce) + ' bounce · ' + fmtPps(gaAud.engW.pps) + ' pages/session');
       lines.push('  - Organic engagement — MTD: ' + fmtPct(gaAud.engM.bounce) + ' bounce · ' + fmtPps(gaAud.engM.pps) + ' pages/session');
+      _seriesLines(gaAud,
+        b => (b ? b.EN + '/' + b.HE : '-'),
+        b => b.EN + ' EN · ' + b.HE + ' HE sessions · ' + b.nu + ' new users · ' + b.ke + ' key events · ₪' + Math.round(b.rev) +
+          ' · ' + fmtPct(b.s ? b.brW / b.s : null) + ' bounce · ' + fmtPps(b.s ? b.ppsW / b.s : null) + ' pages/session'
+      ).forEach(l => lines.push(l));
+      lines.push('  - (weekly: EN/HE organic sessions)');
     } else {
       lines.push('- GA4 audience split: no data (' + gaAud.reason + ')');
     }
     const gs = _readGsc(allConfig['system.sheet.gsc_report']);
     if (gs.ok) {
-      const d = n => n == null ? '' : (n >= 0 ? '+' + n : String(n));
-      lines.push('- GSC (trailing 90d, page-grouped snapshot):');
-      lines.push('  - Total: ' + gs.totClicks + ' clicks · ' + gs.totImpr + ' impr · avg pos ' + gs.avgPos.toFixed(1) +
-        (gs.delta ? ' (Δ vs last pull: ' + d(gs.delta.clicks) + ' clicks, ' + d(gs.delta.impr) + ' impr, since ' + gs.delta.sinceDate + ')' : ' (first snapshot — trend starts next pull)'));
-      lines.push('  - Top pages: ' + gs.top.map(function(r) { return _shortPage(r.page) + ' (' + r.clicks + ' clicks, pos ' + r.pos.toFixed(1) + ')'; }).join('; '));
+      const newest = gs.months[gs.months.length - 1];
+      const expected = _gscExpectedMonth(today);
+      lines.push('- GSC monthly (backup tabs; Sheet1 ignored)' + (newest.key < expected
+        ? ': **STALE** (newest month tab ' + newest.key + ', expected ' + expected + '; monthly backup may have stopped)'
+        : ':'));
+      gs.months.forEach(function(m) {
+        lines.push('  - ' + m.key + ': ' + (m.ok
+          ? m.totClicks + ' clicks · ' + m.totImpr + ' impr · avg pos ' + m.avgPos.toFixed(1)
+          : 'unreadable (' + m.reason + ')'));
+      });
+      if (newest.ok) {
+        lines.push('  - Top pages ' + newest.key + ': ' + newest.top.map(function(r) { return _shortPage(r.page) + ' (' + r.clicks + ' clicks, pos ' + r.pos.toFixed(1) + ')'; }).join('; '));
+      }
     } else {
       lines.push('- GSC: no data (' + gs.reason + ')');
     }
@@ -520,7 +620,15 @@ const StatusReportService = (function() {
       const custTrend = lastClosed ? ' (vs ' + (Number(gPrev('sk_NewCustomersEN')) || 0) + ' EN · ' + (Number(gPrev('sk_NewCustomersHE')) || 0) + ' HE last month)' : '';
       lines.push('- New customers: ' + enNow + ' EN · ' + heNow + ' HE (' + g('sk_NewCustomersTotal') + ' total)' + custTrend);
 
-      lines.push('- First-order conversion: ' + pct(g('sk_FirstOrderConvRate')) + ' · AOV ' + nis(g('sk_FirstOrderAOV')));
+      // Sanity check (plans/REVIEW_PROCESS_PLAN.md): 0% / blank conversion alongside
+      // nonzero new customers is a broken metric, not a value to interpret.
+      const convRaw = g('sk_FirstOrderConvRate');
+      const newTotal = Number(g('sk_NewCustomersTotal')) || 0;
+      if (newTotal > 0 && !(Number(convRaw) > 0)) {
+        lines.push('- First-order conversion: **BROKEN** (reads ' + pct(convRaw) + ' with ' + newTotal + ' new customers; metric not computing, do not interpret)');
+      } else {
+        lines.push('- First-order conversion: ' + pct(convRaw) + ' · AOV ' + nis(g('sk_FirstOrderAOV')));
+      }
 
       const retPrev = lastClosed ? gPrev('sk_Return90Rate') : null;
       const retTrend = (lastClosed && retPrev !== '' && retPrev != null) ? ' (vs ' + pct(retPrev) + ' last month)' : '';
@@ -814,7 +922,12 @@ const StatusReportService = (function() {
     refreshLiveBlocks: refreshLiveBlocks,
     refreshKpiBlock: refreshKpiBlock,
     applyPendingCalendarUpdates: applyPendingCalendarUpdates,
-    updateCalendarDate: updateCalendarDate
+    updateCalendarDate: updateCalendarDate,
+    // Pure helpers exported for tests (traffic series, plans/REVIEW_PROCESS_PLAN.md)
+    _seriesPlan: _seriesPlan,
+    _gscTabMonth: _gscTabMonth,
+    _summarizeGscTable: _summarizeGscTable,
+    _gscExpectedMonth: _gscExpectedMonth
   };
 })();
 
