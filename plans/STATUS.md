@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-11-02. Bundle web-sync plan final-reviewed and awaiting approval (avoid the bundle Update buttons until it ships); Heter Mechira description fix live @604; Golan Heights awaits manager lock.
+**Updated:** 2026-11-03. Year-over-year review score live @607 (new customers and Israel traffic up ~70% vs a depressed 2025); bundle web-sync plan awaits approval (avoid the bundle Update buttons); Golan Heights awaits manager lock.
 
 ## At a glance
 
@@ -8,7 +8,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 - **jlmops** (GAS backend) — live (current version in Metrics below); sync/calendar/coupons all recently hardened (`jlmops/docs/ARCHITECTURE.md`).
 - **jlmwines.com** (storefront/theme) — live (current version in Metrics below); new-visitor offer popup, expanded Wine Talk categories, and the Israel-only checkout guard live; folk-art package images live EN/HE (HE alt text awaits manager translation); category tab-row UI not yet built (`website/BLOG_CATEGORIES_PLAN.md`).
-- **content** — 12 editorial posts live (EN+HE), 3 of 6 region posts published; remaining regions and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
+- **content** — 12 editorial posts live (EN+HE), 4 of 6 region posts published; remaining regions and a Grapes guide anchor in active drafting (`content/plans/REGION_POSTS_PLAN.md`, `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — organic traffic rising, subscribers growing slowly; no paid ads running (`marketing/_resources/PAID_ADS_REFERENCE.md`); manager-led Thursday tastings are the current growth push (Next Action 3-4).
 - **business** — strategy/brand docs current.
 
@@ -44,7 +44,7 @@ The live "what now" — daily review reads these first.
 9. **After the region posts: the ministry-map anchor, then People.** The anchor introduces the 2026 official map (8 regions, 18 sub-regions) and places our six region posts on it; People profiles are the richer next category (subjects can supply images and share). Grapes anchor stays drafted on the shelf (`content/grapes/grapes-en.post.md`). Plan → `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`.
 10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager).
 11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.
-12. **Valid business review process** — phase 1 live @605: `jlmops-status.md` now carries GA4 weekly/monthly series (all + organic EN/HE), GSC monthly from the backup tabs, and STALE/BROKEN labels. Phase 2 live @607: a year-over-year score (last 3 months vs same 3 last year: new customers, returning frequency and order size, Israel traffic) leads the export and `/review-deep`. Remaining: open questions only (gift view, shop sales) → `plans/REVIEW_PROCESS_PLAN.md`.
+12. **Deep-review follow-ups (2026-11-03)** — the review now leads with a year-over-year score (Aug-Oct 2026 vs 2025: new customers +71%, Israel traffic +67%, returning customers -25% but buying more often and larger; definition in `business/KPI.md`). Open flags from `plans/reviews/review-deep-2026-11-03.md` awaiting user answers: STRATEGY.md offline-channels line, BUGS line for the broken first-order conversion KPI, the eight "verify" bugs, tastings measurement.
 13. **Vintage-drift smoke test** — fix deployed @528 (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`); needs a live vintage change to occur naturally before it can be confirmed working (no way to manufacture the test condition). Also: the task open since 2026-07-18 still carries the old, pre-fix stale snapshot — user to correct/clear it directly.
 
 ## Active Plans

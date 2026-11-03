@@ -100,10 +100,16 @@ Each KPI below maps to one of those three.
 - **`JLMops_Logs`** also in Drive (operational logs).
 - **Daily exports** (Comax order export, web inventory export, Comax inventory export) land in Drive folders.
 - **Setup guide** for GA4 + GSC → Sheets is in Drive root (file ID `1QWTJmlj-wvHYk3SfdTvPj7gxskEqPx2HDEznILljRYM`, "JLM Wines — GA4 + GSC to Drive: Setup Guide"). User runs the 15-min × 2 setup when ready.
-- **GA4 + GSC sheets BUILT and REFRESHING (restored 2026-06-10):**
-  - **"JLM GA4 Weekly"** — id `12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU` (GA4 property `279950414`, rolling 90-day, end = yesterday, Sheets add-on). Refreshing (last ran 2026-06-10). _(Had stalled 2026-05-17 → 2026-06-10; re-enabled.)_
-  - **"JLM GSC Weekly"** — id `1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc`. **Monthly cadence (3rd)** via Search Analytics for Sheets; recurring backup re-enabled + **Date dimension added** 2026-06-10 (was Page-only, so no trend accumulated before). _(Had not recurred since 2026-05-07.)_
-  - Both are **multi-tab** (Report + Configuration), so sessions/Drive MCP can NOT read them usefully — **only OPS (GAS) reads them and flattens KPIs into the shared one-tab export (`jlmops-status.md` KPI block) that sessions consume.** Sessions never open these source workbooks directly, and don't verify them — that's OPS's job (or a human eyeball in the sheet UI).
+- **GA4 workbook "JLM GA4 Weekly"** — id `12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU` (property `279950414`, Sheets add-on, scheduled). Three reports: `JLM GA4 Weekly` (90 days to yesterday, dimensions `date, sessionDefaultChannelGroup`, limit 5000), `Audience Weekly` (90 days, `date, audienceName, sessionMedium`, filtered to organic search), `JLM GA4 Israel Monthly` (from 2025-01-01, `yearMonth, sessionDefaultChannelGroup, country`, filtered to Israel, sessions).
+- **GSC workbook "JLM GSC Weekly"** — id `1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc`. The Search Analytics for Sheets monthly backup writes one page-grouped tab per month (`Mon YYYY`, from Aug 2026). `Sheet1` is a one-time 90-day pull and is ignored.
+- Both are **multi-tab**, so sessions/Drive MCP can't read them usefully — **only OPS (`StatusReportService`) reads them and writes the KPI block of `jlmops-status.md`**, which sessions consume. Sessions don't open the source workbooks.
+
+### What the export carries (`jlmops-status.md` KPI block, daily + `runRefreshKpiBlock`)
+- **Score: are we doing better?** (first, and what `/review-deep` leads with): last 3 complete months vs the same 3 a year earlier, as % change. New customers (non-gift online orders whose customer's first completed order is in the window, `SysContacts.sc_FirstCompletedDate`); returning customers, orders per returning customer, returning average order; Israel sessions from `JLM GA4 Israel Monthly`. Gift rule `ContactService._isGiftOrder` (rough by design); orders from `WebOrdM` + `WebOrdM_Archive`; valid statuses processing/completed/on-hold. Shop sales are not included; shop customers who move online count as new (wanted, user 2026-11-03). From Aug 2025 the base year is depressed (SEO damage, war).
+- **Traffic series:** GA4 all traffic and organic EN/HE as last 12 complete weeks + monthly; GSC monthly clicks/impressions/position. Not seasonally adjusted; partial months labeled.
+- **Exclusions:** GA4 Organic Social is dropped (Meta ads crawl/interference). Foreign traffic is out of the score (Israel filter); mostly gift senders, plus one-off spikes such as the 2026-08 US-site Hollander referral.
+- **Labels:** an input past its refresh cadence prints **STALE** (GA4 > 9 days old; GSC month tab missing 10+ days into the next month); first-order conversion at 0% with nonzero new customers prints **BROKEN**.
+- **Not measured:** shop (Comax) sales; a separate view of gift orders.
 
 ### Remaining sub-item
 KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign") still depends on per-recipient activity writes that don't exist yet — see `plans/BUGS.md` 2026-05-28. Doesn't block anything above; KPI #3's coupon-based conversion+AOV numbers and KPI #5 (newsletter engagement) are both already live without it. Data path → `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`).
@@ -129,4 +135,4 @@ KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign"
 
 ---
 
-Updated: 2026-07-02 (jlmops KPI block live in `jlmops-status.md`, reworked to its Page-grouped GSC design; all 6 KPIs now compute automatically — 4 via `SysKPISummary`'s "Business KPIs" block, KPI #1 organic-traffic EN/HE split and KPI #6 organic-source engagement (bounce rate + pages/session) both via the GA4 "Audience Weekly" report (audiences Not IL/EN IL/HE IL), surfaced in the Traffic block.)
+Updated: 2026-11-03 (year-over-year score, weekly/monthly traffic series and STALE/BROKEN labels live @605-@607; design history in `plans/_archive/REVIEW_PROCESS_PLAN.md`).

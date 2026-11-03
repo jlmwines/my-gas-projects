@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-03 — Deep review; review data rebuilt with year-over-year score
+
+- Deep review found GSC frozen 10 weeks (OPS read a one-time Sheet1; add-on writes monthly tabs) and GA4 reduced to 7d/MTD. Fixed @605-@607: weekly/monthly GA4 series, GSC monthly, STALE/BROKEN labels, Organic Social excluded (Meta interference), and a YoY score (non-gift new/returning customers from orders + GA4 Israel sessions). Plan graduated to `business/KPI.md`, archived.
+- Score Aug-Oct 2026 vs 2025: new +71%, Israel traffic +67% (2025 base depressed: SEO damage, war), returning customers -25% but more frequent/larger. User: shop-to-online migration counts as a win.
+- Next: bundle plan approval; review flags awaiting answers (STATUS Next Action 12). Small cleanup for the next jlmops deploy: export traffic line and code comments still cite `plans/REVIEW_PROCESS_PLAN.md` (archived) and "no year-over-year yet".
+- Lesson: user asked repeatedly for shorter answers; yes/no questions get one word (memory updated).
+
 ## 2026-11-02 — Bundle plan final review; Heter Mechira fix live
 
 - Bundle plan final-reviewed: every Product slot needs a category (no "any wine"), Restore to web version, no nightly bundle work, config-only push first, local checks against exports, one code deploy. D4 done (all Product slots categorized). Awaiting approval.

@@ -20,6 +20,8 @@ Projects: jlmops, web, marketing, content
 - [ ] 2026-05-15: Single-product ops view: Comax + Woo state, last updates, image and live-page link on one screen, for triage. No plan doc yet.
 - [ ] 2026-05-15: **Outreach to unpaid orders / abandoned carts / consummated-but-not-paid.** Identify customers who intended to buy but didn't complete payment (pending orders, on-hold, abandoned carts if trackable). High-intent contacts worth reaching. Check what data we already have (WebOrdM has pending/on-hold; abandoned cart data may require a Woo API extension or plugin). Once trackable, ship as a new topic on `task.contact.outreach` so the manager surfaces and contacts them through the same Action Panel flow. (Broader scope than the @110-@111 pending-payment auto-followup which only covers `pending` Woo status.)
 
+- [ ] 2026-11-03: Review score: separate view of gift orders (their own pattern), and whether to add shop (Comax) sales. Score definition → `business/KPI.md`.
+
 ## web
 
 - [ ] 2025-12-29: Risk that redundant text is affecting SEO - research enriched text in products
