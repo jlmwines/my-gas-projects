@@ -1,6 +1,6 @@
 # Business Review Process — Plan
 
-The current `/review-deep` process does not produce valid trend reads. This doc records why, what the source data actually holds (traced 2026-11-03), and the design. Phase 1 steps 1-3 live @605 (2026-11-03), verified in `jlmops-status.md` (series match the exported workbooks; BROKEN label showing); step 4 (review reads the series) and phase 2 not started.
+The current `/review-deep` process does not produce valid trend reads. This doc records why, what the source data actually holds (traced 2026-11-03), and the design. Phase 1 done 2026-11-03: steps 1-3 live @605, verified in `jlmops-status.md` (series match the exported workbooks; BROKEN label showing); step 4 in `~/.claude/commands/review-deep.md` (reads step 6 + "Reading the data" rules). Phase 2 not started.
 
 ## Deficiencies (found 2026-10-26)
 
