@@ -90,6 +90,14 @@
         "", "", "", "", "", "", ""
     ],
     [
+        "system.sheet.ga4_israel_report_tab",
+        "GA4 Israel monthly report tab name, workbook id in ga4_audience_report_id (same workbook). Dimensions: yearMonth, sessionDefaultChannelGroup, country (filtered to Israel), metric sessions, from 2025-01-01. Read by StatusReportService for the year-over-year score; Organic Social rows are dropped (plans/REVIEW_PROCESS_PLAN.md phase 2).",
+        "stable",
+        "value",
+        "JLM GA4 Israel Monthly",
+        "", "", "", "", "", "", ""
+    ],
+    [
         "system.sheet.gsc_report",
         "GSC export workbook (id). Read by StatusReportService.refreshKpiBlock: the Search Analytics for Sheets monthly backup writes one page-grouped tab per month named 'Mon YYYY'; every such tab is read as a monthly series. Sheet1 (a one-time 90-day pull of unknown period) is ignored, and data_tab is no longer used (plans/REVIEW_PROCESS_PLAN.md, 2026-11-03).",
         "stable",

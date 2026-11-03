@@ -291,6 +291,181 @@ const StatusReportService = (function() {
 
   // Orders + customers from WebOrdM / SysContacts (fresh aggregators; the V2
   // dashboard refactor is deferred to Tier 6.8 per the plan).
+  // ── Shared order/customer helpers (used by the MTD lines and the YoY score) ──
+  /** Orders that count: processing / completed / on-hold. */
+  function _isValidOrderStatus(st) {
+    const s = String(st).replace(/^wc-/, '').toLowerCase();
+    return s === 'processing' || s === 'completed' || s === 'on-hold' || s === 'onhold';
+  }
+
+  /** SysContacts: email -> first completed order date, plus every valid date (for counts). */
+  function _firstCompletedMap(ds, sheetNames) {
+    const map = {}, dates = [];
+    const cSheet = ds.getSheetByName(sheetNames.SysContacts || 'SysContacts');
+    if (!cSheet) return { map: map, dates: dates };
+    const cv = cSheet.getDataRange().getValues();
+    const CH = cv[0] || [];
+    const fcCol = CH.indexOf('sc_FirstCompletedDate'), emCol = CH.indexOf('sc_Email');
+    for (let i = 1; i < cv.length; i++) {
+      const em = String(cv[i][emCol] || '').toLowerCase();
+      const fcRaw = fcCol !== -1 ? cv[i][fcCol] : null;
+      const fc = fcRaw ? new Date(fcRaw) : null;
+      if (!fc || isNaN(fc)) continue;
+      if (em) map[em] = fc;
+      dates.push(fc);
+    }
+    return { map: map, dates: dates };
+  }
+
+  // ── Year-over-year score (plans/REVIEW_PROCESS_PLAN.md phase 2) ───────────
+  /** All orders from WebOrdM + WebOrdM_Archive, de-duplicated by order id (WebOrdM wins). */
+  function _readOrderHistory(ds, sheetNames) {
+    const out = [], seen = {};
+    [['WebOrdM', 'wom_'], ['WebOrdM_Archive', 'woma_']].forEach(function(src) {
+      const sh = ds.getSheetByName(sheetNames[src[0]] || src[0]);
+      if (!sh) return;
+      const v = sh.getDataRange().getValues();
+      const H = v[0] || [];
+      const col = k => H.indexOf(src[1] + k);
+      const c = { id: col('OrderId'), d: col('OrderDate'), st: col('Status'), em: col('BillingEmail'), tot: col('OrderTotal'),
+        note: col('CustomerNote'), bl: col('BillingLastName'), sl: col('ShippingLastName') };
+      for (let i = 1; i < v.length; i++) {
+        const id = String(v[i][c.id] || '');
+        if (!id || seen[id]) continue;
+        seen[id] = true;
+        out.push({ id: id, date: v[i][c.d] ? new Date(v[i][c.d]) : null, status: v[i][c.st],
+          email: String(v[i][c.em] || '').toLowerCase(), total: _num(v[i][c.tot]),
+          customerNote: v[i][c.note], billingLastName: v[i][c.bl], shippingLastName: v[i][c.sl] });
+      }
+    });
+    return out;
+  }
+
+  /**
+   * Per month: new and returning customers from valid, non-gift orders. New = first
+   * completed order (SysContacts) falls in that month, or unknown (same rule as the MTD
+   * line); returning = first completed order before the month.
+   */
+  function _customerMonthly(orders, firstMap, isGift) {
+    const by = {};
+    let minKey = null;
+    orders.forEach(function(o) {
+      if (!o.date || isNaN(o.date) || !_isValidOrderStatus(o.status)) return;
+      if (isGift(o)) return;
+      const k = _monthKey(o.date);
+      if (!minKey || k < minKey) minKey = k;
+      const b = by[k] = by[k] || { newC: {}, retC: {}, retOrders: 0, retRev: 0 };
+      const fc = firstMap[o.email];
+      const mStart = new Date(o.date.getFullYear(), o.date.getMonth(), 1);
+      if (fc && fc < mStart) { b.retC[o.email] = true; b.retOrders++; b.retRev += o.total; }
+      else b.newC[o.email || ('#' + o.id)] = true;
+    });
+    return { byMonth: by, minKey: minKey };
+  }
+
+  /** Window totals over month keys: distinct customers, orders per returning customer, returning AOV. */
+  function _windowStats(byMonth, keys) {
+    const nc = {}, rc = {}; let ro = 0, rr = 0;
+    keys.forEach(function(k) {
+      const b = byMonth[k]; if (!b) return;
+      Object.keys(b.newC).forEach(e => { nc[e] = true; });
+      Object.keys(b.retC).forEach(e => { rc[e] = true; });
+      ro += b.retOrders; rr += b.retRev;
+    });
+    const n = Object.keys(nc).length, r = Object.keys(rc).length;
+    return { newCustomers: n, returningCustomers: r, ordersPerReturning: r ? ro / r : null, returningAov: ro ? rr / ro : null };
+  }
+
+  /** The n complete months before `today`, oldest first, as YYYY-MM. */
+  function _lastCompleteMonths(today, n) {
+    const keys = [];
+    for (let i = n; i >= 1; i--) keys.push(_monthKey(new Date(today.getFullYear(), today.getMonth() - i, 1)));
+    return keys;
+  }
+  function _yearEarlier(key) { return (Number(key.substr(0, 4)) - 1) + key.substr(4); }
+
+  /** GA4 Israel monthly report: YYYY-MM -> sessions, Organic Social dropped. */
+  function _readGa4IsraelMonthly(idCfg, tabCfg) {
+    const id = idCfg && idCfg.value, tab = tabCfg && tabCfg.value;
+    if (!id || !tab) return { ok: false, reason: 'not configured' };
+    let ss;
+    try { ss = SpreadsheetApp.openById(id); } catch (e) { return { ok: false, reason: 'open failed: ' + e.message }; }
+    const sheet = ss.getSheetByName(tab);
+    if (!sheet) return { ok: false, reason: 'no tab "' + tab + '"' };
+    const vals = sheet.getDataRange().getValues();
+    let hr = -1, H = null;
+    for (let i = 0; i < Math.min(vals.length, 20); i++) {
+      const row = vals[i].map(c => String(c).trim().toLowerCase());
+      if (row.indexOf('yearmonth') !== -1 && row.indexOf('sessions') !== -1) { hr = i; H = row; break; }
+    }
+    if (hr === -1) return { ok: false, reason: 'header row not found' };
+    const cYm = H.indexOf('yearmonth'), cCh = H.indexOf('sessiondefaultchannelgroup'), cS = H.indexOf('sessions');
+    const by = {}; let maxKey = null;
+    for (let i = hr + 1; i < vals.length; i++) {
+      const ym = String(Math.round(_num(vals[i][cYm])));
+      if (!/^\d{6}$/.test(ym)) continue;
+      if (cCh !== -1 && String(vals[i][cCh] || '').trim().toLowerCase() === 'organic social') continue;
+      const k = ym.substr(0, 4) + '-' + ym.substr(4, 2);
+      by[k] = (by[k] || 0) + _num(vals[i][cS]);
+      if (!maxKey || k > maxKey) maxKey = k;
+    }
+    return { ok: true, byMonth: by, maxKey: maxKey };
+  }
+
+  function _pctChange(now, prev) {
+    if (now == null || prev == null || !prev) return '';
+    const p = Math.round((now - prev) / prev * 100);
+    return ' (' + (p >= 0 ? '+' : '') + p + '%)';
+  }
+
+  function _scoreBlock(allConfig) {
+    const lines = ['### Score: are we doing better? (Israel, online)'];
+    try {
+      const today = new Date();
+      const cur = _lastCompleteMonths(today, 3), prev = cur.map(_yearEarlier);
+      lines.push('_Last 3 complete months vs the same 3 months a year earlier. Orders: online only, gift orders excluded (rough rule); shop sales not included. Traffic: GA4 Israel sessions, Organic Social excluded. From Aug 2025 the base year is depressed (SEO damage, war)._');
+      lines.push('- Window: ' + cur[0] + ' to ' + cur[2] + ' vs ' + prev[0] + ' to ' + prev[2]);
+
+      const sheetNames = allConfig['system.sheet_names'] || {};
+      const ds = SheetAccessor.getDataSpreadsheet();
+      const cm = _customerMonthly(_readOrderHistory(ds, sheetNames), _firstCompletedMap(ds, sheetNames).map, ContactService._isGiftOrder);
+      if (!cm.minKey || cm.minKey > prev[0]) {
+        lines.push('- Customers: no comparison (order history starts ' + (cm.minKey || '-') + ')');
+      } else {
+        const a = _windowStats(cm.byMonth, cur), b = _windowStats(cm.byMonth, prev);
+        const f1 = v => v == null ? '-' : v.toFixed(2), nis = v => v == null ? '-' : '₪' + Math.round(v);
+        lines.push('- New customers: ' + a.newCustomers + ' vs ' + b.newCustomers + _pctChange(a.newCustomers, b.newCustomers));
+        lines.push('- Returning customers: ' + a.returningCustomers + ' vs ' + b.returningCustomers + _pctChange(a.returningCustomers, b.returningCustomers) +
+          ' · orders per returning customer ' + f1(a.ordersPerReturning) + ' vs ' + f1(b.ordersPerReturning) + _pctChange(a.ordersPerReturning, b.ordersPerReturning) +
+          ' · returning avg order ' + nis(a.returningAov) + ' vs ' + nis(b.returningAov) + _pctChange(a.returningAov, b.returningAov));
+      }
+
+      const ga = _readGa4IsraelMonthly(allConfig['system.sheet.ga4_audience_report_id'], allConfig['system.sheet.ga4_israel_report_tab']);
+      if (!ga.ok) {
+        lines.push('- Israel traffic: no data (' + ga.reason + ')');
+      } else if (!ga.maxKey || ga.maxKey < cur[2]) {
+        lines.push('- Israel traffic: **STALE** (newest month ' + (ga.maxKey || '-') + ', expected ' + cur[2] + ')');
+      } else {
+        const sum = keys => keys.reduce((t, k) => t + (ga.byMonth[k] || 0), 0);
+        const hasPrev = prev.every(k => ga.byMonth[k] != null);
+        lines.push('- Israel traffic: ' + sum(cur) + ' vs ' + (hasPrev ? sum(prev) : '-') + ' sessions' + (hasPrev ? _pctChange(sum(cur), sum(prev)) : ' (no comparison data)'));
+      }
+
+      const monthBits = cur.map(function(k, i) {
+        const pk = prev[i];
+        const s = k1 => _windowStats(cm.byMonth, [k1]);
+        const a = s(k), b = s(pk);
+        const t = ga.ok ? ((ga.byMonth[k] || 0) + '/' + (ga.byMonth[pk] != null ? ga.byMonth[pk] : '-')) : '-';
+        return k.substr(5) + ': new ' + a.newCustomers + '/' + b.newCustomers + ' · returning ' + a.returningCustomers + '/' + b.returningCustomers + ' · traffic ' + t;
+      });
+      lines.push('- By month (this year/last year): ' + monthBits.join('; '));
+    } catch (e) {
+      lines.push('- (score error: ' + e.message + ')');
+    }
+    lines.push('');
+    return lines.join('\n');
+  }
+
   function _internalKpisBlock(allConfig) {
     const lines = ['### Orders & customers (ops data)'];
     try {
@@ -304,26 +479,13 @@ const StatusReportService = (function() {
       const dCol = oc('wom_OrderDate'), tCol = oc('wom_OrderTotal'), sCol = oc('wom_Status'),
             lCol = oc('wom_MetaWpmlLanguage'), eCol = oc('wom_BillingEmail');
       const today = _windowStart(0), wk = _windowStart(7), mo = _monthStart();
-      const valid = st => {
-        const s = String(st).replace(/^wc-/, '').toLowerCase();
-        return s === 'processing' || s === 'completed' || s === 'on-hold' || s === 'onhold';
-      };
+      const valid = _isValidOrderStatus;
 
       // email -> first-completed map, and first-ever buyers this month
-      const firstMap = {}; let newBuyersThisMonth = 0;
-      const cSheet = ds.getSheetByName(sheetNames.SysContacts || 'SysContacts');
-      if (cSheet) {
-        const cv = cSheet.getDataRange().getValues();
-        const CH = cv[0] || [];
-        const fcCol = CH.indexOf('sc_FirstCompletedDate'), emCol = CH.indexOf('sc_Email');
-        for (let i = 1; i < cv.length; i++) {
-          const em = String(cv[i][emCol] || '').toLowerCase();
-          const fcRaw = fcCol !== -1 ? cv[i][fcCol] : null;
-          const fc = fcRaw ? new Date(fcRaw) : null;
-          if (em && fc && !isNaN(fc)) firstMap[em] = fc;
-          if (fc && !isNaN(fc) && fc >= mo) newBuyersThisMonth++;
-        }
-      }
+      const fcRead = _firstCompletedMap(ds, sheetNames);
+      const firstMap = fcRead.map;
+      let newBuyersThisMonth = 0;
+      fcRead.dates.forEach(function(fc) { if (fc >= mo) newBuyersThisMonth++; });
 
       const W = { t: { c: 0, r: 0 }, w: { c: 0, r: 0 }, m: { c: 0, r: 0, en: 0, he: 0, nw: 0, ret: 0 } };
       for (let i = 1; i < ov.length; i++) {
@@ -663,6 +825,7 @@ const StatusReportService = (function() {
     return [
       '_KPIs — generated ' + _il(new Date()) + ' (Asia/Jerusalem) · daily cadence + on-demand._', '',
       '## KPIs',
+      _scoreBlock(allConfig),
       _internalKpisBlock(allConfig),
       _kpiSummaryBlock(allConfig),
       _trafficBlock(allConfig)
@@ -939,7 +1102,11 @@ const StatusReportService = (function() {
     _seriesPlan: _seriesPlan,
     _gscTabMonth: _gscTabMonth,
     _summarizeGscTable: _summarizeGscTable,
-    _gscExpectedMonth: _gscExpectedMonth
+    _gscExpectedMonth: _gscExpectedMonth,
+    _customerMonthly: _customerMonthly,
+    _windowStats: _windowStats,
+    _lastCompleteMonths: _lastCompleteMonths,
+    _yearEarlier: _yearEarlier
   };
 })();
 
