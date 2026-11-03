@@ -1,6 +1,6 @@
 # Business Review Process — Plan
 
-The current `/review-deep` process does not produce valid trend reads. This doc records why, what the source data actually holds (traced 2026-11-03), and the design. Phase 1 done 2026-11-03: steps 1-3 live @605, verified in `jlmops-status.md` (series match the exported workbooks; BROKEN label showing); step 4 in `~/.claude/commands/review-deep.md` (reads step 6 + "Reading the data" rules). Phase 2 (year-over-year score: new customers, returning frequency and order size, Israel traffic) planned 2026-11-03, not built.
+The current `/review-deep` process does not produce valid trend reads. This doc records why, what the source data actually holds (traced 2026-11-03), and the design. Phase 1 done 2026-11-03: steps 1-3 live @605, verified in `jlmops-status.md` (series match the exported workbooks; BROKEN label showing); step 4 in `~/.claude/commands/review-deep.md` (reads step 6 + "Reading the data" rules). Phase 2 (year-over-year score: new customers, returning frequency and order size, Israel traffic) live @607 2026-11-03, verified in `jlmops-status.md` (matches the local run on real exports); `/review-deep` leads with it.
 
 ## Deficiencies (found 2026-10-26)
 
@@ -37,7 +37,7 @@ The current `/review-deep` process does not produce valid trend reads. This doc 
 3. **Freshness and sanity in the export.** Each input prints its newest data date. GA4 data more than 9 days old (the add-on reports are weekly) and a missing GSC month tab (last month expected once 10+ days into the current month) print as STALE. First-order conversion at 0% with nonzero new customers prints as BROKEN. A partial month is labeled and never compared.
 4. **Review reads the series.** `/review-deep` reports these as recent direction, explicitly without seasonal adjustment until phase 2; 7d/MTD stay health figures.
 
-**Phase 2: are we doing better, and by roughly how much (user 2026-11-03, approved to plan; not built).** Business goals: acquire new customers in Israel; get more frequent, larger purchases from existing customers. Measured on online sales only (shop sales are not in this data). Gift orders are left out (they have their own pattern, for a later view).
+**Phase 2: are we doing better, and by roughly how much (user 2026-11-03; live @607).** Business goals: acquire new customers in Israel; get more frequent, larger purchases from existing customers. Measured on online sales only (shop sales are not in this data). Gift orders are left out (they have their own pattern, for a later view).
 
 1. **New customers (non-gift), from jlmops.** Per month, customers whose first completed order falls in that month, gift orders excluded. Reuses existing logic: gift rule `ContactService._isGiftOrder` (rough by design), new vs returning from `SysContacts.sc_FirstCompletedDate`, valid statuses as in `StatusReportService._internalKpisBlock`. Source `WebOrdM` + `WebOrdM_Archive` (schema has every field needed; date range to check at build). Shop customers who start buying online count as new (accepted).
 2. **Returning customers (non-gift), from jlmops.** Per month: orders per returning customer (frequency) and average order value of returning orders (size).
