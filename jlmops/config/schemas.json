@@ -120,6 +120,21 @@
         ""
     ],
     [
+        "schema.data.WebBundles",
+        "Web snapshot of WooCommerce woosb bundles (BUNDLE_PULL_FIX_PLAN 4A). One row per EN bundle, HE joined by translations.en. Mirror of the website; written only by the snapshot refresh (Pull from Web).",
+        "stable",
+        "headers",
+        "wb_BundleId,wb_HeId,wb_NameEn,wb_NameHe,wb_Status,wb_WoosbIdsEn,wb_WoosbIdsHe,wb_Discount,wb_DiscountAmount,wb_CustomPrice,wb_DisableAutoPrice,wb_ShortDescEn,wb_LongDescEn,wb_ShortDescHe,wb_LongDescHe,wb_PulledAt",
+        "key_column",
+        "wb_BundleId",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "schema.data.WebXltS",
         "Schema for Web Translate Staging sheet (Hebrew products - 31 columns).",
         "stable",
