@@ -225,7 +225,7 @@ const StatusReportService = (function() {
     const d = new Date(s); return isNaN(d) ? null : d;
   }
 
-  // ── Traffic series (plans/REVIEW_PROCESS_PLAN.md phase 1) ─────────────────
+  // ── Traffic series (business/KPI.md, Data path) ─────────────────
   // Pure helpers: weeks run Sunday-Saturday; a month is "complete" only when the
   // data window covers all of it. No timezone formatting here (plain local dates).
   function _pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -317,7 +317,7 @@ const StatusReportService = (function() {
     return { map: map, dates: dates };
   }
 
-  // ── Year-over-year score (plans/REVIEW_PROCESS_PLAN.md phase 2) ───────────
+  // ── Year-over-year score (business/KPI.md, Data path) ───────────
   /** All orders from WebOrdM + WebOrdM_Archive, de-duplicated by order id (WebOrdM wins). */
   function _readOrderHistory(ds, sheetNames) {
     const out = [], seen = {};
@@ -642,7 +642,7 @@ const StatusReportService = (function() {
   // one page-grouped tab per month, named "Mon YYYY" (Page/Clicks/Impressions/
   // CTR/Position, no Date column). Sheet1 is a one-time 90-day pull of unknown
   // period and is ignored. Each month tab is summed into a monthly series
-  // (plans/REVIEW_PROCESS_PLAN.md phase 1).
+  // (business/KPI.md, Data path).
   function _shortPage(url) {
     return String(url || '').replace(/^https?:\/\/[^/]+/, '') || '/';
   }
@@ -694,7 +694,7 @@ const StatusReportService = (function() {
     const today = new Date();
     const fmtPct = v => v == null ? '-' : (v * 100).toFixed(0) + '%';
     const fmtPps = v => v == null ? '-' : v.toFixed(1);
-    lines.push('_Series are recent direction only, not seasonally adjusted (no year-over-year yet, `plans/REVIEW_PROCESS_PLAN.md`). 7d/MTD are health figures._');
+    lines.push('_Weekly/monthly series are recent direction, not seasonally adjusted; year-over-year is in the Score above. 7d/MTD are health figures._');
     const ga = _readGa4(allConfig['system.sheet.ga4_report']);
     if (ga.ok) {
       const eng = w => w.s ? (w.engW / w.s * 100).toFixed(0) + '%' : '-';
@@ -794,7 +794,7 @@ const StatusReportService = (function() {
       const custTrend = lastClosed ? ' (vs ' + (Number(gPrev('sk_NewCustomersEN')) || 0) + ' EN · ' + (Number(gPrev('sk_NewCustomersHE')) || 0) + ' HE last month)' : '';
       lines.push('- New customers: ' + enNow + ' EN · ' + heNow + ' HE (' + g('sk_NewCustomersTotal') + ' total)' + custTrend);
 
-      // Sanity check (plans/REVIEW_PROCESS_PLAN.md): 0% / blank conversion alongside
+      // Sanity check (business/KPI.md, Data path): 0% / blank conversion alongside
       // nonzero new customers is a broken metric, not a value to interpret.
       const convRaw = g('sk_FirstOrderConvRate');
       const newTotal = Number(g('sk_NewCustomersTotal')) || 0;
@@ -1098,7 +1098,7 @@ const StatusReportService = (function() {
     refreshKpiBlock: refreshKpiBlock,
     applyPendingCalendarUpdates: applyPendingCalendarUpdates,
     updateCalendarDate: updateCalendarDate,
-    // Pure helpers exported for tests (traffic series, plans/REVIEW_PROCESS_PLAN.md)
+    // Pure helpers exported for tests (traffic series, business/KPI.md, Data path)
     _seriesPlan: _seriesPlan,
     _gscTabMonth: _gscTabMonth,
     _summarizeGscTable: _summarizeGscTable,
