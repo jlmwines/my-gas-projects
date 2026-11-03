@@ -1,6 +1,6 @@
 # Business Review Process — Plan
 
-The current `/review-deep` process does not produce valid trend reads. This doc records why, what the source data actually holds (traced 2026-11-03), and the design. Phase 1 done 2026-11-03: steps 1-3 live @605, verified in `jlmops-status.md` (series match the exported workbooks; BROKEN label showing); step 4 in `~/.claude/commands/review-deep.md` (reads step 6 + "Reading the data" rules). Phase 2 not started.
+The current `/review-deep` process does not produce valid trend reads. This doc records why, what the source data actually holds (traced 2026-11-03), and the design. Phase 1 done 2026-11-03: steps 1-3 live @605, verified in `jlmops-status.md` (series match the exported workbooks; BROKEN label showing); step 4 in `~/.claude/commands/review-deep.md` (reads step 6 + "Reading the data" rules). Phase 2 (Israel customers and GA4 Israel sales with year-over-year) designed 2026-11-03, awaiting approval.
 
 ## Deficiencies (found 2026-10-26)
 
@@ -37,10 +37,19 @@ The current `/review-deep` process does not produce valid trend reads. This doc 
 3. **Freshness and sanity in the export.** Each input prints its newest data date. GA4 data more than 9 days old (the add-on reports are weekly) and a missing GSC month tab (last month expected once 10+ days into the current month) print as STALE. First-order conversion at 0% with nonzero new customers prints as BROKEN. A partial month is labeled and never compared.
 4. **Review reads the series.** `/review-deep` reports these as recent direction, explicitly without seasonal adjustment until phase 2; 7d/MTD stay health figures.
 
-**Phase 2 later: year-over-year.** Needs history the sheets don't hold today: GA4 reports with dimension `yearMonth` from a fixed start date (add-on settings), and a one-time GSC backfill of earlier month tabs. Whether the sources return that far back is checked when phase 2 starts, by running it. OPS then adds the same-month-last-year column to each series.
+**Phase 2: Israel customers and sales, year-over-year (user 2026-11-03).** Focus is Israel; the measures that matter are new and returning customers. Foreign traffic (mostly gift senders, plus one-off spikes like the US-site Hollander referral) is left out of growth analysis; gifts have their own pattern, to be considered separately later. Draft, not approved, nothing built.
+
+1. **Customer and order series from jlmops (code, no add-on change).** Monthly, from `WebOrdM` + `WebOrdM_Archive` (about 2,100 orders): orders, revenue, new customers, returning customers, each split EN/HE. Same definitions as today's MTD lines (`StatusReportService._internalKpisBlock`): valid statuses processing/completed/on-hold, language from `wom_MetaWpmlLanguage`, new vs returning from `SysContacts.sc_FirstCompletedDate`; the monthly loop reuses that logic, not a copy. Archive columns to be checked against the `WebOrdM` schema at build time. Limit: orders can't be split Israel/foreign (checkout country is fixed to IL), so foreign gift senders count as customers.
+2. **GA4 Israel sales (add-on setting + code).** New report column `JLM GA4 Israel Monthly`: dimensions `yearMonth, sessionDefaultChannelGroup`; dimension filter `country = Israel`; metrics sessions, newUsers, keyEvents, transactions, totalRevenue, engagementRate; start date 2025-01-01. OPS drops Organic Social and reports Israel sessions, purchases and revenue per month, plus Israel organic search (channel Organic Search).
+3. **Side by side, year-over-year.** The export prints both sets per month: jlmops orders, revenue, new and returning customers next to GA4 Israel sessions, purchases and revenue. For each: same month last year, and the **3-month window** (last 3 complete months vs the same 3 months a year earlier, with % change) as the headline trend.
+4. **Organic EN/HE** counts EN IL and HE IL only; Not IL is no longer added to EN. EN/HE traffic year-over-year is deferred (audiences only collect from their creation, about July 2026; landing-page split is the alternative, decision later).
+5. **GSC history** (one report grouped by Date from mid-2025) is deferred; GSC stays monthly as in phase 1.
+
+Caveat: months before the 2026-05-05 site cutover are valid for demand and sales comparison, not for page-level comparison.
 
 ## Open questions
 
-- Ops data series (new customers EN/HE, orders/revenue, subscribers) from jlmops sheets and Mailchimp: add to phase 1, or later?
-- Does 2025 (pre-cutover site, before 2026-05-05) count as comparable for year-over-year, or is it shown but flagged?
+- Subscribers (Mailchimp) monthly series: in phase 2 or later?
+- EN/HE traffic split for year-over-year: landing page `/he/` vs audiences (deferred, phase 2 item 4).
+- Gift buyers: what pattern identifies them (timing, recipient vs buyer), for a separate later view.
 - Review cadence, and whether `/review-daily` needs the same treatment.
