@@ -30,14 +30,17 @@ Draft. The current `/review-deep` process does not produce valid trend reads. Th
 
 ## Design (draft, 2026-11-03)
 
-1. **GA4 monthly history (add-on settings, no code).** Add (or convert to) reports with dimension `yearMonth` and a fixed start date (2025-01-01 candidate) to yesterday: one for all traffic, one for organic by audience (EN IL, HE IL, Not IL), with sessions, users, new users, key events, revenue, engagement. About 22 rows per audience. Keep the existing daily reports if anything else reads them. To verify on first run: that GA4 returns months back to the start date.
-2. **GSC monthly history.** One-time backfill of monthly tabs from about Jul 2025 (GSC is expected to keep 16 months; verify), then the existing monthly backup continues. `Sheet1` is ignored.
-3. **OPS reads series (code).** OPS reads every month tab of the GSC workbook (by name pattern `Mon YYYY`, skipping `Sheet1`) and the monthly GA4 rows, and writes into `jlmops-status.md` a monthly table per metric for the last 13 months: organic sessions EN/HE, total sessions, key events, revenue, GSC clicks/impressions/position, each with year-over-year where the same month last year exists. The current-month partial is shown as such, never compared. The stale `otherSettings.json:94` note is rewritten.
-4. **Freshness and sanity in the export.** Each input carries its newest month; one overdue past its refresh cadence is printed as STALE, not as a value. Known-broken KPIs (first-order conversion 0% with nonzero new customers) print as BROKEN until fixed.
-5. **Review reads only the series.** `/review-deep` trend calls use year-over-year from the export; month-over-month is secondary context only. Snapshot figures (7d, MTD) are health, not trend.
+**Phase 1 first: make current and recent data accurate and available from what the sheets already hold (user 2026-11-03).** No add-on changes, no history questions.
+
+1. **GSC from the month tabs (code).** OPS stops reading `Sheet1` and reads every month tab (name pattern `Mon YYYY`): per month total clicks, impressions, impression-weighted position, plus top pages for the newest month. Today that is Aug, Sep, Oct 2026; each monthly backup adds one. The stale `otherSettings.json:94` note is rewritten.
+2. **GA4 series from the existing 90-day daily rows (code).** OPS keeps the daily rows it already reads but reports them as series instead of only 7d/MTD: the last 12 complete weeks and every complete month inside the window (today Sep and Oct 2026; Aug is partial and labeled so), for total traffic (sessions, users, new users, key events, revenue, engagement) and organic by audience (EN IL, HE IL, Not IL; same metrics plus bounce rate, pages/session).
+3. **Freshness and sanity in the export.** Each input prints its newest data date; one overdue past its refresh cadence (GSC month tab more than ~10 days into the next month; GA4 more than 3 days old) prints as STALE, not as a value. Known-broken KPIs (first-order conversion 0% with nonzero new customers) print as BROKEN until fixed. The current partial month is shown as partial and never compared.
+4. **Review reads the series.** `/review-deep` reports these as recent direction, explicitly without seasonal adjustment until phase 2; 7d/MTD stay health figures.
+
+**Phase 2 later: year-over-year.** Needs history the sheets don't hold today: GA4 reports with dimension `yearMonth` from a fixed start date (add-on settings), and a one-time GSC backfill of earlier month tabs. Whether the sources return that far back is checked when phase 2 starts, by running it. OPS then adds the same-month-last-year column to each series.
 
 ## Open questions
 
-- Ops data series (new customers EN/HE, orders/revenue, subscribers) from jlmops sheets and Mailchimp: same monthly + YoY treatment in step 3, or a second phase?
+- Ops data series (new customers EN/HE, orders/revenue, subscribers) from jlmops sheets and Mailchimp: add to phase 1, or later?
 - Does 2025 (pre-cutover site, before 2026-05-05) count as comparable for year-over-year, or is it shown but flagged?
 - Review cadence, and whether `/review-daily` needs the same treatment.
