@@ -858,10 +858,23 @@ const BundleService = (function () {
    * @param {Object} slot - slot with criteria fields
    * @returns {boolean} true if the product matches every specified criterion
    */
+  // Category rules (BUNDLE_PULL_FIX_PLAN §4G). Names compared after Unicode normalization + trim on
+  // both sides (WebCat lists Rosé twice; composed/decomposed é variants).
+  const SEMI_DRY = 'Semi-Dry';
+  function _normCat(s) { return String(s == null ? '' : s).normalize('NFC').trim(); }
+  /** §4G.1: a Product slot must name a category; blank is invalid (Text slots are exempt). */
+  function _slotHasNoCategory(slot) { return slot.slotType !== 'Text' && _normCat(slot.category) === ''; }
+
   function _matchesSlotCriteria(p, slot) {
-    // Category filter - exact match in category list
-    if (slot.category && !p.categories.includes(slot.category)) return false;
-    if (slot.category2 && !p.categories.includes(slot.category2)) return false;
+    // §4G.1 — a Product slot with no category matches nothing (picker empty, generator skips).
+    if (_slotHasNoCategory(slot)) return false;
+    // §4G.3 — category 1 and (if set) category 2 must both be on the product.
+    const cats = (p.categories || []).map(_normCat);
+    const c1 = _normCat(slot.category), c2 = _normCat(slot.category2);
+    if (!cats.includes(c1)) return false;
+    if (c2 && !cats.includes(c2)) return false;
+    // §4G.2 — a Semi-Dry wine fits only a slot that names Semi-Dry.
+    if (cats.includes(SEMI_DRY) && c1 !== SEMI_DRY && c2 !== SEMI_DRY) return false;
     // Price range
     if (slot.priceMin !== null && p.price < slot.priceMin) return false;
     if (slot.priceMax !== null && p.price > slot.priceMax) return false;
@@ -1712,7 +1725,7 @@ const BundleService = (function () {
    * A PRODUCT slot is deficient when its current wine is (a) out/low-stock (available = Comax − on-hold
    * < threshold), (b) no longer satisfies its slot criteria (category/price/intensity/… — `_matchesSlotCriteria`,
    * which also catches price > slot.priceMax, the gate-time "over-band"), or (c) a base (qty≥1) slot with
-   * no wine at all ('empty'). A BUNDLE is deficient if any slot is, OR its base total falls outside its
+   * no wine at all ('empty'), or (d) has no category ('no_category', §4G.1). A BUNDLE is deficient if any slot is, OR its base total falls outside its
    * price band (baseTotal < sb_MinTotal → 'below_min', > sb_MaxTotal → 'above_max'). Base total sums
    * web price × qty over qty≥1 product slots; flexible (qty-0) add-ons contribute 0 (rev 2.2). Population
    * = non-archived (matches the generator's, rev 2.1 #7).
@@ -1739,6 +1752,13 @@ const BundleService = (function () {
       const isBase = qty >= 1;
       const activeSKU = (activeSkuOverride && Object.prototype.hasOwnProperty.call(activeSkuOverride, slot.slotId))
         ? activeSkuOverride[slot.slotId] : slot.activeSKU;
+
+      // §4G.1 — a Product slot with no category is flagged on its own; it can't be judged otherwise.
+      if (_slotHasNoCategory(slot)) {
+        if (activeSKU && isBase) baseTotal += (webAttrMap[activeSKU] ? webAttrMap[activeSKU].price : 0) * qty;
+        deficientSlots.push({ slotId: slot.slotId, reason: 'no_category', stock: null });
+        continue;
+      }
 
       if (!activeSKU) {
         if (isBase) deficientSlots.push({ slotId: slot.slotId, reason: 'empty', stock: null });
@@ -2821,6 +2841,7 @@ const BundleService = (function () {
     mergeReplace: mergeReplace,
     nonTargetDiff: nonTargetDiff,
     buildRestoredSlotRows: buildRestoredSlotRows,
+    matchesSlotCriteria: _matchesSlotCriteria,
 
     // Authoring export (Stage 3) — slots -> WPClever woosb_ids JSON per language
     exportBundleWoosb: exportBundleWoosb,

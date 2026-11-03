@@ -144,6 +144,21 @@ const BundleServiceTest = (function() {
       log('buildRestoredSlotRows: token-then-SKU carry, history', true);
     } catch (e) { log('buildRestoredSlotRows: token-then-SKU carry, history', false, e); }
 
+    // --- Category rules (§4G) ---
+    try {
+      const m = BundleService.matchesSlotCriteria;
+      const wine = function (cats) { return { categories: cats, price: 80, name: 'X', intensity: null, complexity: null, acidity: null }; };
+      const slot = function (c1, c2, type) { return { slotType: type || 'Product', category: c1, category2: c2 || '', priceMin: null, priceMax: null, intensity: null, complexity: null, acidity: null, nameContains: '' }; };
+      eq(m(wine(['Dry Red']), slot('')), false, 'blank category matches nothing');
+      eq(m(wine(['Dry Red']), slot('Dry Red')), true, 'plain match');
+      eq(m(wine(['Rosé', 'Semi-Dry']), slot('Rosé')), false, 'semi-dry rosé kept out of a plain Rosé slot');
+      eq(m(wine(['Rosé', 'Semi-Dry']), slot('Rosé', 'Semi-Dry')), true, 'semi-dry rosé fits Rosé + Semi-Dry');
+      eq(m(wine(['Rosé']), slot('Rosé', 'Semi-Dry')), false, 'both categories required');
+      eq(m(wine(['Semi-Dry']), slot('Semi-Dry')), true, 'Semi-Dry named as category 1');
+      eq(m(wine(['Rosé']), slot('Rosé ')), true, 'decomposed é and trailing space normalized');
+      log('matchesSlotCriteria: blank invalid, Semi-Dry exclusion, AND, normalization', true);
+    } catch (e) { log('matchesSlotCriteria: blank invalid, Semi-Dry exclusion, AND, normalization', false, e); }
+
     return results;
   }
 

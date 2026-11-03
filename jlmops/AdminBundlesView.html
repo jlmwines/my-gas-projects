@@ -918,10 +918,12 @@
       var bandDetail = parts[1] || '';
       return (kind === 'below_min' ? 'below min total' : 'over max total') + (bandDetail ? ' (' + bandDetail + ')' : '');
     }
-    if (kind === 'stock' || kind === 'criteria' || kind === 'empty') {
+    if (kind === 'stock' || kind === 'criteria' || kind === 'empty' || kind === 'no_category' || kind === 'changed_since_pick') {
       var slotId = parts[1] || '';
       var rest = parts.slice(2).join(' — ');
-      var label = kind === 'stock' ? 'out of stock' : kind === 'criteria' ? 'no longer matches slot criteria' : 'no wine assigned';
+      var label = kind === 'stock' ? 'out of stock' : kind === 'criteria' ? 'no longer matches slot criteria'
+        : kind === 'no_category' ? 'slot has no category (set one)' : kind === 'changed_since_pick' ? 'changed while generating, left as is'
+        : 'no wine assigned';
       return 'slot ' + slotId + ': ' + label + (rest ? ' (' + rest + ')' : '');
     }
     // Legacy vocabulary (pre-fix flag strings still on a bundle that hasn't been re-generated since).
@@ -1048,7 +1050,7 @@
           nameHtml += ' <span class="badge badge-warning">&#9888; low stock</span>';
         }
       } else {
-        var defLbl = defReason === 'criteria' ? 'off-criteria' : defReason === 'empty' ? 'empty' : defReason;
+        var defLbl = defReason === 'criteria' ? 'off-criteria' : defReason === 'empty' ? 'empty' : defReason === 'no_category' ? 'no category' : defReason;
         nameHtml += ' <span class="badge badge-warning">&#9888; ' + defLbl + '</span>';
       }
     }
