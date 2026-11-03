@@ -12,5 +12,4 @@ Checked, no change: Inbox empty; memory index (34 files, all indexed); CALENDAR 
 Not resolved (needs user):
 - BUGS "fixed, verify" items (@597-@604) still await live confirmation (Next Action 12 lists them).
 - Archive candidates needing a graduation pass: `plans/CUTOVER_CHECKLIST.md` (cutover complete 2026-05-05), `jlmops/plans/UI_T4_3_inventory_mobile.md` (shipped 2026-05-29), `jlmops/plans/ADMIN_BUNDLES_UI_PLAN.md` (mostly shipped history), and the 2025-dated `RESOURCE_OPTIMIZATION_PLAN.md`, `STRATEGIC_PLAN.md`, `TESTING_GUIDE.md`, `PRODUCT_TEXT_UPDATE_PLAN.md`.
-- CALENDAR "Bundle API push test" (To plan) predates the bundle redesign; keep or drop?
 - `BUNDLE_PULL_FIX_PLAN.md` archive waits on tomorrow's housekeeping log check.

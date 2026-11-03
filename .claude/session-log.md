@@ -8,6 +8,7 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Shipped: jlmops @610 bundle pull fix (WebBundles snapshot, Pull from Web, Restore to web version, safe write + locks, category rules); Update buttons and nightly bundle tasks gone. Live-verified incl. a real Review → Maintain → Export → Pull cycle.
 - Shipped: theme v1.2.33 signup success text "You're on the list" (audience is single opt-in, no confirmation email).
 - Next: check tomorrow's 3am housekeeping log for no bundle tasks, then archive BUNDLE_PULL_FIX_PLAN and delete local branch `bundle-rollback`.
+- Also: project cleanup run (stamp in last-cleanup.md); CardCom plugin 3.6.0.0 reviewed, site meets its new PHP 8.2 / WP 7.0 / WC 11.1 minimums; place a test order after updating.
 - Watch: one embedded-form subscriber had no language; recheck if it recurs (JSONP path never verified for language interest).
 - Note: bundle editor now shows website descriptions via WebBundles, but those are generated boilerplate (name/details); real bundle copy is still a content task (BUGS web 2026-06-16).
 
