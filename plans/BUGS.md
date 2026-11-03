@@ -43,16 +43,6 @@ _One line each; full root-cause analysis lives in the git commit._
 - [x] 2026-10-22: `SysCampaigns` duplicated all-digit campaign id daily (61 rows) — fixed @591, extra rows deleted by user.
 - [x] 2026-10-12: Admin attach of a manager-owned Doc failed at `setOwner` — now attaches a copy. Verified live, jlmops @576. `jlmops/docs/DATA_MODEL.md`.
 - [x] 2026-09-03: Welcome task fired for repeat customers with an archived first order — fixed @575, verified live 2026-10-10. `CONTACT_MANAGER_PLAN.md`.
-- [x] 2026-09-02: Bundle deficiency count on view-load was stale — automation removed, review now manual-only. jlmops @574.
-- [x] 2026-09-01: "Newsletter" content stage produced a task invisible to `PublishingView` — stage removed. jlmops @573.
-- [x] 2026-09-01: Sync widget Generate button reappeared mid-export, could double-submit — fixed, verified live. `SYNC_HARDENING_PLAN.md` Bug 2. @572.
-- [x] 2026-09-01: Sync widget skip-log showed literal "skipped" instead of the real reason — fixed. jlmops @571.
-- [x] 2026-08-21: Welcome-outreach recency + dedup gap — fixed, deployed @568. `jlmops/plans/CONTACT_MANAGER_PLAN.md`.
-- [x] 2026-08-21: `JLMops_Logs` hit Sheets' 10M-cell limit, blocking all writes — `cleanOldLogs` now deletes rows >7 days. jlmops @547.
-- [x] 2026-08-21: Two log-volume sources fixed (`BundleService._parseWoosbJson`, `exportWebInventory` warn). jlmops @547.
-- [x] 2026-08-21: Real error messages from failed jobs overwritten by a generic relay error across 3 layers — fixed. jlmops @547-@548.
-- [x] 2026-08-17: Vendor SKU Update rejected the real target SKU as a conflict once Comax had synced to the new SKU — fixed, smoke-tested, @546.
-- [x] 2026-06-14: Web inventory export sync-state race — closed by `SYNC_HARDENING_PLAN.md` Bug 5 Stages A-E (script lock), live by @570.
 
 ## web
 
@@ -64,8 +54,6 @@ _One line each; full root-cause analysis lives in the git commit._
 ### Resolved
 
 - [x] 2026-09-03: 50NEW first-purchase check hooked to a nonexistent WC filter, never ran at all. Fixed, live, confirmed working on real orders (per user 2026-10-22). `inc/coupons.php`.
-- [x] 2026-08-28: 50NEW reusable by repeat guest-checkout customers — turned out incomplete, see 2026-09-03 entry above. `inc/coupons.php`.
-- [x] 2026-08-20: `deploy-theme.ps1` truncated live files to 0 bytes mid-deploy — restored from backup, hardened (byte-verify + atomic rename, curl).
 
 ## marketing
 

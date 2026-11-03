@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-03 (b) — Bundle web-sync fix shipped; signup message
+- Shipped: jlmops @610 bundle pull fix (WebBundles snapshot, Pull from Web, Restore to web version, safe write + locks, category rules); Update buttons and nightly bundle tasks gone. Live-verified incl. a real Review → Maintain → Export → Pull cycle.
+- Shipped: theme v1.2.33 signup success text "You're on the list" (audience is single opt-in, no confirmation email).
+- Next: check tomorrow's 3am housekeeping log for no bundle tasks, then archive BUNDLE_PULL_FIX_PLAN and delete local branch `bundle-rollback`.
+- Watch: one embedded-form subscriber had no language; recheck if it recurs (JSONP path never verified for language interest).
+- Note: bundle editor now shows website descriptions via WebBundles, but those are generated boilerplate (name/details); real bundle copy is still a content task (BUGS web 2026-06-16).
+
 ## 2026-11-03 — Deep review; review data rebuilt with year-over-year score
 
 - Deep review found GSC frozen 10 weeks (OPS read a one-time Sheet1; add-on writes monthly tabs) and GA4 reduced to 7d/MTD. Fixed @605-@607: weekly/monthly GA4 series, GSC monthly, STALE/BROKEN labels, Organic Social excluded (Meta interference), and a YoY score (non-gift new/returning customers from orders + GA4 Israel sessions). Plan graduated to `business/KPI.md`, archived.
@@ -199,31 +206,8 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
-## 2026-09-03 — Two "customer treated as new" bugs found and fixed (welcome-outreach archive-blindness, 50NEW coupon dead hook); SYNC_HARDENING_PLAN step 9 finalized to a firm decision
+## Pruned — entries before 2026-10-04 (cleanup 2026-11-03, consolidates all earlier pruned blocks)
 
-- User reported repeat customers getting welcome-outreach tasks and using the first-purchase-only coupon. Welcome fix: `sc_FirstCompletedDate` floor check, jlmops @575 (verified live 2026-10-10). Coupon fix: rehooked from the nonexistent `woocommerce_coupon_is_valid_for_user` to `woocommerce_coupon_is_valid`, live, still awaiting a real repeat-use test.
-- `SYNC_HARDENING_PLAN.md` step 9 (JLMops_Logs workbook cleanup) is now a firm decision: remove `SysSyncSession`/`SysSyncStatus`/`SysLog_Archive` outright. Queued behind Test Suite Tier 4.
-
----
-
-## 2026-09-01/02 — Sync widget skip-log + double-submit fixes verified live (@571/@572); newsletter task-stage bug (@573); bundle-health automation removed (@574)
-
-- Skip-log real reasons (@571); `GENERATING_WEB_EXPORT` stage closes the Generate double-submit (@572, `SYNC_HARDENING_PLAN.md` Bug 2), verified on a real sync 9/2.
-- Bug 5 Stages C/E 5+ days live, zero errors; Stage E's narrower inside-lock re-check still formally unexercised.
-- "Newsletter" content stage removed (@573) — correct doc-attach stages are "Assemble EN/HE Newsletter." Bundle-health auto-checks removed, review manual-only (@574). Calendar Holidays toggle defaults to Hide.
-- Next: Bugs 1/3 still need a live repro; Test Suite Tier 4 and `JLMops_Logs` cleanup still queued.
-
----
-
-## Pruned — entries before 2026-09-01 (cleanup 2026-10-13, consolidates all earlier pruned blocks)
-
-Entries through 2026-08-31 were condensed per this file's header and the kernel's 30-day pruning default. Their durable facts live in current docs: sync hardening (Bug 5 A-E, D1-D4, Bug 6, script-lock concurrency) in `SYNC_HARDENING_PLAN.md` and `jlmops/docs/ARCHITECTURE.md` §2.5; test suite Tiers 1-3 in `TEST_SUITE_EXTENSION_PLAN.md`; welcome-outreach recency/dedup in `CONTACT_MANAGER_PLAN.md`; the SysLog cell-limit crisis fix and error-message relay fix in git (@547-@548); new-visitor popup and the deploy-theme incident/hardening in `website/EXIT_INTENT_POPUP_PLAN.md` and `deploy-theme.ps1`; region posts (Negev, Galilee live; Central Mountains, Coastal Plain, Golan, Judea in pipeline) in `content/plans/REGION_POSTS_PLAN.md`; Meta Ads test (ended 2026-08-31) in `marketing/plans/META_ADS_PLAN.md`; code-audit fix sequence in `CODE_AUDIT_FIX_SEQUENCE.md`; Content Library, PublishingView, product verification, product-detail performance, bundles, KPI summary, and calendar/library loop in `jlmops/docs/DATA_MODEL.md`, `WORKFLOWS.md`, `ARCHITECTURE.md` and `jlmops/plans/_archive/`.
+Entries through 2026-10-03 were condensed per this file's header and the kernel's 30-day pruning default. Their durable facts live in current docs: sync hardening (Bug 5 A-E, D1-D4, Bug 6, script-lock concurrency) in `SYNC_HARDENING_PLAN.md` and `jlmops/docs/ARCHITECTURE.md` §2.5; test suite Tiers 1-3 in `TEST_SUITE_EXTENSION_PLAN.md`; welcome-outreach recency/dedup and archived-first-order fix in `CONTACT_MANAGER_PLAN.md`; 50NEW first-purchase check in `website/jlmwines-theme/inc/coupons.php`; sync widget skip-log + double-submit fixes in `SYNC_HARDENING_PLAN.md`; the SysLog cell-limit crisis fix and error-message relay fix in git (@547-@548); new-visitor popup and the deploy-theme incident/hardening in `website/EXIT_INTENT_POPUP_PLAN.md` and `deploy-theme.ps1`; region posts (Negev, Galilee live; Central Mountains, Coastal Plain, Golan, Judea in pipeline) in `content/plans/REGION_POSTS_PLAN.md`; Meta Ads test (ended 2026-08-31) in `marketing/plans/META_ADS_PLAN.md`; code-audit fix sequence in `CODE_AUDIT_FIX_SEQUENCE.md`; Content Library, PublishingView, product verification, product-detail performance, bundles, KPI summary, and calendar/library loop in `jlmops/docs/DATA_MODEL.md`, `WORKFLOWS.md`, `ARCHITECTURE.md` and `jlmops/plans/_archive/`.
 
 Lessons from that period already captured as standing rules: "bug report ≠ ship order" (`.claude/CLAUDE.md`), check git log first on "this broke" (memory), theme deploy is live not staging (`.claude/CLAUDE.md`), session never originates Hebrew for blog posts (memory), body-first drafting gate (`content/CLAUDE.md`). One open gap noted 2026-07-31: `UNIFIED_TASK_UI_PLAN.md` no longer exists anywhere, its facts unverified against `ARCHITECTURE.md`. Full narrative is in git history.
-
-## 2026-11-03 (b) — Bundle web-sync fix shipped; signup message
-- Shipped: jlmops @610 bundle pull fix (WebBundles snapshot, Pull from Web, Restore to web version, safe write + locks, category rules); Update buttons and nightly bundle tasks gone. Live-verified incl. a real Review → Maintain → Export → Pull cycle.
-- Shipped: theme v1.2.33 signup success text "You're on the list" (audience is single opt-in, no confirmation email).
-- Next: check tomorrow's 3am housekeeping log for no bundle tasks, then archive BUNDLE_PULL_FIX_PLAN and delete local branch `bundle-rollback`.
-- Watch: one embedded-form subscriber had no language; recheck if it recurs (JSONP path never verified for language interest).
-- Note: website has bundle descriptions for 13 of 14 bundles, so STATUS/WebDetM backfill line "bundles have no description text anywhere" needs revisiting.

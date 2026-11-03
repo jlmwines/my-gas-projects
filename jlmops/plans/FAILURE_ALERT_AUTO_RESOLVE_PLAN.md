@@ -1,6 +1,6 @@
 # Failure Alert Auto-Resolve
 
-Fix for the BUGS.md entry "Stale system-failure alerts stay on Admin dash" (2026-10-23). Every failure context that can report a failure should also clear it once the same operation next succeeds. Status: **draft, awaiting approval.** Nothing changed yet.
+Fix for the BUGS.md entry "Stale system-failure alerts stay on Admin dash" (2026-10-23). Every failure context that can report a failure should also clear it once the same operation next succeeds. Status: **live @599.** Open: live verification, one-time cleanup of already-stale failure tasks, then graduate the behavior to `jlmops/docs/ARCHITECTURE.md` and archive.
 
 ## How alerting works now
 

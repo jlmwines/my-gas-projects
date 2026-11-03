@@ -1,6 +1,6 @@
 # WebDetM Description Backfill (non-wine)
 
-One-time data fix so `WebDetM` holds the long descriptions (EN + HE) for every non-wine product: import the ones that exist only on the live site, and clean unwanted HTML out of the ones already stored. Status: **draft, awaiting approval.** No code changes; the work is done offline on sheet exports and lands as one sheet import.
+One-time data fix so `WebDetM` holds the long descriptions (EN + HE) for every non-wine product: import the ones that exist only on the live site, and clean unwanted HTML out of the ones already stored. Status: **Pass 1 (fill blanks from live) imported and verified; Pass 2 (HTML cleanup) file built and reviewed, import + post-import check pending.** No code changes; the work is done offline on sheet exports and lands as one sheet import.
 
 ## Why
 
