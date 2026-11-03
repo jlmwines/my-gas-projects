@@ -1572,15 +1572,20 @@ function HousekeepingService() {
   };
 
   /**
-   * Recompute + cache the bundle export status (ADMIN_BUNDLES_UI_PLAN Phase 1). Runs daily
-   * right after refreshBundleComposition so the ops≠web diff is maximally fresh. Recomputed,
-   * never recorded — cached in system.bundles.push_status only so the Bundles view + dashboard
-   * mount instantly. Stores {count, bundleIds, ts}.
+   * Recompute + cache the bundle export status (ADMIN_BUNDLES_UI_PLAN Phase 1) against the
+   * WebBundles snapshot. Called after Pull from Web and by the Bundles view controllers; no nightly
+   * run (BUNDLE_PULL_FIX_PLAN §4I). Recomputed, never recorded — cached in
+   * system.bundles.push_status only so the Bundles view + dashboard mount instantly. Stores
+   * {count, bundleIds, ts}. Empty snapshot = unknown: cache and push task are left untouched.
    */
   this.refreshBundlePushStatus = function() {
     const functionName = 'refreshBundlePushStatus';
     try {
       const result = BundleService.buildExportTable();
+      if (result.unknown) {
+        logger.info('HousekeepingService', functionName, 'WebBundles is empty; push status unknown, cache left unchanged. Pull from Web first.');
+        return { count: null, unknown: true };
+      }
       const bundleIds = (result.rows || []).map(function (r) { return String(r.bundleId); });
       const payload = JSON.stringify({
         count: result.exportCount || 0,

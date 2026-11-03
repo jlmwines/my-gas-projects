@@ -85,7 +85,7 @@ function WebAppBundles_getViewData(sessionId) {
 
 /**
  * Gets a single bundle with all its slots for editing.
- * Includes descriptions from WebProdM and Hebrew translations from WebXltM.
+ * Includes EN + HE descriptions from the WebBundles snapshot.
  * @param {string} bundleId - The bundle ID to load
  * @returns {Object} Bundle with slots array and descriptions
  */
@@ -99,50 +99,18 @@ function WebAppBundles_getBundleWithSlots(bundleId) {
       };
     }
 
-    // Load descriptions from WebProdM
+    // Descriptions (EN + HE) from the bundle's WebBundles row (BUNDLE_PULL_FIX_PLAN §4C)
+    const web = BundleService.getWebSnapshotRow(bundleId);
+    if (web) {
+      bundle.shortDescEn = web.wb_ShortDescEn.trim();
+      bundle.longDescEn = web.wb_LongDescEn.trim();
+      bundle.shortDescHe = web.wb_ShortDescHe.trim();
+      bundle.longDescHe = web.wb_LongDescHe.trim();
+    }
+
     const allConfig = ConfigService.getAllConfig();
     const spreadsheet = SheetAccessor.getDataSpreadsheet();
     const webSheet = spreadsheet.getSheetByName('WebProdM');
-
-    if (webSheet) {
-      const schema = allConfig['schema.data.WebProdM'];
-      const headers = schema.headers.split(',');
-      const data = webSheet.getDataRange().getValues();
-
-      const idIdx = headers.indexOf('wpm_ID');
-      const excerptIdx = headers.indexOf('wpm_PostExcerpt');
-      const contentIdx = headers.indexOf('wpm_PostContent');
-
-      for (let i = 1; i < data.length; i++) {
-        const rowId = String(data[i][idIdx] || '').trim();
-        if (rowId === bundleId) {
-          bundle.shortDescEn = String(data[i][excerptIdx] || '').trim();
-          bundle.longDescEn = String(data[i][contentIdx] || '').trim();
-          break;
-        }
-      }
-    }
-
-    // Load Hebrew descriptions from WebXltM via wxm_WpmlOriginalId
-    const xltSheet = spreadsheet.getSheetByName('WebXltM');
-    if (xltSheet) {
-      const xltSchema = allConfig['schema.data.WebXltM'];
-      const xltHeaders = xltSchema.headers.split(',');
-      const xltData = xltSheet.getDataRange().getValues();
-
-      const origIdIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
-      const xltExcerptIdx = xltHeaders.indexOf('wxm_PostExcerpt');
-      const xltContentIdx = xltHeaders.indexOf('wxm_PostContent');
-
-      for (let i = 1; i < xltData.length; i++) {
-        const origId = String(xltData[i][origIdIdx] || '').trim();
-        if (origId === bundleId) {
-          bundle.shortDescHe = String(xltData[i][xltExcerptIdx] || '').trim();
-          bundle.longDescHe = String(xltData[i][xltContentIdx] || '').trim();
-          break;
-        }
-      }
-    }
 
     // Load product names and prices for product slots (for preview)
     if (bundle.slots && bundle.slots.length > 0 && webSheet) {
@@ -800,25 +768,21 @@ function WebAppBundles_getProductName(sku) {
 // =================================================================================
 
 /**
- * Pull Bundle Data button (BUNDLE_PLAN Stage 5): fast bundles-only refresh — pulls ONLY woosb
- * products from WC (EN+HE) and writes composition + discount fields directly to WebProdM/WebXltM,
- * bypassing the full staging pipeline. Run this, then Update Composition to re-derive the bundles.
- * @returns {Object} pullBundleProducts result { success, enUpdated, enMissing, heUpdated, heMissing, message }
+ * Pull from Web button (BUNDLE_PULL_FIX_PLAN §4B): refresh the WebBundles snapshot, create web
+ * bundles missing from ops, update names. Never changes an existing composition/status and never
+ * writes WebProdM/WebXltM. Then recompute Needs Push against the fresh snapshot (outside the lock).
+ * @returns {Object} { success, message, created, renamed, missingFromWeb, warnings, snapshotCount }
  */
-function WebAppBundles_pullBundleProducts() {
+function WebAppBundles_pullFromWeb() {
   const serviceName = 'WebAppBundles';
-  const functionName = 'pullBundleProducts';
+  const functionName = 'pullFromWeb';
   try {
-    LoggerService.info(serviceName, functionName, 'Fast bundles-only pull (composition + discount)');
-    const result = WooProductPullService.pullBundleProducts();
-    // The pull refreshes jlmops's web copy (wpm_WoosbIds); recompute Needs Push now so a just-exported
-    // bundle whose web now matches ops clears immediately, instead of lagging to overnight housekeeping
-    // (user 2026-06-08: a fresh pull should clear the push flag — it reflects the real website state).
-    _refreshBundlePushStatusQuietly('pullBundleProducts');
+    const result = BundleService.pullFromWeb();
+    if (result.success) _refreshBundlePushStatusQuietly('pullFromWeb');
     return result;
   } catch (e) {
-    LoggerService.error(serviceName, functionName, `Pull Bundle Data failed: ${e.message}`, e);
-    return { success: false, message: `Pull Bundle Data failed: ${e.message}` };
+    LoggerService.error(serviceName, functionName, `Pull from Web failed: ${e.message}`, e);
+    return { success: false, message: `Pull from Web failed: ${e.message}`, created: [], renamed: [], missingFromWeb: [], warnings: [] };
   }
 }
 
@@ -941,7 +905,9 @@ function WebAppBundles_buildExportTable() {
     LoggerService.info(serviceName, functionName, 'Building bundle export worklist (ops != web)');
     // Read-only diff used by the view and by the Phase 2 sheet export. The push-pending task
     // close now lives in WebAppBundles_exportBundlesToSheet (the actual export action) — Phase 2.
-    return { error: null, data: BundleService.buildExportTable() };
+    const data = BundleService.buildExportTable();
+    if (data.unknown) return { error: 'No web snapshot yet. Pull from Web first.', data: null };
+    return { error: null, data: data };
   } catch (e) {
     LoggerService.error(serviceName, functionName, `Export build failed: ${e.message}`, e);
     return { error: `Export build failed: ${e.message}`, data: null };
@@ -984,6 +950,7 @@ function WebAppBundles_getPushStatus() {
     const cfg = ConfigService.getConfig('system.bundles.push_status');
     const raw = (cfg && cfg.value) ? cfg.value : '';
     const parsed = raw ? JSON.parse(raw) : { count: 0, bundleIds: [], ts: '' };
+    parsed.snapshotAt = BundleService.getWebSnapshotTime();   // "Web snapshot: <time>" (§4C)
     return { error: null, data: parsed };
   } catch (e) {
     LoggerService.error(serviceName, functionName, `getPushStatus failed: ${e.message}`, e);

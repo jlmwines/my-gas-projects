@@ -59,6 +59,7 @@
             <button type="button" class="btn btn-sm mr-1 bundle-chip" data-filter="needs-export">Update web <span class="badge badge-secondary" id="chip-count-needs">0</span></button>
             <button type="button" class="btn btn-sm mr-3 bundle-chip" data-filter="ok">OK <span class="badge badge-secondary" id="chip-count-ok">0</span></button>
             <input type="text" id="bundle-name-filter" class="form-control form-control-sm" placeholder="Filter by name…" style="width:200px;">
+            <span class="small text-muted ml-3" id="web-snapshot-at"></span>
           </div>
         </div>
         <div class="card-body p-0">
@@ -250,6 +251,7 @@
   function applyInitData(data) {
     var ps = data.pushStatus || { count: 0, bundleIds: [] };
     pushBundleIds = (ps.bundleIds || []).map(String);
+    renderSnapshotAt(ps);
     var nu = data.needsUpdate || { count: 0, bundleIds: [] };
     needsUpdateBundleIds = (nu.bundleIds || []).map(String);
     loadCategories(data.categories);
@@ -1482,6 +1484,7 @@
       .withSuccessHandler(function(res) {
         if (res && !res.error && res.data) {
           pushBundleIds = (res.data.bundleIds || []).map(String);
+          renderSnapshotAt(res.data);
           if (currentBundleId) renderDeficiencyStrip({ bundleId: currentBundleId });
           loadBundleList();
         }
@@ -1490,6 +1493,13 @@
       .WebAppBundles_getPushStatus();
   }
   function afterSaveRefresh() { syncPushStatus(); }
+
+  // "Web snapshot: <time>" — when WebBundles was last pulled; empty snapshot → prompt to Pull.
+  function renderSnapshotAt(ps) {
+    var el = document.getElementById('web-snapshot-at');
+    if (!el) return;
+    el.textContent = (ps && ps.snapshotAt) ? 'Web snapshot: ' + ps.snapshotAt : 'No web snapshot. Pull from Web first.';
+  }
 
   function discardDraft() {
     if (!currentBundleId || !currentBundle) return;
@@ -1524,10 +1534,10 @@
     };
   }
 
-  // Pull Bundle Data (Stage 5): fast bundles-only pull (composition + discount) straight to master.
-  // Then prompts to Update Composition (re-derive SysBundles from the refreshed master data).
+  // Pull from Web (BUNDLE_PULL_FIX_PLAN §4B): refresh the web snapshot, create web bundles missing
+  // from jlmops, update names. Existing compositions and statuses are never changed.
   function pullBundleData() {
-    TaskWidgets.confirm('Pull bundle data (composition + discount) from the website?', function() {
+    TaskWidgets.confirm('Pull bundles from the website?', function() {
       var btn = document.getElementById('btn-pull-bundles');
       var restore = withButtonBusy(btn, 'Pulling...');
       google.script.run
@@ -1539,18 +1549,33 @@
             showResults('Pull from Web', '<p class="text-warning">' + TaskWidgets.escape(m) + '</p>');
             return;
           }
-          showResults('Pull from Web',
-            '<p class="text-success mb-2">' + TaskWidgets.escape(res.message) + '</p>' +
-            '<p class="small text-muted mb-0">Needs Push refreshed — bundles now matching the website are cleared. ' +
-            '(Use <strong>Update Composition</strong> only to import a brand-new web bundle or re-baseline ops to the web — it overwrites ops compositions.)</p>');
-          TaskWidgets.toast('Bundle data pulled.', 'success');
-          syncPushStatus();   // backend recomputed push-status post-pull; re-fetch so badges clear for matched bundles
+          var esc = TaskWidgets.escape;
+          var html = '<p class="text-success mb-2">' + esc(res.message) + '</p>';
+          var missing = res.missingFromWeb || [];
+          if (missing.length) {
+            html += '<p class="text-danger mb-2">Not on the website (not deleted, check WPClever): ' +
+              esc(missing.map(function(m) { return m.bundleId + (m.name ? ' ' + m.name : ''); }).join(', ')) + '</p>';
+          }
+          (res.created || []).forEach(function(c) {
+            html += '<p class="small mb-1">Created ' + esc(c.bundleId + ' ' + (c.name || '')) + ' (set each slot\'s category).</p>';
+          });
+          (res.renamed || []).forEach(function(r) {
+            html += '<p class="small mb-1">Renamed ' + esc(r.bundleId) + ': ' +
+              esc((r.fromEn !== r.toEn ? r.fromEn + ' → ' + r.toEn : '') + (r.fromHe !== r.toHe ? ' ' + r.fromHe + ' → ' + r.toHe : '')) + '</p>';
+          });
+          (res.warnings || []).forEach(function(w) {
+            html += '<p class="small text-warning mb-1">' + esc(w) + '</p>';
+          });
+          html += '<p class="small text-muted mb-0">Update web flags refreshed against the new snapshot. Compositions in jlmops were not changed.</p>';
+          showResults('Pull from Web', html);
+          TaskWidgets.toast(missing.length ? 'Pulled, with errors.' : 'Bundles pulled.', missing.length ? 'warning' : 'success');
+          syncPushStatus();   // re-fetch push status (+ snapshot time) and reload the list, so created bundles appear
         })
         .withFailureHandler(function(err) {
           restore();
           TaskWidgets.toast('Failed: ' + err.message, 'error');
         })
-        .WebAppBundles_pullBundleProducts();
+        .WebAppBundles_pullFromWeb();
     });
   }
 

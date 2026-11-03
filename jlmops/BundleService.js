@@ -198,27 +198,19 @@ const BundleService = (function () {
    * @param {Object} priceMap - Map of SKU to price
    * @returns {Object} {totalPrice, displayPrice, discount}
    */
-  // WPClever (WOOSB) discount fields live on the BUNDLE's own WebProdM row, keyed by wpm_ID (which
-  // IS bundleId — WebAppBundles.js:613). Imported every sync, never authored/pushed by jlmops
-  // (§7.1c). Built once from a WebProdM read, keyed by wpm_ID, for the as-presented price/margin.
-  function _buildBundleDiscountMap(webData, webHeaders) {
+  // WPClever (WOOSB) discount fields come from the bundle's WebBundles row (EN), keyed by bundleId
+  // (BUNDLE_PULL_FIX_PLAN §4C). Never authored/pushed by jlmops (§7.1c). For the as-presented
+  // price/margin; a bundle with no snapshot row gets null → sb_DiscountPrice fallback.
+  function _buildBundleDiscountMap() {
     const map = {};
-    const idIdx = webHeaders.indexOf('wpm_ID');
-    if (idIdx === -1) return map;
-    const discIdx = webHeaders.indexOf('wpm_WoosbDiscount');
-    const amtIdx = webHeaders.indexOf('wpm_WoosbDiscountAmount');
-    const customIdx = webHeaders.indexOf('wpm_WoosbCustomPrice');
-    const disableIdx = webHeaders.indexOf('wpm_WoosbDisableAutoPrice');
-    for (let i = 1; i < webData.length; i++) {
-      const id = String(webData[i][idIdx] || '').trim();
-      if (!id) continue;
-      map[id] = {
-        discountOn: discIdx !== -1 ? webData[i][discIdx] : '',
-        discountAmount: amtIdx !== -1 ? webData[i][amtIdx] : '',
-        customPrice: customIdx !== -1 ? webData[i][customIdx] : '',
-        disableAuto: disableIdx !== -1 ? webData[i][disableIdx] : ''
+    _readWebBundles().rows.forEach(function (w) {
+      map[w.wb_BundleId] = {
+        discountOn: w.wb_Discount,
+        discountAmount: w.wb_DiscountAmount,
+        customPrice: w.wb_CustomPrice,
+        disableAuto: w.wb_DisableAutoPrice
       };
-    }
+    });
     return map;
   }
 
@@ -309,7 +301,7 @@ const BundleService = (function () {
     const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
 
     const priceMap = {};
-    let discountMap = {};
+    const discountMap = _buildBundleDiscountMap();
     if (webSheet) {
       const webData = webSheet.getDataRange().getValues();
       const webSchema = allConfig['schema.data.WebProdM'];
@@ -323,7 +315,6 @@ const BundleService = (function () {
           priceMap[sku] = Number(webData[i][priceIdx]) || 0;
         }
       }
-      discountMap = _buildBundleDiscountMap(webData, webHeaders);
     }
 
     // Add price info to each bundle (as-presented discount from its own WOOSB row, §7.1c)
@@ -373,7 +364,6 @@ const BundleService = (function () {
     // same single WebProdM read, so no extra sheet round-trip (ADMIN_BUNDLES_UI_PLAN Phase 3).
     const priceMap = {};
     const infoMap = {};
-    let webDiscount = null;
     if (webSheet) {
       const webData = webSheet.getDataRange().getValues();
       const webSchema = allConfig['schema.data.WebProdM'];
@@ -395,9 +385,9 @@ const BundleService = (function () {
           };
         }
       }
-      // The bundle's own WOOSB discount row (keyed by wpm_ID = bundleId) for the as-presented margin.
-      webDiscount = _buildBundleDiscountMap(webData, webHeaders)[String(bundleId)] || null;
     }
+    // The bundle's own WOOSB discount (WebBundles row) for the as-presented margin.
+    const webDiscount = _buildBundleDiscountMap()[String(bundleId)] || null;
 
     // Enrich product slots with display fields (name/price/profit) for the composition sheet.
     const enrichedSlots = bundleSlots.map(s => {
@@ -1784,6 +1774,336 @@ const BundleService = (function () {
   }
 
   // =====================================================
+  // WEB SNAPSHOT — WebBundles (BUNDLE_PULL_FIX_PLAN §4A-C)
+  // =====================================================
+  // WebBundles mirrors the website's woosb bundles (EN row per bundle, HE joined by
+  // translations.en). Only the snapshot refresh writes it. Bundle code reads web bundle state
+  // (composition, discount, descriptions) from here, never from WebProdM/WebXltM.
+
+  const SNAPSHOT_MAX_BUNDLES = 50;
+
+  function _webBundlesHeaders() {
+    const schema = ConfigService.getAllConfig()['schema.data.WebBundles'];
+    if (!schema || !schema.headers) throw new Error('Schema for WebBundles not found in configuration.');
+    return schema.headers.split(',');
+  }
+
+  /**
+   * Builds WebBundles snapshot rows from fetched EN + HE woosb products. Pure (no sheet access).
+   * Any abort rule → { ok:false, error }, nothing to write. An EN bundle with no HE translation
+   * is not an abort: its row gets blank HE fields and a warning.
+   * @param {Array} enProducts - WC REST products, lang=en, type=woosb
+   * @param {Array} heProducts - WC REST products, lang=he, type=woosb
+   * @param {string} pulledAt - timestamp stamped on every row
+   * @returns {{ok:boolean, error:?string, rows:Array<Object>, warnings:Array<string>}}
+   */
+  function buildSnapshotRows(enProducts, heProducts, pulledAt) {
+    const fail = function (msg) { return { ok: false, error: msg, rows: [], warnings: [] }; };
+    enProducts = enProducts || [];
+    heProducts = heProducts || [];
+    if (enProducts.length === 0) return fail('The website returned no English bundles.');
+    if (enProducts.length > SNAPSHOT_MAX_BUNDLES) {
+      return fail(`The website returned ${enProducts.length} English "bundles" (cap ${SNAPSHOT_MAX_BUNDLES}); the bundle filter may have been ignored.`);
+    }
+    if (heProducts.length === 0) return fail('The website returned no Hebrew bundles.');
+
+    const all = enProducts.concat(heProducts);
+    const notWoosb = all.filter(function (p) { return !p || String(p.type || '').toLowerCase().trim() !== 'woosb'; });
+    if (notWoosb.length) {
+      return fail(`${notWoosb.length} returned product(s) are not bundles (first id ${notWoosb[0] ? notWoosb[0].id : '?'}).`);
+    }
+
+    const woosbOf = function (p) { return String(WooProductPullService.woosbIdsString(p.meta_data) || ''); };
+    for (let i = 0; i < all.length; i++) {
+      const raw = woosbOf(all[i]);
+      if (raw.trim() !== '' && Object.keys(_parseWoosbJson(raw, all[i].id, 'snapshot')).length === 0) {
+        return fail(`Bundle ${all[i].id}: its composition (woosb_ids) could not be read.`);
+      }
+    }
+
+    const enById = {};
+    enProducts.forEach(function (p) { enById[String(p.id)] = p; });
+    const heByEn = {};
+    for (let i = 0; i < heProducts.length; i++) {
+      const h = heProducts[i];
+      const link = (h.translations && h.translations.en != null) ? String(h.translations.en).trim() : '';
+      if (!link) return fail(`Hebrew bundle ${h.id} has no link to its English bundle.`);
+      if (!enById[link]) return fail(`Hebrew bundle ${h.id} links to ${link}, which is not an English bundle.`);
+      if (heByEn[link]) return fail(`Hebrew bundles ${heByEn[link].id} and ${h.id} both link to English bundle ${link}.`);
+      heByEn[link] = h;
+    }
+
+    const meta = function (p, key) {
+      const v = WooProductPullService.getMetaValue(p.meta_data, key);
+      return (v === null || v === undefined) ? '' : String(v);
+    };
+    const warnings = [];
+    const rows = enProducts.map(function (en) {
+      const id = String(en.id);
+      const he = heByEn[id] || null;
+      if (!he) warnings.push(`English bundle ${id} (${en.name || ''}) has no Hebrew translation; Hebrew fields left blank.`);
+      return {
+        wb_BundleId: id,
+        wb_HeId: he ? String(he.id) : '',
+        wb_NameEn: en.name || '',
+        wb_NameHe: he ? (he.name || '') : '',
+        wb_Status: en.status || '',
+        wb_WoosbIdsEn: woosbOf(en),
+        wb_WoosbIdsHe: he ? woosbOf(he) : '',
+        wb_Discount: meta(en, 'woosb_discount'),
+        wb_DiscountAmount: meta(en, 'woosb_discount_amount'),
+        wb_CustomPrice: meta(en, 'woosb_custom_price'),
+        wb_DisableAutoPrice: meta(en, 'woosb_disable_auto_price'),
+        wb_ShortDescEn: en.short_description || '',
+        wb_LongDescEn: en.description || '',
+        wb_ShortDescHe: he ? (he.short_description || '') : '',
+        wb_LongDescHe: he ? (he.description || '') : '',
+        wb_PulledAt: pulledAt || ''
+      };
+    });
+    return { ok: true, error: null, rows: rows, warnings: warnings };
+  }
+
+  /**
+   * Reads WebBundles. Display values: every field is text (ids, woosb JSON, '10%' discounts).
+   * @returns {{rows:Array<Object>, byId:Object, pulledAt:string}}
+   */
+  function _readWebBundles() {
+    const out = { rows: [], byId: {}, pulledAt: '' };
+    const sheet = SheetAccessor.getDataSheet('WebBundles', false);
+    if (!sheet || sheet.getLastRow() < 2) return out;
+    const headers = _webBundlesHeaders();
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getDisplayValues();
+    data.forEach(function (r) {
+      const obj = {};
+      headers.forEach(function (h, i) { obj[h] = String(r[i] == null ? '' : r[i]); });
+      const id = obj.wb_BundleId.trim();
+      if (!id) return;
+      obj.wb_BundleId = id;
+      out.rows.push(obj);
+      out.byId[id] = obj;
+      if (!out.pulledAt) out.pulledAt = obj.wb_PulledAt;
+    });
+    return out;
+  }
+
+  /** Rewrites WebBundles whole (a mirror). Caller holds the bundles-write lock. Text format so
+   *  Sheets never converts '10%', ids or timestamps. */
+  function _writeWebBundles(rows) {
+    const sheet = SheetAccessor.getDataSheet('WebBundles');
+    if (!sheet) throw new Error('WebBundles sheet not found');
+    const headers = _webBundlesHeaders();
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
+    if (!rows.length) return;
+    const values = rows.map(function (r) { return headers.map(function (h) { return r[h] == null ? '' : r[h]; }); });
+    const range = sheet.getRange(2, 1, values.length, headers.length);
+    range.setNumberFormat('@');
+    range.setValues(values);
+  }
+
+  /** The editor/discount reader for one bundle's web row, or null. */
+  function getWebSnapshotRow(bundleId) {
+    return _readWebBundles().byId[String(bundleId)] || null;
+  }
+
+  /** wb_PulledAt of the current snapshot ('' when empty) — for the "Web snapshot: <time>" line. */
+  function getWebSnapshotTime() {
+    return _readWebBundles().pulledAt;
+  }
+
+  /**
+   * Snapshot fetch + validation, no lock and no write (§4B). Refuses while a sync is active.
+   * @returns {{ok:boolean, error:?string, rows:Array<Object>, warnings:Array<string>}}
+   */
+  function _fetchWebSnapshot() {
+    if (SyncStateService.isSyncActive()) {
+      return { ok: false, error: 'A sync is running (' + SyncStateService.getActiveSession().stage + '). Pull after it finishes.', rows: [], warnings: [] };
+    }
+    let enProducts, heProducts;
+    try {
+      enProducts = WooApiService.fetchBundleProducts('en');
+      heProducts = WooApiService.fetchBundleProducts('he');
+    } catch (e) {
+      return { ok: false, error: 'Could not fetch bundles from the website: ' + e.message, rows: [], warnings: [] };
+    }
+    const pulledAt = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+    return buildSnapshotRows(enProducts, heProducts, pulledAt);
+  }
+
+  /**
+   * What Pull from Web would change in the bundle sheets (§4B). Pure.
+   * - creates: web bundles missing from ops → bundle row + slot rows from the snapshot
+   * - renames: existing bundles whose non-blank web name differs (compositions/status untouched)
+   * - missingFromWeb: non-Archived ops bundles absent from the snapshot (a fault, never deleted)
+   * @param {Array<Object>} snapshotRows - WebBundles rows
+   * @param {Array<Array>} bundleRows - SysBundles data rows (no header)
+   * @param {Object} bundleCols - SysBundles header → index
+   * @param {Object} slotCols - SysBundleSlots header → index
+   * @returns {{creates:Array, renames:Array, missingFromWeb:Array}}
+   */
+  function planPull(snapshotRows, bundleRows, bundleCols, slotCols) {
+    const bundleColCount = Object.keys(bundleCols).length;
+    const opsById = {};
+    bundleRows.forEach(function (r) {
+      const id = String(r[bundleCols.sb_BundleId] || '').trim();
+      if (id) opsById[id] = r;
+    });
+    const webById = {};
+    snapshotRows.forEach(function (w) { webById[w.wb_BundleId] = w; });
+
+    const creates = [];
+    const renames = [];
+    snapshotRows.forEach(function (w) {
+      const id = w.wb_BundleId;
+      const ops = opsById[id];
+      if (!ops) {
+        const row = new Array(bundleColCount).fill('');
+        row[bundleCols.sb_BundleId] = id;
+        row[bundleCols.sb_NameEn] = w.wb_NameEn;
+        row[bundleCols.sb_NameHe] = w.wb_NameHe;
+        row[bundleCols.sb_Type] = 'Bundle';
+        row[bundleCols.sb_Status] = (String(w.wb_Status).toLowerCase().trim() === 'publish') ? 'Active' : 'Draft';
+        creates.push({
+          bundleId: id,
+          name: w.wb_NameEn,
+          bundleRow: row,
+          slotRows: _slotRowsFromWoosb(id, w.wb_WoosbIdsEn, w.wb_WoosbIdsHe, slotCols, null)
+        });
+        return;
+      }
+      const curEn = String(ops[bundleCols.sb_NameEn] || '');
+      const curHe = String(ops[bundleCols.sb_NameHe] || '');
+      const newEn = (w.wb_NameEn && w.wb_NameEn !== curEn) ? w.wb_NameEn : curEn;
+      const newHe = (w.wb_NameHe && w.wb_NameHe !== curHe) ? w.wb_NameHe : curHe;
+      if (newEn !== curEn || newHe !== curHe) {
+        const row = ops.slice();
+        row[bundleCols.sb_NameEn] = newEn;
+        row[bundleCols.sb_NameHe] = newHe;
+        renames.push({ bundleId: id, fromEn: curEn, toEn: newEn, fromHe: curHe, toHe: newHe, bundleRow: row });
+      }
+    });
+
+    const missingFromWeb = [];
+    Object.keys(opsById).forEach(function (id) {
+      const ops = opsById[id];
+      if (String(ops[bundleCols.sb_Status] || '') === 'Archived') return;
+      if (!webById[id]) missingFromWeb.push({ bundleId: id, name: String(ops[bundleCols.sb_NameEn] || '') });
+    });
+    return { creates: creates, renames: renames, missingFromWeb: missingFromWeb };
+  }
+
+  /**
+   * SysBundleSlots rows for one bundle built from its web woosb (EN + HE). Slot ids are
+   * `<bundleId>-<token>`; HE section text is matched by ordinal (WPClever keys differ per
+   * language). carryFn(token, sku) → {sbs_Column: value} merged into Product rows (criteria
+   * carry for Restore, §4D); null → blank criteria (Pull create). Pure.
+   */
+  function _slotRowsFromWoosb(bundleId, woosbEnStr, woosbHeStr, slotCols, carryFn) {
+    const slotColCount = Object.keys(slotCols).length;
+    const woosbData = _parseWoosbJson(woosbEnStr, bundleId, 'en');
+    const woosbDataHe = _parseWoosbJson(woosbHeStr, bundleId, 'he');
+    const textSlotTypes = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'none', 'span', 'div'];
+    const heTexts = Object.keys(woosbDataHe || {})
+      .filter(function (k) { const v = woosbDataHe[k] || {}; return v.type !== undefined && v.text !== undefined && v.id === undefined && v.sku === undefined; })
+      .map(function (k) { return (woosbDataHe[k].text || '').trim(); });
+    let heTextIdx = 0;
+    let order = 1;
+    const rows = [];
+    Object.keys(woosbData).forEach(function (key) {
+      const value = woosbData[key] || {};
+      const row = new Array(slotColCount).fill('');
+      row[slotCols.sbs_SlotId] = `${bundleId}-${key}`;
+      row[slotCols.sbs_BundleId] = bundleId;
+      row[slotCols.sbs_Order] = order;
+      row[slotCols.sbs_HistoryJson] = '[]';
+      if (value.type && textSlotTypes.includes(String(value.type).toLowerCase())) {
+        row[slotCols.sbs_SlotType] = 'Text';
+        row[slotCols.sbs_TextStyle] = value.type;
+        row[slotCols.sbs_TextEn] = value.text || '';
+        row[slotCols.sbs_TextHe] = (heTextIdx < heTexts.length) ? heTexts[heTextIdx] : '';
+        heTextIdx++;
+        row[slotCols.sbs_DefaultQty] = 1;
+        rows.push(row);
+      } else if (value.id || value.sku) {
+        const sku = String(value.sku || '');
+        row[slotCols.sbs_SlotType] = 'Product';
+        row[slotCols.sbs_ActiveSKU] = sku;
+        row[slotCols.sbs_DefaultQty] = (value.qty === '' || value.qty == null) ? 1 : Number(value.qty);
+        row[slotCols.sbs_QtyVariable] = (value.optional === '1') ? 'TRUE' : '';
+        const extra = carryFn ? (carryFn(key, sku) || {}) : {};
+        Object.keys(extra).forEach(function (col) {
+          if (slotCols[col] !== undefined) row[slotCols[col]] = extra[col];
+        });
+        rows.push(row);
+      }
+      // else: empty / unknown entry — skip but advance order (as the old import did).
+      order++;
+    });
+    return rows;
+  }
+
+  /**
+   * Pull from Web (§4B): refresh WebBundles, then create web bundles missing from ops and update
+   * names on existing ones. Never changes an existing composition or status, never writes
+   * WebProdM/WebXltM. A non-Archived ops bundle absent from the web is reported as an error.
+   * Push-status refresh is the controller's job, after this returns (outside the lock).
+   * @returns {{success:boolean, message:string, created:Array, renamed:Array, missingFromWeb:Array, warnings:Array, snapshotCount:number}}
+   */
+  function pullFromWeb() {
+    const functionName = 'pullFromWeb';
+    const snap = _fetchWebSnapshot();
+    if (!snap.ok) {
+      LoggerService.warn(SERVICE_NAME, functionName, 'Pull aborted, nothing written: ' + snap.error);
+      return { success: false, message: snap.error, created: [], renamed: [], missingFromWeb: [], warnings: [], snapshotCount: 0 };
+    }
+
+    const locked = LockHelpers.withScriptLock('bundles-write', 30000, function () {
+      clearCache();
+      _writeWebBundles(snap.rows);
+      const bundleCols = _getBundleColumnIndices();
+      const slotCols = _getSlotColumnIndices();
+      const bundlesSheet = _getBundlesSheet();
+      const lastRow = bundlesSheet.getLastRow();
+      const bundleRows = lastRow > 1
+        ? bundlesSheet.getRange(2, 1, lastRow - 1, Object.keys(bundleCols).length).getValues()
+        : [];
+      const plan = planPull(snap.rows, bundleRows, bundleCols, slotCols);
+
+      const bundleRowsById = {};
+      const slotRowsById = {};
+      plan.creates.forEach(function (c) { bundleRowsById[c.bundleId] = c.bundleRow; slotRowsById[c.bundleId] = c.slotRows; });
+      plan.renames.forEach(function (r) { bundleRowsById[r.bundleId] = r.bundleRow; });
+      if (Object.keys(bundleRowsById).length) _replaceBundles(bundleRowsById, slotRowsById);
+      return { ok: true, value: plan };
+    });
+    if (locked === null) {
+      return { success: false, message: 'Bundles are busy (another bundle action is running). Try again in a moment.', created: [], renamed: [], missingFromWeb: [], warnings: [], snapshotCount: 0 };
+    }
+    const plan = locked.value;
+
+    if (plan.missingFromWeb.length) {
+      const list = plan.missingFromWeb.map(function (m) { return m.bundleId + (m.name ? ' (' + m.name + ')' : ''); }).join(', ');
+      NotificationService.reportFailure('bundles.missing_from_web',
+        `${plan.missingFromWeb.length} bundle(s) are in jlmops but not on the website: ${list}`,
+        'High', { bundleIds: plan.missingFromWeb.map(function (m) { return m.bundleId; }) });
+    }
+
+    let message = `Web snapshot: ${snap.rows.length} bundles. Created ${plan.creates.length}, renamed ${plan.renames.length}.`;
+    if (plan.missingFromWeb.length) message += ` ERROR: ${plan.missingFromWeb.length} bundle(s) missing from the website.`;
+    LoggerService.info(SERVICE_NAME, functionName, message, { warnings: snap.warnings });
+    return {
+      success: true,
+      message: message,
+      created: plan.creates.map(function (c) { return { bundleId: c.bundleId, name: c.name }; }),
+      renamed: plan.renames.map(function (r) { return { bundleId: r.bundleId, fromEn: r.fromEn, toEn: r.toEn, fromHe: r.fromHe, toHe: r.toHe }; }),
+      missingFromWeb: plan.missingFromWeb,
+      warnings: snap.warnings,
+      snapshotCount: snap.rows.length
+    };
+  }
+
+  // =====================================================
   // PUBLIC API: Import from WooCommerce
   // =====================================================
 
@@ -2387,50 +2707,55 @@ const BundleService = (function () {
    * from the current WEB woosb (EN or HE) — covers both changed-this-round and
    * unchanged-but-drifted. Export direction is ops→web; this only SELECTS + serializes (the
    * manager pastes the cells into WPClever). Ops is never conformed to web.
-   * @returns {{rows:Array<Object>, total:number, exportCount:number}}
+   * Web side = WebBundles (§4C). Empty snapshot → `unknown: true` and no rows (callers must not
+   * treat it as "nothing to push"). Archived bundles are skipped; a non-Archived bundle with no
+   * snapshot row is listed in `missingFromWeb` (a fault), not as a needs-push row.
+   * @returns {{rows:Array<Object>, total:number, exportCount:number, unknown:boolean, missingFromWeb:Array<string>, snapshotAt:string}}
    */
   function buildExportTable() {
+    const snap = _readWebBundles();
+    if (!snap.rows.length) {
+      return { rows: [], total: 0, exportCount: 0, unknown: true, missingFromWeb: [], snapshotAt: '' };
+    }
+
     const allConfig = ConfigService.getAllConfig();
     const ss = SheetAccessor.getDataSpreadsheet();
 
-    // Web woosb per bundle: EN from WebProdM (by wpm_ID), HE from WebXltM (by wxm_WpmlOriginalId).
+    // Per-wine facts stay on the product sheets: SKU -> EN id + stock (WebProdM), EN id -> HE id (WebXltM).
     const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
     const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
-    const wpmWoosbIdx = wpmHeaders.indexOf('wpm_WoosbIds');
     const wpmSkuIdx = wpmHeaders.indexOf('wpm_SKU');
     const wpmStockIdx = wpmHeaders.indexOf('wpm_Stock');
-    const webEnByBundle = {};
     const skuToStock = {};   // web stock by SKU — for the pre-export out-of-stock failsafe (§3.1)
     const skuToEnId = {};    // SKU -> EN id, built ONCE here + handed to exportBundleWoosb (kills its N+1)
     const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
     for (let i = 1; i < wpmData.length; i++) {
       const id = String(wpmData[i][wpmIdIdx] || '').trim();
-      if (id) webEnByBundle[id] = String(wpmData[i][wpmWoosbIdx] || '');
       const sku = wpmSkuIdx >= 0 ? String(wpmData[i][wpmSkuIdx] || '').trim() : '';
       if (sku && wpmStockIdx >= 0) skuToStock[sku] = Number(wpmData[i][wpmStockIdx]);
       if (sku && id) skuToEnId[sku] = id;
     }
     const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
     const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
-    const xltWoosbIdx = xltHeaders.indexOf('wxm_WoosbIds');
     const xltIdIdx = xltHeaders.indexOf('wxm_ID');
-    const webHeByBundle = {};
     const enToHeId = {};     // EN id -> HE id, built ONCE here + handed to exportBundleWoosb
     const xltData = ss.getSheetByName('WebXltM').getDataRange().getValues();
     for (let i = 1; i < xltData.length; i++) {
       const enId = String(xltData[i][xltOrigIdx] || '').trim();
-      if (enId && xltWoosbIdx !== -1) webHeByBundle[enId] = String(xltData[i][xltWoosbIdx] || '');
       if (enId && xltIdIdx !== -1) enToHeId[enId] = String(xltData[i][xltIdIdx] || '').trim();
     }
     const exportCtx = { skuToEnId: skuToEnId, enToHeId: enToHeId };
 
-    const bundles = getAllBundles();
+    const bundles = getAllBundles().filter(b => b.status !== 'Archived');
     const rows = [];
+    const missingFromWeb = [];
     bundles.forEach(b => {
+      const web = snap.byId[b.bundleId];
+      if (!web) { missingFromWeb.push(b.bundleId); return; }
       const en = exportBundleWoosb(b.bundleId, 'en', exportCtx);
       const he = exportBundleWoosb(b.bundleId, 'he', exportCtx);
-      const enDiff = !_woosbEqual(en.json, webEnByBundle[b.bundleId] || '');
-      const heDiff = !_woosbEqual(he.json, webHeByBundle[b.bundleId] || '');
+      const enDiff = !_woosbEqual(en.json, web.wb_WoosbIdsEn);
+      const heDiff = !_woosbEqual(he.json, web.wb_WoosbIdsHe);
       if (enDiff || heDiff) {
         const warnings = en.warnings.concat(he.warnings);
         // Out-of-stock failsafe (§3.1): flag product members with web stock <= 0 so a now
@@ -2448,7 +2773,10 @@ const BundleService = (function () {
         });
       }
     });
-    return { rows: rows, total: bundles.length, exportCount: rows.length };
+    return {
+      rows: rows, total: bundles.length, exportCount: rows.length,
+      unknown: false, missingFromWeb: missingFromWeb, snapshotAt: snap.pulledAt
+    };
   }
 
   /**
@@ -2462,6 +2790,9 @@ const BundleService = (function () {
    */
   function exportBundlesToSheet() {
     const result = buildExportTable();
+    if (result.unknown) {
+      return { success: false, exportCount: 0, total: 0, fileUrl: null, message: 'No web snapshot yet. Pull from Web first.' };
+    }
     if ((result.exportCount || 0) === 0) {
       return {
         success: true, exportCount: 0, total: result.total || 0, fileUrl: null,
@@ -2554,6 +2885,14 @@ const BundleService = (function () {
     importBundleFromWooCommerce: importBundleFromWooCommerce,
     reimportAllBundlesBatch: reimportAllBundlesBatch,
     duplicateBundle: duplicateBundle,
+
+    // Web snapshot + Pull from Web (BUNDLE_PULL_FIX_PLAN §4A-C)
+    pullFromWeb: pullFromWeb,
+    getWebSnapshotRow: getWebSnapshotRow,
+    getWebSnapshotTime: getWebSnapshotTime,
+    // Pure helpers, exposed for TestRunner / local checks
+    buildSnapshotRows: buildSnapshotRows,
+    planPull: planPull,
 
     // Authoring export (Stage 3) — slots -> WPClever woosb_ids JSON per language
     exportBundleWoosb: exportBundleWoosb,
