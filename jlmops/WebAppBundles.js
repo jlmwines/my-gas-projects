@@ -167,7 +167,7 @@ function WebAppBundles_getBundleWithSlots(bundleId) {
  */
 function WebAppBundles_updateBundle(bundleId, updates) {
   try {
-    const bundle = BundleService.updateBundle(bundleId, updates);
+    const bundle = _withBundlesLock(() => BundleService.updateBundle(bundleId, updates));
     if (!bundle) {
       return {
         error: `Bundle not found: ${bundleId}`,
@@ -194,7 +194,7 @@ function WebAppBundles_updateBundle(bundleId, updates) {
  */
 function WebAppBundles_createBundle(bundleData) {
   try {
-    const bundle = BundleService.createBundle(bundleData);
+    const bundle = _withBundlesLock(() => BundleService.createBundle(bundleData));
     return {
       error: null,
       data: bundle
@@ -215,7 +215,7 @@ function WebAppBundles_createBundle(bundleData) {
  */
 function WebAppBundles_deleteBundle(bundleId) {
   try {
-    const success = BundleService.deleteBundle(bundleId);
+    const success = _withBundlesLock(() => BundleService.deleteBundle(bundleId));
     return {
       error: success ? null : `Failed to delete bundle: ${bundleId}`,
       data: { success: success }
@@ -238,7 +238,7 @@ function WebAppBundles_deleteBundle(bundleId) {
  */
 function WebAppBundles_duplicateBundle(sourceBundleId, newBundleId, overrides) {
   try {
-    const bundle = BundleService.duplicateBundle(sourceBundleId, newBundleId, overrides || {});
+    const bundle = _withBundlesLock(() => BundleService.duplicateBundle(sourceBundleId, newBundleId, overrides || {}));
     if (!bundle) {
       return {
         error: `Failed to duplicate bundle: ${sourceBundleId}`,
@@ -269,7 +269,7 @@ function WebAppBundles_duplicateBundle(sourceBundleId, newBundleId, overrides) {
  */
 function WebAppBundles_createSlot(slotData) {
   try {
-    const slot = BundleService.createSlot(slotData);
+    const slot = _withBundlesLock(() => BundleService.createSlot(slotData));
     return {
       error: null,
       data: slot
@@ -291,7 +291,7 @@ function WebAppBundles_createSlot(slotData) {
  */
 function WebAppBundles_updateSlot(slotId, updates) {
   try {
-    const slot = BundleService.updateSlot(slotId, updates);
+    const slot = _withBundlesLock(() => BundleService.updateSlot(slotId, updates));
     if (!slot) {
       return {
         error: `Slot not found: ${slotId}`,
@@ -318,7 +318,7 @@ function WebAppBundles_updateSlot(slotId, updates) {
  */
 function WebAppBundles_deleteSlot(slotId) {
   try {
-    const success = BundleService.deleteSlot(slotId);
+    const success = _withBundlesLock(() => BundleService.deleteSlot(slotId));
     return {
       error: success ? null : `Failed to delete slot: ${slotId}`,
       data: { success: success }
@@ -342,7 +342,7 @@ function WebAppBundles_deleteSlot(slotId) {
  */
 function WebAppBundles_saveComposition(bundleId, header, slots) {
   try {
-    const bundle = BundleService.saveComposition(bundleId, header, slots);
+    const bundle = _withBundlesLock(() => BundleService.saveComposition(bundleId, header, slots));
     _refreshBundlePushStatusQuietly('saveComposition');   // keep the ops≠web cache fresh post-edit
     return { error: null, data: bundle };
   } catch (e) {
@@ -363,6 +363,22 @@ function _refreshBundlePushStatusQuietly(caller) {
   } catch (e) {
     LoggerService.warn('WebAppBundles', caller, `Push-status refresh after ${caller} failed (non-fatal): ${e.message}`);
   }
+}
+
+/**
+ * Entry-point lock for every bundle write (BUNDLE_PULL_FIX_PLAN §4E): one global script lock,
+ * taken only here (and in BundleService's Pull / Restore / generator apply), never by the
+ * internal primitives, so nested calls can't deadlock. Clears the bundle cache first so row
+ * numbers come from a fresh read. A lock timeout throws: the controller's catch reports it to
+ * the user, never a silent skip. Push-status refresh runs after this returns (outside the lock).
+ */
+function _withBundlesLock(fn) {
+  const r = LockHelpers.withScriptLock('bundles-write', 30000, function () {
+    BundleService.clearCache();
+    return { ok: true, value: fn() };
+  });
+  if (r === null) throw new Error('Bundles are busy (another bundle action is running). Try again in a moment.');
+  return r.value;
 }
 
 // =================================================================================
@@ -400,7 +416,7 @@ function WebAppBundles_getEligibleProducts(slotId, options) {
  */
 function WebAppBundles_assignProductToSlot(slotId, sku, reason) {
   try {
-    const slot = BundleService.assignProductToSlot(slotId, sku, reason || 'Manual');
+    const slot = _withBundlesLock(() => BundleService.assignProductToSlot(slotId, sku, reason || 'Manual'));
     if (!slot) {
       return {
         error: `Failed to assign product to slot: ${slotId}`,
@@ -457,7 +473,7 @@ function WebAppBundles_applyReplacements(replacements) {
     let failCount = 0;
     const results = [];
 
-    replacements.forEach(r => {
+    _withBundlesLock(() => replacements.forEach(r => {
       try {
         const slot = BundleService.assignProductToSlot(r.slotId, r.sku, r.reason || 'Low Stock Replacement');
         if (slot) {
@@ -471,7 +487,7 @@ function WebAppBundles_applyReplacements(replacements) {
         failCount++;
         results.push({ slotId: r.slotId, success: false, error: e.message });
       }
-    });
+    }));
 
     return {
       error: null,
@@ -485,162 +501,6 @@ function WebAppBundles_applyReplacements(replacements) {
     LoggerService.error('WebAppBundles', 'applyReplacements', `Error applying replacements: ${e.message}`, e);
     return {
       error: `Error applying replacements: ${e.message}`,
-      data: null
-    };
-  }
-}
-
-// =================================================================================
-// IMPORT
-// =================================================================================
-
-/**
- * Imports a bundle from WooCommerce data.
- * @param {string} bundleId - WooCommerce product ID
- * @param {string} woosbIdsJson - JSON string from woosb_ids field
- * @param {Object} bundleInfo - Additional info {nameEn, nameHe, type}
- * @returns {Object} Imported bundle with slots
- */
-function WebAppBundles_importFromWooCommerce(bundleId, woosbIdsJson, bundleInfo) {
-  try {
-    const bundle = BundleService.importBundleFromWooCommerce(bundleId, woosbIdsJson, bundleInfo || {});
-    if (!bundle) {
-      return {
-        error: `Failed to import bundle: ${bundleId}`,
-        data: null
-      };
-    }
-    return {
-      error: null,
-      data: bundle
-    };
-  } catch (e) {
-    LoggerService.error('WebAppBundles', 'importFromWooCommerce', `Error importing bundle: ${e.message}`, e);
-    return {
-      error: `Error importing bundle: ${e.message}`,
-      data: null
-    };
-  }
-}
-
-/**
- * Re-imports all bundles from current web product data.
- * Scans WebProdM for woosb type products and imports/updates their bundle structure.
- * @returns {Object} Import results
- */
-function WebAppBundles_reimportAllBundles(bundleId) {
-  const serviceName = 'WebAppBundles';
-  const functionName = 'reimportAllBundles';
-
-  try {
-    LoggerService.info(serviceName, functionName,
-      bundleId ? `Re-deriving one bundle from WebProdM: ${bundleId}` : 'Starting full bundle reimport from WebProdM...');
-
-    const allConfig = ConfigService.getAllConfig();
-    const spreadsheet = SheetAccessor.getDataSpreadsheet();
-    const webProdMSheet = spreadsheet.getSheetByName('WebProdM');
-
-    if (!webProdMSheet) {
-      throw new Error('WebProdM sheet not found');
-    }
-
-    const webProdMSchema = allConfig['schema.data.WebProdM'];
-    const headers = webProdMSchema.headers.split(',');
-    const data = webProdMSheet.getDataRange().getValues();
-
-    const typeIdx = headers.indexOf('wpm_TaxProductType');
-    const woosbIdsIdx = headers.indexOf('wpm_WoosbIds');
-    const idIdx = headers.indexOf('wpm_ID');
-    const titleIdx = headers.indexOf('wpm_PostTitle');
-    const statusIdx = headers.indexOf('wpm_PostStatus');
-
-    if (typeIdx === -1 || woosbIdsIdx === -1) {
-      throw new Error('Bundle columns (wpm_TaxProductType, wpm_WoosbIds) not found in WebProdM schema');
-    }
-
-    // Load WebXltM to get Hebrew names and woosb_ids
-    const webXltMSheet = spreadsheet.getSheetByName('WebXltM');
-    const hebrewNameMap = {};
-    const hebrewWoosbIdsMap = {};
-    if (webXltMSheet) {
-      const xltSchema = allConfig['schema.data.WebXltM'];
-      const xltHeaders = xltSchema.headers.split(',');
-      const xltData = webXltMSheet.getDataRange().getValues();
-      const xltOrigIdIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
-      const xltTitleIdx = xltHeaders.indexOf('wxm_PostTitle');
-      const xltWoosbIdsIdx = xltHeaders.indexOf('wxm_WoosbIds');
-
-      for (let i = 1; i < xltData.length; i++) {
-        const origId = String(xltData[i][xltOrigIdIdx] || '').trim();
-        const heTitle = String(xltData[i][xltTitleIdx] || '').trim();
-        const heWoosbIds = String(xltData[i][xltWoosbIdsIdx] || '').trim();
-        if (origId) {
-          if (heTitle) hebrewNameMap[origId] = heTitle;
-          if (heWoosbIds) hebrewWoosbIdsMap[origId] = heWoosbIds;
-        }
-      }
-      LoggerService.info(serviceName, functionName, `Loaded ${Object.keys(hebrewNameMap).length} Hebrew translations, ${Object.keys(hebrewWoosbIdsMap).length} Hebrew woosb_ids`);
-    }
-
-    // Collect bundle metadata for batch reimport (one sheet-write pass instead
-    // of per-bundle row ops). Pre-batch implementation called
-    // BundleService.importBundleFromWooCommerce per bundle which did its own
-    // deleteRow + appendRow per slot — 14 bundles × ~12 slot ops × ~150ms each
-    // ≈ 25-40s of sheet overhead. Batch path completes in ~2-3s.
-    let skipped = 0;
-    const bundlesToImport = [];
-
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      const productType = String(row[typeIdx] || '').toLowerCase().trim();
-      if (productType !== 'woosb' && productType !== 'bundle') continue;
-
-      const bundleId = String(row[idIdx] || '').trim();
-      if (!bundleId) {
-        skipped++;
-        continue;
-      }
-
-      const woosbIds = String(row[woosbIdsIdx] || '').trim();
-      const nameEn = String(row[titleIdx] || '').trim();
-      const postStatus = String(row[statusIdx] || '').toLowerCase().trim();
-      const nameHe = hebrewNameMap[bundleId] || '';
-      const woosbIdsHe = hebrewWoosbIdsMap[bundleId] || '';
-      const bundleStatus = (postStatus === 'publish' || postStatus === '1') ? 'Active' : 'Draft';
-
-      bundlesToImport.push({
-        bundleId: bundleId,
-        nameEn: nameEn,
-        nameHe: nameHe,
-        type: 'Bundle',
-        status: bundleStatus,
-        woosbIds: woosbIds,
-        woosbIdsHe: woosbIdsHe
-      });
-    }
-
-    // Single-bundle target (Phase 5 §C): re-derive just the open bundle when bundleId is given.
-    const targets = bundleId
-      ? bundlesToImport.filter(b => String(b.bundleId) === String(bundleId))
-      : bundlesToImport;
-    const batchResult = BundleService.reimportAllBundlesBatch(targets);
-
-    LoggerService.info(serviceName, functionName,
-      `Bundle reimport complete. Imported: ${batchResult.imported}, Failed: ${batchResult.failed}, Skipped: ${skipped}, Slots: ${batchResult.slotCount}`);
-
-    return {
-      error: null,
-      data: {
-        imported: batchResult.imported,
-        failed: batchResult.failed,
-        skipped: skipped,
-        slotCount: batchResult.slotCount
-      }
-    };
-  } catch (e) {
-    LoggerService.error(serviceName, functionName, `Error reimporting bundles: ${e.message}`, e);
-    return {
-      error: `Error reimporting bundles: ${e.message}`,
       data: null
     };
   }
@@ -828,17 +688,17 @@ function WebAppBundles_maintainBundle(bundleId) {
 }
 
 /**
- * Re-roll button (BUNDLE_PLAN Stage 7 rev 2.2): explicit fresh lineup — re-picks EVERY product slot
- * for the given bundle (or all non-archived bundles when bundleId is omitted). Higher churn; for a
- * seasonal reset / new bundle / "give me new wines". Web export remains the gate.
- * @param {string} [bundleId] - re-roll just this bundle; omit for all non-archived bundles
+ * Editor Re-roll (BUNDLE_PLAN Stage 7): explicit fresh lineup — re-picks EVERY product slot of the
+ * open bundle. One bundle only; there is no all-bundle re-roll (BUNDLE_PULL_FIX_PLAN §4E/F). Web
+ * export remains the gate.
+ * @param {string} bundleId - the bundle to re-roll (required)
  * @returns {Object} { totalBundles, generated, results } (or { error } on failure)
  */
 function WebAppBundles_rerollBundles(bundleId) {
   const serviceName = 'WebAppBundles';
   const functionName = 'rerollBundles';
   try {
-    LoggerService.info(serviceName, functionName, `Stage 7 Re-roll — ${bundleId || 'all non-archived bundles'}`);
+    LoggerService.info(serviceName, functionName, `Stage 7 Re-roll — ${bundleId}`);
     const result = BundleService.rerollBundles(bundleId);
     _refreshBundlePushStatusQuietly('rerollBundles');   // re-rolled bundles now differ from web
     return result;
@@ -849,30 +709,22 @@ function WebAppBundles_rerollBundles(bundleId) {
 }
 
 /**
- * Update Composition button: re-derives SysBundles + SysBundleSlots from
- * current WebProdM + WebXltM data. Does NOT pull from WooCommerce — premise
- * is "sync just ran, WebProdM is fresh, but housekeeping bundle refresh
- * didn't run". If WebProdM is stale, run the daily sync first.
- * @returns {Object} { error, data: { reimport } }
+ * Editor "Restore to web version" (BUNDLE_PULL_FIX_PLAN §4D): refreshes the web snapshot, then
+ * rebuilds the OPEN bundle's slots from its website composition, carrying slot criteria and history.
+ * Touches only that bundle. Used to undo an unwanted re-roll. Push status refreshed afterwards.
+ * @param {string} bundleId
+ * @returns {Object} { success, message, slotCount }
  */
-function WebAppBundles_updateComposition(bundleId) {
+function WebAppBundles_restoreToWebVersion(bundleId) {
   const serviceName = 'WebAppBundles';
-  const functionName = 'updateComposition';
+  const functionName = 'restoreToWebVersion';
   try {
-    LoggerService.info(serviceName, functionName,
-      bundleId ? `Update Composition (single): re-derive ${bundleId} from WebProdM (no WC pull)`
-               : 'Update Composition: re-derive bundles from WebProdM (no WC pull)');
-
-    const reimportResult = WebAppBundles_reimportAllBundles(bundleId);
-    return {
-      error: null,
-      data: {
-        reimport: reimportResult
-      }
-    };
+    const result = BundleService.restoreToWebVersion(bundleId);
+    if (result.success) _refreshBundlePushStatusQuietly('restoreToWebVersion');
+    return result;
   } catch (e) {
-    LoggerService.error(serviceName, functionName, `Update Composition failed: ${e.message}`, e);
-    return { error: `Update Composition failed: ${e.message}`, data: null };
+    LoggerService.error(serviceName, functionName, `Restore to web version failed for ${bundleId}: ${e.message}`, e);
+    return { success: false, message: `Restore failed: ${e.message}` };
   }
 }
 

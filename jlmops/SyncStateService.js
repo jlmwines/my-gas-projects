@@ -330,7 +330,7 @@ const SyncStateService = (function() {
    * (D2, SYNC_HARDENING_PLAN.md). Centralized here so the stage-list check
    * (and its field name) exists in exactly one place -- hand-copied
    * duplicates of this same check drifted at least twice before
-   * (`WooProductPullService.pullProducts`/`.pullBundleProducts` both
+   * (`WooProductPullService.pullProducts` and the old bundle pull both
    * checked a nonexistent `.currentStage` field instead of `.stage`,
    * silently never firing).
    */

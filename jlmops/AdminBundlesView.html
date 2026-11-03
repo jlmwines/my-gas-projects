@@ -42,14 +42,12 @@
         <div class="card-header bundle-card-header" style="background: transparent;">
           <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Bundle Management</h5>
-            <!-- Ordered to the workflow: Review → Maintain → Export → Pull from Web (confirm). Update
-                 Composition is a web→ops utility (new/re-baseline bundles), set apart at the end. -->
+            <!-- Ordered to the workflow: Review → Maintain → Export → Pull from Web (confirm). -->
             <div class="bundle-btnbar">
               <button id="btn-review-stock" class="btn btn-sm mr-2">Review</button>
               <button id="btn-generate-compositions" class="btn btn-sm mr-2">Maintain</button>
               <button id="btn-export-bundles" class="btn btn-sm mr-2">Export</button>
               <button id="btn-pull-bundles" class="btn btn-sm mr-2">Pull from Web</button>
-              <button id="btn-update-composition" class="btn btn-sm ml-3 text-muted">Update Composition</button>
             </div>
           </div>
           <!-- Filter chips in the management section — badge area doubles as message area for action results -->
@@ -106,7 +104,7 @@
           <div class="bundle-btnbar">
             <button id="btn-maintain-bundle" class="btn btn-sm mr-1">Maintain</button>
             <button id="btn-reroll-bundle" class="btn btn-sm mr-1">Re-roll</button>
-            <button id="btn-update-bundle" class="btn btn-sm mr-1 text-muted">Update from web</button>
+            <button id="btn-restore-bundle" class="btn btn-sm mr-1 text-muted">Restore to web version</button>
             <button id="btn-save-composition" class="btn btn-sm mr-1" disabled>Save Composition</button>
             <button id="btn-discard-draft" class="btn btn-sm mr-1" style="display:none;">Discard</button>
             <button id="btn-close-editor" class="btn btn-sm">Close</button>
@@ -278,7 +276,6 @@
   function bindEvents() {
     document.getElementById('btn-pull-bundles').addEventListener('click', pullBundleData);
     document.getElementById('btn-generate-compositions').addEventListener('click', generateCompositions);
-    document.getElementById('btn-update-composition').addEventListener('click', updateComposition);
     document.getElementById('btn-review-stock').addEventListener('click', reviewStock);
     document.getElementById('btn-export-bundles').addEventListener('click', exportBundles);
     document.querySelectorAll('.bundle-chip').forEach(function(chip) {
@@ -293,7 +290,7 @@
     document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
     document.getElementById('btn-maintain-bundle').addEventListener('click', maintainBundleOne);
     document.getElementById('btn-reroll-bundle').addEventListener('click', rerollBundle);
-    document.getElementById('btn-update-bundle').addEventListener('click', updateBundleOne);
+    document.getElementById('btn-restore-bundle').addEventListener('click', restoreBundleOne);
     document.getElementById('btn-save-composition').addEventListener('click', saveComposition);
     document.getElementById('btn-discard-draft').addEventListener('click', discardDraft);
     document.getElementById('btn-add-text').addEventListener('click', addTextSlot);
@@ -771,7 +768,7 @@
   function loadBundleForEditing(bundleId) {
     // (Phase 5 §B) The per-bundle export-meta panel is now INSIDE the editor and clears itself on load
     // (showEditorLoading → renderExportMetaInline(null)). The shared bottom panel now only holds GLOBAL
-    // batch results (Maintain/Review/Export/Update Composition), so a bundle switch must NOT wipe it.
+    // batch results (Maintain/Review/Export/Pull from Web), so a bundle switch must NOT wipe it.
     currentBundleId = String(bundleId);
     currentDeficiency = null;   // cleared until the live deficiency check returns for a flagged bundle
     ensureEditorMounted(currentBundleId);   // mount the editor inline under this row (Phase 5)
@@ -1676,52 +1673,26 @@
     });
   }
 
-  // Update just the OPEN bundle from web (Phase 5 §C): the muted Update Composition utility, scoped to
-  // one bundle in context. Re-derives THIS bundle from WebProdM (web→ops re-baseline).
-  function updateBundleOne() {
+  // Restore to web version (BUNDLE_PULL_FIX_PLAN §4D): rebuild ONLY the open bundle from its website
+  // composition (fresh snapshot first), keeping slot criteria. Used to undo an unwanted re-roll.
+  function restoreBundleOne() {
     if (!currentBundleId) return;
-    if (draftDirty) { TaskWidgets.toast('Save or discard your edits before updating from web.', 'warning'); return; }
-    TaskWidgets.confirm('Re-derive THIS bundle from WebProdM (web→ops)? Replaces the ops composition with the latest web data.', function() {
-      var btn = document.getElementById('btn-update-bundle');
-      var restore = withButtonBusy(btn, 'Updating...');
+    if (draftDirty) { TaskWidgets.toast('Save or discard your edits before restoring.', 'warning'); return; }
+    TaskWidgets.confirm('Restore this bundle to its website version? Its jlmops wines are replaced with the ones on the website; other bundles are not touched.', function() {
+      var btn = document.getElementById('btn-restore-bundle');
+      var restore = withButtonBusy(btn, 'Restoring...');
       google.script.run
-        .withSuccessHandler(function(result) {
+        .withSuccessHandler(function(res) {
           restore();
-          if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
+          if (!res || !res.success) { TaskWidgets.toast((res && res.message) || 'Restore failed', 'error'); return; }
           clearDraft(currentBundleId);
           loadBundleForEditing(currentBundleId);
           syncPushStatus();
-          TaskWidgets.toast('Updated from web.', 'success');
+          TaskWidgets.toast(res.message, 'success');
         })
         .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
-        .WebAppBundles_updateComposition(currentBundleId);
-    });
-  }
-
-  function updateComposition() {
-    TaskWidgets.confirm('Re-derive bundle composition from WebProdM?', function() {
-    var btn = document.getElementById('btn-update-composition');
-    var restore = withButtonBusy(btn, 'Updating...');
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        restore();
-        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-        var d = result.data || {};
-        var r = d.reimport || {};
-        var msg = 'Update Composition complete. Re-derived from WebProdM: ' + (r.imported || 0) + ' bundles imported, ' + (r.failed || 0) + ' failed, ' + (r.skipped || 0) + ' skipped.';
-        showResults('Update Composition', '<p>' + TaskWidgets.escape(msg) + '</p>');
-        loadStats();
-        loadBundleList();
-        // Inventory health panel intentionally NOT refreshed here — Composition
-        // and Inventory are separate buttons; click Review Stock for inventory.
-      })
-      .withFailureHandler(function(err) {
-        restore();
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_updateComposition();
-    });
+        .WebAppBundles_restoreToWebVersion(currentBundleId);
+    }, { danger: true });
   }
 
   function reviewStock() {

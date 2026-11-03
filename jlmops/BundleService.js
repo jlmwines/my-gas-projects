@@ -1181,6 +1181,10 @@ const BundleService = (function () {
         priceBySlot[s.slotId] = s.productPrice || 0;
       }
     });
+    // Compute-then-write (BUNDLE_PULL_FIX_PLAN §4E): picks are made in memory; startSku is what each
+    // slot held when the run began, re-checked under the lock before anything is written.
+    const startSku = Object.assign({}, currentSku);
+    const pickReason = {};
 
     // Which slots get re-picked this run.
     const refill = {};
@@ -1280,7 +1284,7 @@ const BundleService = (function () {
         if (sc > bestScore) { bestScore = sc; best = pool[i]; }
       }
       if (best.sku !== currentSku[slot.slotId]) {
-        assignProductToSlot(slot.slotId, best.sku, 'Stage 7 generator');
+        pickReason[slot.slotId] = 'Stage 7 generator';
         currentSku[slot.slotId] = best.sku;
         changed++;
       }
@@ -1310,7 +1314,7 @@ const BundleService = (function () {
           });
         });
         if (!pick) break;
-        assignProductToSlot(pick.slot.slotId, pick.sku, 'Stage 7 top-up');
+        pickReason[pick.slot.slotId] = 'Stage 7 top-up';
         currentSku[pick.slot.slotId] = pick.sku;
         priceBySlot[pick.slot.slotId] = pick.price;
         baseTotal = baseTotal - pick.cur * pick.q + pick.price * pick.q;
@@ -1334,7 +1338,7 @@ const BundleService = (function () {
           if (cheaper) { pick = { slot: slot, sku: cheaper.sku, price: cheaper.price, cur: cur, q: q }; break; }
         }
         if (!pick) break;
-        assignProductToSlot(pick.slot.slotId, pick.sku, 'Stage 7 down-pass');
+        pickReason[pick.slot.slotId] = 'Stage 7 down-pass';
         currentSku[pick.slot.slotId] = pick.sku;
         priceBySlot[pick.slot.slotId] = pick.price;
         baseTotal = baseTotal - pick.cur * pick.q + pick.price * pick.q;
@@ -1377,7 +1381,19 @@ const BundleService = (function () {
       stillDeficient = flags !== '';
     }
 
-    updateBundle(bundle.bundleId, { lastGenerated: new Date().toISOString(), genFlags: flags });
+    // Apply this bundle's picks in one locked write; a slot changed since the pick (e.g. a concurrent
+    // Save) is skipped and reported, never overwritten.
+    const changes = productSlots
+      .filter(s => (currentSku[s.slotId] || '') !== (startSku[s.slotId] || ''))
+      .map(s => ({ slotId: s.slotId, sku: currentSku[s.slotId], reason: pickReason[s.slotId] || 'Stage 7 generator' }));
+    const applied = _applyGeneratedPicks(bundle.bundleId, startSku, changes,
+      { lastGenerated: new Date().toISOString(), genFlags: flags });
+    if (applied === null) throw new Error('Bundles are busy (another bundle action is running). Try again in a moment.');
+    changed = changes.length - applied.skipped.length;
+    if (applied.skipped.length) {
+      flags = (flags ? flags + ';' : '') + applied.skipped.map(id => 'changed_since_pick:' + id).join(';');
+      stillDeficient = true;
+    }
 
     const inBand = postCheck ? (postCheck.bandFlags.length === 0)
       : (minTotal == null || baseTotal >= minTotal) && (maxTotal == null || baseTotal <= maxTotal);
@@ -1388,6 +1404,27 @@ const BundleService = (function () {
       changed: changed, baseTotal: Math.round(baseTotal),
       minTotal: minTotal, maxTotal: maxTotal, inBand: inBand, flags: flags, stillDeficient: stillDeficient
     };
+  }
+
+  /**
+   * Writes one bundle's generator picks under the bundles-write lock (§4E). Each change is applied only
+   * if the slot still holds the SKU it had when the run started; otherwise it is skipped and returned.
+   * Then stamps sb_LastGenerated / sb_GenFlags. Returns null on lock timeout.
+   * @returns {?{skipped:Array<string>}}
+   */
+  function _applyGeneratedPicks(bundleId, startSku, changes, bundleUpdates) {
+    const r = LockHelpers.withScriptLock('bundles-write', 30000, function () {
+      clearCache();
+      const skipped = [];
+      changes.forEach(function (c) {
+        const slot = getSlot(c.slotId);
+        if (!slot || String(slot.activeSKU || '') !== String(startSku[c.slotId] || '')) { skipped.push(c.slotId); return; }
+        assignProductToSlot(c.slotId, c.sku, c.reason);
+      });
+      updateBundle(bundleId, bundleUpdates);
+      return { ok: true, value: { skipped: skipped } };
+    });
+    return r === null ? null : r.value;
   }
 
   /**
@@ -1448,20 +1485,16 @@ const BundleService = (function () {
   }
 
   /**
-   * RE-ROLL — explicit fresh lineup. One bundle (bundleId given) or every non-archived bundle.
-   * Higher churn; for a seasonal reset / new bundle / "give me new wines".
-   * @param {string} [bundleId] - re-roll just this bundle; omit to re-roll all non-archived bundles
-   * @returns {Object} { totalBundles, generated, results: [...] }
+   * RE-ROLL — explicit fresh lineup for ONE bundle (editor). Higher churn; for a seasonal reset /
+   * new bundle / "give me new wines". There is no all-bundle re-roll (BUNDLE_PULL_FIX_PLAN §4E).
+   * @param {string} bundleId - the bundle to re-roll (required)
+   * @returns {Object} { totalBundles, generated, results: [...] } (or { error })
    */
   function rerollBundles(bundleId) {
     const fnName = 'rerollBundles';
-    let bundles;
-    if (bundleId) {
-      const b = getBundle(bundleId);
-      bundles = b ? [b] : [];
-    } else {
-      bundles = _loadBundles().filter(b => b.status !== 'Archived');
-    }
+    if (!bundleId) return { error: 'Re-roll needs a bundle.', totalBundles: 0, generated: 0, results: [] };
+    const found = getBundle(bundleId);
+    const bundles = found ? [found] : [];
     // Build the eligible-products context ONCE for the run (shared across all bundles' slot picks).
     const inv = _buildBundleInventoryContext();
     const genCtx = inv ? inv.ctx : null;
@@ -2043,6 +2076,212 @@ const BundleService = (function () {
     return rows;
   }
 
+  // =====================================================
+  // SAFE BULK WRITE (BUNDLE_PULL_FIX_PLAN §4E)
+  // =====================================================
+
+  // Cell value normalized for the non-target assertion: Dates by time, everything else as text
+  // (sheet ids come back as numbers).
+  function _normCell(v) {
+    return (v instanceof Date) ? 'D' + v.getTime() : String(v == null ? '' : v);
+  }
+
+  /**
+   * Merges target bundles into the current sheet rows. Pure.
+   * Bundles: a target row replaces the row with the same id (in place) or is appended.
+   * Slots: for each id in slotRowsById, all that bundle's slot rows are dropped and the new rows are
+   * inserted where its first old row was (appended if it had none). Ids only in bundleRowsById keep
+   * their slots. Every non-target row keeps its content and relative order.
+   */
+  function mergeReplace(bundleRows, slotRows, bundleRowsById, slotRowsById, bundleCols, slotCols) {
+    const idOf = function (r, col) { return String(r[col] == null ? '' : r[col]).trim(); };
+    const bTargets = Object.keys(bundleRowsById || {});
+    const sTargets = Object.keys(slotRowsById || {});
+    const placed = {};
+    const outB = bundleRows.map(function (r) {
+      const id = idOf(r, bundleCols.sb_BundleId);
+      if (id && bundleRowsById[id] && !placed[id]) { placed[id] = true; return bundleRowsById[id]; }
+      return r;
+    });
+    bTargets.forEach(function (id) { if (!placed[id]) outB.push(bundleRowsById[id]); });
+
+    const outS = [];
+    const inserted = {};
+    slotRows.forEach(function (r) {
+      const id = idOf(r, slotCols.sbs_BundleId);
+      if (id && slotRowsById[id]) {
+        if (!inserted[id]) { inserted[id] = true; slotRowsById[id].forEach(function (x) { outS.push(x); }); }
+        return;
+      }
+      outS.push(r);
+    });
+    sTargets.forEach(function (id) { if (!inserted[id]) slotRowsById[id].forEach(function (x) { outS.push(x); }); });
+    return { bundleRows: outB, slotRows: outS };
+  }
+
+  /**
+   * First difference between the non-target rows of two row sets ('' when identical). Pure.
+   * @param {Object} targetSet - {bundleId:true} rows to ignore
+   */
+  function nonTargetDiff(before, after, idCol, targetSet) {
+    const keep = function (rows) {
+      return rows.filter(function (r) { return !targetSet[String(r[idCol] == null ? '' : r[idCol]).trim()]; });
+    };
+    const a = keep(before), b = keep(after);
+    if (a.length !== b.length) return `non-target row count ${a.length} → ${b.length}`;
+    for (let i = 0; i < a.length; i++) {
+      for (let c = 0; c < a[i].length; c++) {
+        if (_normCell(a[i][c]) !== _normCell(b[i][c])) return `row for bundle ${a[i][idCol]} changed (column ${c + 1})`;
+      }
+    }
+    return '';
+  }
+
+  /**
+   * The only bulk rewrite of SysBundles/SysBundleSlots (Pull create/rename, Restore to web version).
+   * Reads both sheets fresh, substitutes the targets (mergeReplace), writes, clears trailing rows,
+   * then re-reads and asserts every non-target row is unchanged; on mismatch writes the pre-write
+   * contents back and throws. Caller holds the bundles-write lock.
+   */
+  function _replaceBundles(bundleRowsById, slotRowsById) {
+    const functionName = '_replaceBundles';
+    bundleRowsById = bundleRowsById || {};
+    slotRowsById = slotRowsById || {};
+    const bundleCols = _getBundleColumnIndices();
+    const slotCols = _getSlotColumnIndices();
+    const bW = Object.keys(bundleCols).length;
+    const sW = Object.keys(slotCols).length;
+    const bSheet = _getBundlesSheet();
+    const sSheet = _getSlotsSheet();
+    if (!bSheet || !sSheet) throw new Error('SysBundles or SysBundleSlots sheet not found');
+
+    const readRows = function (sheet, w) {
+      const last = sheet.getLastRow();
+      return last > 1 ? sheet.getRange(2, 1, last - 1, w).getValues() : [];
+    };
+    const writeRows = function (sheet, w, rows, oldCount) {
+      if (rows.length) sheet.getRange(2, 1, rows.length, w).setValues(rows);
+      if (oldCount > rows.length) sheet.getRange(2 + rows.length, 1, oldCount - rows.length, w).clearContent();
+    };
+
+    const beforeB = readRows(bSheet, bW);
+    const beforeS = readRows(sSheet, sW);
+    const merged = mergeReplace(beforeB, beforeS, bundleRowsById, slotRowsById, bundleCols, slotCols);
+    writeRows(bSheet, bW, merged.bundleRows, beforeB.length);
+    writeRows(sSheet, sW, merged.slotRows, beforeS.length);
+    SpreadsheetApp.flush();
+    clearCache();
+
+    const targets = {};
+    Object.keys(bundleRowsById).concat(Object.keys(slotRowsById)).forEach(function (id) { targets[id] = true; });
+    // Trailing cleared rows read back blank; drop all-blank rows before comparing.
+    const nonBlank = function (rows) { return rows.filter(function (r) { return r.some(function (v) { return _normCell(v) !== ''; }); }); };
+    const problem = nonTargetDiff(nonBlank(beforeB), nonBlank(readRows(bSheet, bW)), bundleCols.sb_BundleId, targets) ||
+                    nonTargetDiff(nonBlank(beforeS), nonBlank(readRows(sSheet, sW)), slotCols.sbs_BundleId, targets);
+    if (problem) {
+      const afterBLen = bSheet.getLastRow() - 1, afterSLen = sSheet.getLastRow() - 1;
+      writeRows(bSheet, bW, beforeB, Math.max(afterBLen, 0));
+      writeRows(sSheet, sW, beforeS, Math.max(afterSLen, 0));
+      SpreadsheetApp.flush();
+      clearCache();
+      LoggerService.error(SERVICE_NAME, functionName, 'Non-target bundle rows changed; pre-write contents restored. ' + problem);
+      throw new Error('Bundle write aborted and rolled back: ' + problem);
+    }
+    LoggerService.info(SERVICE_NAME, functionName, `Replaced bundle(s) ${Object.keys(targets).join(', ')}`);
+  }
+
+  // =====================================================
+  // RESTORE TO WEB VERSION (BUNDLE_PULL_FIX_PLAN §4D)
+  // =====================================================
+
+  const CRITERIA_COLS = ['sbs_Category', 'sbs_Category2', 'sbs_PriceMin', 'sbs_PriceMax', 'sbs_Intensity',
+    'sbs_Complexity', 'sbs_Acidity', 'sbs_NameContains', 'sbs_Exclusive'];
+
+  /**
+   * Slot rows for Restore to web version. Pure. Rebuilt from the bundle's web woosb; each web
+   * product slot carries criteria from an existing slot matched by woosb token (slot id with
+   * `<bundleId>-` stripped), else by SKU; each existing slot is used at most once. History carries
+   * over: when the SKU changes, the open entry is closed and a "Restore to web version" entry is
+   * appended. sbs_LastRotated carries over. Unmatched web slots get blank criteria and '[]' history.
+   * @param {string} bundleId
+   * @param {Object} web - WebBundles row
+   * @param {Array<Array>} existingSlotRows - this bundle's current SysBundleSlots rows
+   * @param {Object} slotCols
+   * @param {string} nowIso
+   */
+  function buildRestoredSlotRows(bundleId, web, existingSlotRows, slotCols, nowIso) {
+    const prefix = String(bundleId) + '-';
+    const products = existingSlotRows.filter(function (r) { return r[slotCols.sbs_SlotType] === 'Product'; });
+    const tokenOf = function (r) {
+      const id = String(r[slotCols.sbs_SlotId] || '');
+      return id.indexOf(prefix) === 0 ? id.substring(prefix.length) : id;
+    };
+    const used = new Set();
+    const carryFn = function (token, sku) {
+      let match = products.find(function (r) { return !used.has(r) && tokenOf(r) === token; });
+      if (!match) match = products.find(function (r) { return !used.has(r) && sku && String(r[slotCols.sbs_ActiveSKU] || '') === sku; });
+      if (!match) return {};
+      used.add(match);
+      const out = {};
+      CRITERIA_COLS.forEach(function (c) { if (slotCols[c] !== undefined) out[c] = match[slotCols[c]]; });
+      out.sbs_LastRotated = match[slotCols.sbs_LastRotated];
+      let history = [];
+      try { history = JSON.parse(match[slotCols.sbs_HistoryJson] || '[]'); } catch (e) { history = []; }
+      if (!Array.isArray(history)) history = [];
+      if (String(match[slotCols.sbs_ActiveSKU] || '') !== sku) {
+        const last = history[history.length - 1];
+        if (last && !last.end) last.end = nowIso;
+        history.push({ sku: sku, start: nowIso, end: null, reason: 'Restore to web version' });
+      }
+      out.sbs_HistoryJson = JSON.stringify(history);
+      return out;
+    };
+    return _slotRowsFromWoosb(String(bundleId), web.wb_WoosbIdsEn, web.wb_WoosbIdsHe, slotCols, carryFn);
+  }
+
+  /**
+   * Restore to web version (§4D): refresh the snapshot (so an export since the last Pull isn't
+   * undone), then rebuild the bundle's slots from its WebBundles row. Keeps sb_MinTotal/MaxTotal/
+   * LastGenerated and status; clears sb_GenFlags. Touches only this bundle.
+   * @param {string} bundleId
+   * @returns {{success:boolean, message:string, slotCount?:number}}
+   */
+  function restoreToWebVersion(bundleId) {
+    const functionName = 'restoreToWebVersion';
+    bundleId = String(bundleId || '').trim();
+    if (!bundleId) return { success: false, message: 'No bundle selected.' };
+    const snap = _fetchWebSnapshot();
+    if (!snap.ok) return { success: false, message: snap.error };
+
+    const locked = LockHelpers.withScriptLock('bundles-write', 30000, function () {
+      clearCache();
+      _writeWebBundles(snap.rows);
+      const web = snap.rows.find(function (w) { return w.wb_BundleId === bundleId; });
+      if (!web) return { ok: true, value: { success: false, message: `Bundle ${bundleId} is not on the website; nothing restored.` } };
+
+      const bundleCols = _getBundleColumnIndices();
+      const slotCols = _getSlotColumnIndices();
+      const bSheet = _getBundlesSheet(), sSheet = _getSlotsSheet();
+      const bRows = bSheet.getLastRow() > 1 ? bSheet.getRange(2, 1, bSheet.getLastRow() - 1, Object.keys(bundleCols).length).getValues() : [];
+      const sRows = sSheet.getLastRow() > 1 ? sSheet.getRange(2, 1, sSheet.getLastRow() - 1, Object.keys(slotCols).length).getValues() : [];
+      const bRow = bRows.find(function (r) { return String(r[bundleCols.sb_BundleId]).trim() === bundleId; });
+      if (!bRow) return { ok: true, value: { success: false, message: `Bundle ${bundleId} not found in jlmops.` } };
+
+      const newSlots = buildRestoredSlotRows(bundleId, web,
+        sRows.filter(function (r) { return String(r[slotCols.sbs_BundleId]).trim() === bundleId; }),
+        slotCols, new Date().toISOString());
+      const row = bRow.slice();
+      if (bundleCols.sb_GenFlags !== undefined) row[bundleCols.sb_GenFlags] = '';
+      const byId = {}; byId[bundleId] = row;
+      const slotsById = {}; slotsById[bundleId] = newSlots;
+      _replaceBundles(byId, slotsById);
+      return { ok: true, value: { success: true, message: `Restored ${web.wb_NameEn || bundleId} to the website version (${newSlots.length} slots).`, slotCount: newSlots.length } };
+    });
+    if (locked === null) return { success: false, message: 'Bundles are busy (another bundle action is running). Try again in a moment.' };
+    LoggerService.info(SERVICE_NAME, functionName, locked.value.message);
+    return locked.value;
+  }
+
   /**
    * Pull from Web (§4B): refresh WebBundles, then create web bundles missing from ops and update
    * names on existing ones. Never changes an existing composition or status, never writes
@@ -2104,7 +2343,7 @@ const BundleService = (function () {
   }
 
   // =====================================================
-  // PUBLIC API: Import from WooCommerce
+  // woosb_ids parsing
   // =====================================================
 
   /**
@@ -2141,319 +2380,6 @@ const BundleService = (function () {
       LoggerService.warn(SERVICE_NAME, functionName, `Invalid woosb_ids JSON (${lang}) for bundle ${bundleId}: ${e.message}. Preview: ${preview}`);
       return {};
     }
-  }
-
-  /**
-   * Parses woosb_ids JSON and creates/updates bundle structure.
-   * @param {string} bundleId - WooCommerce product ID for the bundle
-   * @param {string} woosbIdsJson - JSON string from Meta: woosb_ids field (English)
-   * @param {Object} bundleInfo - Additional bundle info {nameEn, nameHe, type, woosbIdsJsonHe}
-   * @returns {Object} Created/updated bundle with slots
-   */
-  function importBundleFromWooCommerce(bundleId, woosbIdsJson, bundleInfo = {}) {
-    const functionName = 'importBundleFromWooCommerce';
-
-    // Parse English woosb_ids
-    const woosbData = _parseWoosbJson(woosbIdsJson, bundleId, 'en');
-    const entryCount = Object.keys(woosbData).length;
-    if (entryCount > 0) {
-      LoggerService.info(SERVICE_NAME, functionName, `Parsed ${entryCount} entries from woosb_ids for bundle ${bundleId}`);
-    } else if (!woosbIdsJson || woosbIdsJson === '') {
-      LoggerService.info(SERVICE_NAME, functionName, `Bundle ${bundleId} has empty woosb_ids, creating bundle without slots`);
-    }
-
-    // Parse Hebrew woosb_ids if provided (for text slot translations)
-    const woosbDataHe = _parseWoosbJson(bundleInfo.woosbIdsJsonHe, bundleId, 'he');
-
-    // Create or update bundle
-    let bundle = getBundle(bundleId);
-    if (!bundle) {
-      bundle = createBundle({
-        bundleId: bundleId,
-        nameEn: bundleInfo.nameEn || '',
-        nameHe: bundleInfo.nameHe || '',
-        type: bundleInfo.type || 'Bundle',
-        status: bundleInfo.status || 'Draft'
-      });
-    } else {
-      // Update bundle with new info
-      const updates = {};
-      if (bundleInfo.nameEn) updates.nameEn = bundleInfo.nameEn;
-      if (bundleInfo.nameHe) updates.nameHe = bundleInfo.nameHe;
-      if (bundleInfo.status) updates.status = bundleInfo.status;
-      if (Object.keys(updates).length > 0) {
-        updateBundle(bundleId, updates);
-      }
-    }
-
-    // Preserve existing slot criteria before rebuild (keyed by activeSKU for product slots)
-    const existingSlots = getSlotsForBundle(bundleId);
-    const preservedCriteria = {};
-    existingSlots.forEach(slot => {
-      if (slot.slotType === 'Product' && slot.activeSKU) {
-        preservedCriteria[slot.activeSKU] = {
-          category: slot.category,
-          category2: slot.category2,
-          priceMin: slot.priceMin,
-          priceMax: slot.priceMax,
-          intensity: slot.intensity,
-          complexity: slot.complexity,
-          acidity: slot.acidity,
-          nameContains: slot.nameContains,
-          exclusive: slot.exclusive
-          // qtyVariable intentionally NOT preserved — `optional` is a web-carried field, so
-          // it's re-derived from web each time (Stage 3 fix 2026-06-07). Preserving it froze
-          // ops at the pre-optional state and broke the export diff (all bundles flagged).
-        };
-      }
-    });
-
-    // Delete existing slots to rebuild
-    existingSlots.forEach(slot => deleteSlot(slot.slotId));
-
-    // Parse woosb_ids entries
-    // Format: {"key1": {"type":"h6","text":"..."}, "key2": {"id":"123","sku":"456","qty":"1",...}}
-    const entries = Object.entries(woosbData);
-    let order = 1;
-
-    // Valid text slot types (h1-h6, p, none, span, etc.)
-    const textSlotTypes = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'none', 'span', 'div'];
-
-    // HE section-header text, matched by ORDINAL (not key): WPClever uses different woosb keys
-    // per language, but text slots are parallel-ordered EN/HE (Stage 3 fix 2026-06-07).
-    const heTexts = Object.keys(woosbDataHe || {})
-      .filter(function (k) { const v = woosbDataHe[k] || {}; return v.type !== undefined && v.text !== undefined && v.id === undefined && v.sku === undefined; })
-      .map(function (k) { return (woosbDataHe[k].text || '').trim(); });
-    let heTextIdx = 0;
-
-    for (const [key, value] of entries) {
-      if (value.type && textSlotTypes.includes(value.type.toLowerCase())) {
-        // Text slot — HE text by ordinal (keys differ per language; sections parallel)
-        const textHe = (heTextIdx < heTexts.length) ? heTexts[heTextIdx] : '';
-        heTextIdx++;
-
-        createSlot({
-          slotId: `${bundleId}-${key}`,
-          bundleId: bundleId,
-          order: order,
-          slotType: 'Text',
-          textStyle: value.type,
-          textEn: value.text || '',
-          textHe: textHe
-        });
-      } else if (value.id || value.sku) {
-        // Product slot - restore preserved criteria if available
-        const sku = value.sku || '';
-        const preserved = preservedCriteria[sku] || {};
-
-        createSlot({
-          slotId: `${bundleId}-${key}`,
-          bundleId: bundleId,
-          order: order,
-          slotType: 'Product',
-          activeSKU: sku,
-          defaultQty: (value.qty === '' || value.qty == null) ? 1 : Number(value.qty),
-          qtyVariable: (value.optional === '1'),  // re-derive from web each time; not preserved
-          exclusive: preserved.exclusive || false,
-          // Restore criteria from previous slot (if same SKU was in bundle before)
-          category: preserved.category || '',
-          category2: preserved.category2 || '',
-          priceMin: preserved.priceMin !== undefined ? preserved.priceMin : null,
-          priceMax: preserved.priceMax !== undefined ? preserved.priceMax : null,
-          intensity: preserved.intensity !== undefined ? preserved.intensity : null,
-          complexity: preserved.complexity !== undefined ? preserved.complexity : null,
-          acidity: preserved.acidity !== undefined ? preserved.acidity : null,
-          nameContains: preserved.nameContains || ''
-        });
-      }
-      order++;
-    }
-
-    LoggerService.info(SERVICE_NAME, functionName, `Imported bundle ${bundleId} with ${order - 1} slots`);
-    return getBundleWithSlots(bundleId);
-  }
-
-  /**
-   * Batch reimport — rebuilds SysBundles + SysBundleSlots in 4-6 sheet ops
-   * total (vs ~250 per-row ops in the per-bundle importBundleFromWooCommerce
-   * path). Used by WebAppBundles_reimportAllBundles when refreshing all
-   * bundles after a sync. Preserves per-slot manager-edited criteria
-   * (category / priceMin / intensity / etc.) keyed by (bundleId, sku).
-   *
-   * @param {Array<Object>} bundlesInput — pre-collected bundle metadata,
-   *   each { bundleId, nameEn, nameHe, type, status, woosbIds, woosbIdsHe }.
-   *   Caller (WebAppBundles_reimportAllBundles) extracts from WebProdM/WebXltM.
-   * @returns {Object} { imported, failed, slotCount }
-   */
-  function reimportAllBundlesBatch(bundlesInput) {
-    const functionName = 'reimportAllBundlesBatch';
-
-    const bundlesSheet = _getBundlesSheet();
-    const slotsSheet = _getSlotsSheet();
-    if (!bundlesSheet || !slotsSheet) {
-      throw new Error('SysBundles or SysBundleSlots sheet not found');
-    }
-
-    const bundleCols = _getBundleColumnIndices();
-    const slotCols = _getSlotColumnIndices();
-    const bundleColCount = Object.keys(bundleCols).length;
-    const slotColCount = Object.keys(slotCols).length;
-
-    // 1. Read existing slots once → preservedCriteria by (bundleId, sku).
-    const existingSlotsData = slotsSheet.getDataRange().getValues();
-    const preservedByBundleSku = {};
-    for (let i = 1; i < existingSlotsData.length; i++) {
-      const row = existingSlotsData[i];
-      if (row[slotCols.sbs_SlotType] !== 'Product') continue;
-      const bundleId = row[slotCols.sbs_BundleId];
-      const sku = row[slotCols.sbs_ActiveSKU];
-      if (!bundleId || !sku) continue;
-      if (!preservedByBundleSku[bundleId]) preservedByBundleSku[bundleId] = {};
-      preservedByBundleSku[bundleId][sku] = {
-        category: row[slotCols.sbs_Category],
-        category2: row[slotCols.sbs_Category2],
-        priceMin: row[slotCols.sbs_PriceMin],
-        priceMax: row[slotCols.sbs_PriceMax],
-        intensity: row[slotCols.sbs_Intensity],
-        complexity: row[slotCols.sbs_Complexity],
-        acidity: row[slotCols.sbs_Acidity],
-        nameContains: row[slotCols.sbs_NameContains],
-        exclusive: row[slotCols.sbs_Exclusive] === 'TRUE'
-        // qtyVariable NOT preserved — re-derived from web `optional` each run (Stage 3 fix 2026-06-07)
-      };
-    }
-
-    // 1b. Read existing BUNDLE rows → preserve the jlmops-owned, NON-web-derived fields by bundleId.
-    //     The rebuild below sources name/type/status from web, but the Stage 7 price band
-    //     (sb_MinTotal/sb_MaxTotal) and generation metadata (sb_LastGenerated/sb_GenFlags) have NO web
-    //     source — without this they'd be wiped on every reimport (incl. the daily refresh).
-    const existingBundlesData = bundlesSheet.getDataRange().getValues();
-    const preservedBundleById = {};
-    for (let i = 1; i < existingBundlesData.length; i++) {
-      const row = existingBundlesData[i];
-      const bid = row[bundleCols.sb_BundleId];
-      if (!bid) continue;
-      preservedBundleById[bid] = {
-        minTotal: bundleCols.sb_MinTotal !== undefined ? row[bundleCols.sb_MinTotal] : '',
-        maxTotal: bundleCols.sb_MaxTotal !== undefined ? row[bundleCols.sb_MaxTotal] : '',
-        lastGenerated: bundleCols.sb_LastGenerated !== undefined ? row[bundleCols.sb_LastGenerated] : '',
-        genFlags: bundleCols.sb_GenFlags !== undefined ? row[bundleCols.sb_GenFlags] : ''
-      };
-    }
-
-    // 2. Build new rows entirely in memory.
-    const textSlotTypes = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'none', 'span', 'div'];
-    const newBundleRows = [];
-    const newSlotRows = [];
-    let imported = 0;
-    let failed = 0;
-
-    for (const b of bundlesInput) {
-      try {
-        const woosbData = _parseWoosbJson(b.woosbIds, b.bundleId, 'en');
-        const woosbDataHe = _parseWoosbJson(b.woosbIdsHe, b.bundleId, 'he');
-
-        const bundleRow = new Array(bundleColCount).fill('');
-        bundleRow[bundleCols.sb_BundleId] = b.bundleId;
-        bundleRow[bundleCols.sb_NameEn] = b.nameEn || '';
-        bundleRow[bundleCols.sb_NameHe] = b.nameHe || '';
-        bundleRow[bundleCols.sb_Type] = b.type || 'Bundle';
-        bundleRow[bundleCols.sb_Status] = b.status || 'Draft';
-        bundleRow[bundleCols.sb_DiscountPrice] = '';
-        // Carry the jlmops-owned, non-web fields through the rebuild (Stage 7 band + gen metadata).
-        const pb = preservedBundleById[b.bundleId];
-        if (pb) {
-          if (bundleCols.sb_MinTotal !== undefined) bundleRow[bundleCols.sb_MinTotal] = pb.minTotal;
-          if (bundleCols.sb_MaxTotal !== undefined) bundleRow[bundleCols.sb_MaxTotal] = pb.maxTotal;
-          if (bundleCols.sb_LastGenerated !== undefined) bundleRow[bundleCols.sb_LastGenerated] = pb.lastGenerated;
-          if (bundleCols.sb_GenFlags !== undefined) bundleRow[bundleCols.sb_GenFlags] = pb.genFlags;
-        }
-        newBundleRows.push(bundleRow);
-
-        const preserved = preservedByBundleSku[b.bundleId] || {};
-        const entries = Object.entries(woosbData);
-        let order = 1;
-
-        // HE section-header text matched by ORDINAL (keys differ per language; sections parallel).
-        const heTexts = Object.keys(woosbDataHe || {})
-          .filter(function (k) { const v = woosbDataHe[k] || {}; return v.type !== undefined && v.text !== undefined && v.id === undefined && v.sku === undefined; })
-          .map(function (k) { return (woosbDataHe[k].text || '').trim(); });
-        let heTextIdx = 0;
-
-        for (const [key, value] of entries) {
-          const slotRow = new Array(slotColCount).fill('');
-          slotRow[slotCols.sbs_SlotId] = `${b.bundleId}-${key}`;
-          slotRow[slotCols.sbs_BundleId] = b.bundleId;
-          slotRow[slotCols.sbs_Order] = order;
-          slotRow[slotCols.sbs_HistoryJson] = '[]';
-
-          if (value.type && textSlotTypes.includes(value.type.toLowerCase())) {
-            slotRow[slotCols.sbs_SlotType] = 'Text';
-            slotRow[slotCols.sbs_TextStyle] = value.type;
-            slotRow[slotCols.sbs_TextEn] = value.text || '';
-            slotRow[slotCols.sbs_TextHe] = (heTextIdx < heTexts.length) ? heTexts[heTextIdx] : '';
-            heTextIdx++;
-            slotRow[slotCols.sbs_DefaultQty] = 1;
-            newSlotRows.push(slotRow);
-          } else if (value.id || value.sku) {
-            const sku = value.sku || '';
-            const pcrit = preserved[sku] || {};
-            slotRow[slotCols.sbs_SlotType] = 'Product';
-            slotRow[slotCols.sbs_ActiveSKU] = sku;
-            slotRow[slotCols.sbs_DefaultQty] = (value.qty === '' || value.qty == null) ? 1 : Number(value.qty);
-            slotRow[slotCols.sbs_QtyVariable] = (value.optional === '1') ? 'TRUE' : '';
-            slotRow[slotCols.sbs_Exclusive] = pcrit.exclusive ? 'TRUE' : '';
-            slotRow[slotCols.sbs_Category] = pcrit.category || '';
-            slotRow[slotCols.sbs_Category2] = pcrit.category2 || '';
-            slotRow[slotCols.sbs_PriceMin] = (pcrit.priceMin !== null && pcrit.priceMin !== undefined && pcrit.priceMin !== '') ? pcrit.priceMin : '';
-            slotRow[slotCols.sbs_PriceMax] = (pcrit.priceMax !== null && pcrit.priceMax !== undefined && pcrit.priceMax !== '') ? pcrit.priceMax : '';
-            slotRow[slotCols.sbs_Intensity] = (pcrit.intensity !== null && pcrit.intensity !== undefined && pcrit.intensity !== '') ? pcrit.intensity : '';
-            slotRow[slotCols.sbs_Complexity] = (pcrit.complexity !== null && pcrit.complexity !== undefined && pcrit.complexity !== '') ? pcrit.complexity : '';
-            slotRow[slotCols.sbs_Acidity] = (pcrit.acidity !== null && pcrit.acidity !== undefined && pcrit.acidity !== '') ? pcrit.acidity : '';
-            slotRow[slotCols.sbs_NameContains] = pcrit.nameContains || '';
-            newSlotRows.push(slotRow);
-          }
-          // else: empty / unknown entry — skip but advance order.
-          order++;
-        }
-        imported++;
-      } catch (e) {
-        LoggerService.warn(SERVICE_NAME, functionName, `Failed bundle ${b.bundleId}: ${e.message}`);
-        failed++;
-      }
-    }
-
-    // 3. Clear existing data rows + batch write the new ones.
-    const oldBundlesLast = bundlesSheet.getLastRow();
-    const oldSlotsLast = slotsSheet.getLastRow();
-    if (oldBundlesLast > 1) {
-      bundlesSheet.getRange(2, 1, oldBundlesLast - 1, bundlesSheet.getLastColumn()).clearContent();
-    }
-    if (oldSlotsLast > 1) {
-      slotsSheet.getRange(2, 1, oldSlotsLast - 1, slotsSheet.getLastColumn()).clearContent();
-    }
-    if (newBundleRows.length > 0) {
-      bundlesSheet.getRange(2, 1, newBundleRows.length, bundleColCount).setValues(newBundleRows);
-    }
-    if (newSlotRows.length > 0) {
-      slotsSheet.getRange(2, 1, newSlotRows.length, slotColCount).setValues(newSlotRows);
-    }
-    // Trim trailing rows so the sheet doesn't grow over time.
-    const newBundlesLast = 1 + newBundleRows.length;
-    const newSlotsLast = 1 + newSlotRows.length;
-    if (oldBundlesLast > newBundlesLast) {
-      bundlesSheet.deleteRows(newBundlesLast + 1, oldBundlesLast - newBundlesLast);
-    }
-    if (oldSlotsLast > newSlotsLast) {
-      slotsSheet.deleteRows(newSlotsLast + 1, oldSlotsLast - newSlotsLast);
-    }
-    SpreadsheetApp.flush();
-    clearCache();
-
-    LoggerService.info(SERVICE_NAME, functionName,
-      `Batch reimport complete. Bundles: ${imported}, slots: ${newSlotRows.length}, failed: ${failed}`);
-
-    return { imported: imported, failed: failed, slotCount: newSlotRows.length };
   }
 
   /**
@@ -2881,18 +2807,20 @@ const BundleService = (function () {
     maintainBundle: maintainBundle,
     rerollBundles: rerollBundles,
 
-    // Import / Duplicate
-    importBundleFromWooCommerce: importBundleFromWooCommerce,
-    reimportAllBundlesBatch: reimportAllBundlesBatch,
+    // Duplicate
     duplicateBundle: duplicateBundle,
 
-    // Web snapshot + Pull from Web (BUNDLE_PULL_FIX_PLAN §4A-C)
+    // Web snapshot + Pull from Web + Restore (BUNDLE_PULL_FIX_PLAN §4A-D)
     pullFromWeb: pullFromWeb,
+    restoreToWebVersion: restoreToWebVersion,
     getWebSnapshotRow: getWebSnapshotRow,
     getWebSnapshotTime: getWebSnapshotTime,
     // Pure helpers, exposed for TestRunner / local checks
     buildSnapshotRows: buildSnapshotRows,
     planPull: planPull,
+    mergeReplace: mergeReplace,
+    nonTargetDiff: nonTargetDiff,
+    buildRestoredSlotRows: buildRestoredSlotRows,
 
     // Authoring export (Stage 3) — slots -> WPClever woosb_ids JSON per language
     exportBundleWoosb: exportBundleWoosb,

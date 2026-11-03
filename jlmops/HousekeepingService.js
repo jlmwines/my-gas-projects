@@ -779,8 +779,8 @@ function HousekeepingService() {
     // Phase 3: Service Data Updates (wrapped to track failures)
     const phase3Failures = [];
     const phase3Tasks = [
-      { name: 'refreshBundleComposition', fn: () => WebAppBundles_reimportAllBundles() },
-      { name: 'refreshBundlePushStatus', fn: () => this.refreshBundlePushStatus() },
+      // No bundle work here (BUNDLE_PULL_FIX_PLAN §4I): the admin's Pull from Web refreshes the
+      // snapshot + push status; deficiency checking is Review's job.
       { name: 'pullMailchimpSubscribers', fn: () => ContactImportService.importFromMailchimpApi() },
       { name: 'pullMailchimpCampaigns', fn: () => CampaignService.pullRecentCampaigns() },
       // Weekly: campaigns usually go out Tuesday evening, so the Wednesday-night run

@@ -278,8 +278,8 @@ const WooApiService = (function() {
 
   /**
    * Fetch ONLY bundle (woosb) products for a language — WC REST `type=woosb`. Tens of products, not
-   * the full catalog; used by the fast bundles-only refresh (BUNDLE_PLAN Stage 5). Returns [] if the
-   * type filter yields nothing (caller treats that as "nothing to update", not an error).
+   * the full catalog; used by BundleService's WebBundles snapshot refresh. Does not re-check p.type:
+   * the snapshot builder rejects any non-woosb product and treats an empty result as an abort.
    * @param {string} lang - 'en' | 'he'
    * @returns {Array} API product objects
    */
