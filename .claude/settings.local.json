@@ -133,7 +133,8 @@
       "Bash(php *)",
       "Read(//c/Users/B/.local/bin/**)",
       "Read(//c/Users/B/.local/share/claude/versions/**)",
-      "WebFetch(domain:www.jpost.com)"
+      "WebFetch(domain:www.jpost.com)",
+      "Bash(git *)"
     ],
     "deny": [
       "Bash(git -C:*)",
