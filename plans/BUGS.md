@@ -15,8 +15,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 ### Open
 
 - [ ] 2026-11-02: Heter Mechira = 1 shows no red text in descriptions; check accepted only `true`; short desc never added it. Fixed @604; 61 live products corrected via API 2026-11-02.
-- [ ] 2026-10-30: Bundle editor "Update from web" wiped all other bundles (13 of 14); Pull from Web can't restore. `jlmops/plans/BUNDLE_PULL_FIX_PLAN.md`.
-- [ ] 2026-10-30: Re-roll/Maintain fills "any category" slots with non-wine products. `jlmops/plans/BUNDLE_PULL_FIX_PLAN.md`.
 - [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS skipped the first data row; row numbers off by one. Fixed @597, verify on next housekeeping run.
 - [ ] 2026-10-23: Stale failure alerts stay on Admin dash. Fixed @599; verify live, clean up old ones. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
 - [ ] 2026-10-13: Welcome-outreach tasks fired for first-time gift purchasers. Fixed @597 (first order a gift = no welcome); verify on next real gift order.
@@ -33,7 +31,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
 - [ ] 2026-08-21: Daily maintenance phase 1 missed steps that catch and return false. Fixed @598 (normal skips return 'skipped'); verify Health task after next run.
-- [ ] 2026-10-19 (low): Bundle descriptions never land in `WebProdM.wpm_PostContent`; bundle detail view (`WebAppBundles.js:102`) shows none. WordPress is the only copy.
 - [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead: no UI, no push; site value is pull-only. `jlmops/docs/ARCHITECTURE.md` (WooCommerceFormatter).
 
 ### Resolved (recent)

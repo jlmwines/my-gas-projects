@@ -1,6 +1,6 @@
 # Bundle Web Sync + Slot Category Rules
 
-Replaces the bundle "web → ops" machinery with a safe design: a dedicated web snapshot (`WebBundles`), per-bundle writes that can never touch other bundles, and a required category on every slot ("any wine" is no longer valid). Status: **approved 2026-11-03; building. Step 1 done (live @609, `WebBundles` headed and empty). Steps 2-4 code written and locally checked (not pushed); `BundleServiceTest` covers their pure helpers. Next: code deploy (§7), then step 5 docs.** Prompted by the 2026-10-30 incident (14 bundles wiped to 1, restored by hand from version history).
+Replaces the bundle "web → ops" machinery with a safe design: a dedicated web snapshot (`WebBundles`), per-bundle writes that can never touch other bundles, and a required category on every slot ("any wine" is no longer valid). Status: **built and live @610 (2026-11-03), live checks passed (tests 61/61, Pull, Restore, a real Review → Maintain → Export → Pull cycle); system docs updated (step 5). Last check before archiving: the next 3am housekeeping log shows no bundle tasks. Open data items from §2.7: `WebCat` lists Rosé twice; some `SysCategories` HE names start with a tab.** Prompted by the 2026-10-30 incident (14 bundles wiped to 1, restored by hand from version history).
 
 ## 1. What happened (log-verified, `JLMops_Logs - SysLog` export)
 

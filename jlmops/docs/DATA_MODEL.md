@@ -163,7 +163,7 @@ The following sheets represent the core data model for managing simple products.
     *   **Media/URLs:** `wpm_ProductUrl`, `wpm_Images`, `wpm_ProductPageUrl`
     *   **Taxonomy:** `wpm_TaxProductBrand`, `wpm_TaxProductType`, `wpm_TaxProductVisibility`, `wpm_TaxProductCat`, `wpm_TaxProductTag`
     *   **SEO (RankMath):** `wpm_MetaRankMathDesc`, `wpm_MetaRankMathKeyword`
-    *   **Bundles (Woosb), 17 fields:** `wpm_WoosbAfterText`, `wpm_WoosbBeforeText`, `wpm_WoosbCustomPrice`, `wpm_WoosbDisableAutoPrice`, `wpm_WoosbDiscount`, `wpm_WoosbDiscountAmount`, `wpm_WoosbExcludeUnpurch`, `wpm_WoosbIds`, `wpm_WoosbLayout`, `wpm_WoosbLimitEachMax`, `wpm_WoosbLimitEachMin`, `wpm_WoosbLimitEachMinDef`, `wpm_WoosbLimitWholeMax`, `wpm_WoosbLimitWholeMin`, `wpm_WoosbManageStock`, `wpm_WoosbOptionalProducts`, `wpm_WoosbShippingFee`, `wpm_WoosbTotalLimits`, `wpm_WoosbTotalLimitsMax`, `wpm_WoosbTotalLimitsMin`
+    *   **Bundles (Woosb), product data only** (bundle code reads web bundle state from `WebBundles`, not these): `wpm_WoosbAfterText`, `wpm_WoosbBeforeText`, `wpm_WoosbCustomPrice`, `wpm_WoosbDisableAutoPrice`, `wpm_WoosbDiscount`, `wpm_WoosbDiscountAmount`, `wpm_WoosbExcludeUnpurch`, `wpm_WoosbIds`, `wpm_WoosbLayout`, `wpm_WoosbLimitEachMax`, `wpm_WoosbLimitEachMin`, `wpm_WoosbLimitEachMinDef`, `wpm_WoosbLimitWholeMax`, `wpm_WoosbLimitWholeMin`, `wpm_WoosbManageStock`, `wpm_WoosbOptionalProducts`, `wpm_WoosbShippingFee`, `wpm_WoosbTotalLimits`, `wpm_WoosbTotalLimitsMax`, `wpm_WoosbTotalLimitsMin`
     *   **Tasting/custom attributes** (each a name/data/default triplet — WooCommerce global-attribute convention): `wpm_AttrAcidity`/`wpm_AttrDataAcidity`/`wpm_AttrDefaultAcidity`, `wpm_AttrComplexity`/`wpm_AttrDataComplexity`/`wpm_AttrDefaultComplexity`, `wpm_AttrFoodContrast`/`wpm_AttrDataFoodContrast`/`wpm_AttrDefaultFoodContrast`, `wpm_AttrFoodHarmony`/`wpm_AttrDataFoodHarmony`/`wpm_AttrDefaultFoodHarmony`, `wpm_AttrIntensity`/`wpm_AttrDataIntensity`/`wpm_AttrDefaultIntensity`, `wpm_AttrWinery`/`wpm_AttrDataWinery`/`wpm_AttrDefaultWinery`
     *   **Computed (jlmops-appended, not part of the WebToffee format):** `wpm_ProfitRate` — see §3 "Supporting profit fields" below for its calculation/preserve-only rule.
 
@@ -247,22 +247,22 @@ The following sheets represent the core data model for managing simple products.
 
 ## Bundle Management Data Model
 
-JLMops is a **shadow-then-authoring system** for WooCommerce (WPClever) bundles: composition is re-derived from WC into `SysBundles`/`SysBundleSlots`, authored/generated here, then exported back via WPClever's import (WC stays system of record for now). Full behavior — the generator, Maintain vs. Re-roll, deficiency detection — is documented in `WORKFLOWS.md` §15; this section is the schema.
+JLMops **authors** WooCommerce (WPClever) bundles: `SysBundles`/`SysBundleSlots` are the only authority for bundle state, edited and generated here, then exported to WPClever by hand. `WebBundles` is a read-only mirror of what the website currently has, used for comparison, discount and descriptions. Full behavior — Pull from Web, Restore, the generator, deficiency detection — is in `WORKFLOWS.md` §15; this section is the schema.
 
-A **bundle** (customer-alterable, has qty-0 flexible slots) and a **package** (fixed, taken as shown) are the same underlying model — `sb_Type` is a derived cache of "does this composition have any flexible slots," not an authored field.
+A **bundle** (customer-alterable, has qty-0 flexible slots) and a **package** (fixed, taken as shown) are the same underlying model.
 
 ### 1. `SysBundles` (Bundle Header)
 *   **Purpose:** Header + price-band + generation metadata for one bundle/package.
 *   **Prefix:** `sb_`
 *   **Columns:**
     *   `sb_BundleId`: **Primary Key.** The WooCommerce Product ID (EN).
-    *   `sb_NameEn` / `sb_NameHe`: Display name — web-derived, read-only here (re-populated by Update Composition; never written by the editor or generator).
-    *   `sb_Type`: `'Bundle'` (has flexible slots) or `'Package'` (fixed) — derived from composition, not authored.
-    *   `sb_Status`: `'Active'`, `'Draft'`, `'Archived'`.
+    *   `sb_NameEn` / `sb_NameHe`: Display name — web-derived, read-only here (updated by Pull from Web from the website names; never written by the editor or generator).
+    *   `sb_Type`: defaults to `'Bundle'` (createBundle default; Pull-created bundles get `'Bundle'`). Not derived from composition and no generator/export logic reads it.
+    *   `sb_Status`: `'Active'`, `'Draft'`, `'Archived'`. Owned by jlmops; Pull from Web sets it only when creating a bundle (website `publish` → Active, else Draft). Archived bundles are skipped by Export and by the missing-from-web check.
     *   `sb_DiscountPrice`: WC-managed discount, if any; read here for as-presented price/profit.
     *   `sb_MinTotal` / `sb_MaxTotal`: Price band (₪) the generator's fill targets — floor (e.g. free-shipping threshold) and ceiling/budget. Either may be blank (no floor / no ceiling). `sb_MinTotal ≤ sb_MaxTotal` enforced on save.
     *   `sb_LastGenerated`: Timestamp of the last Maintain/Re-roll run.
-    *   `sb_GenFlags`: Semicolon-separated result of that run's **post-run self-check** (see WORKFLOWS.md §15.4) — not the generator's own internal bookkeeping. Empty only when the real deficiency test agrees the bundle is clean. Format: `below_min:total=X,min=Y` / `above_max:total=X,max=Y` / `<stock|criteria|empty>:<slotId>[:avail=N,min=M][:searched=N,cheapest=P,ceiling=C]`.
+    *   `sb_GenFlags`: Semicolon-separated result of that run's **post-run self-check** (see WORKFLOWS.md §15.4) — not the generator's own internal bookkeeping. Empty only when the real deficiency test agrees the bundle is clean. Format: `below_min:total=X,min=Y` / `above_max:total=X,max=Y` / `<stock|criteria|empty|no_category>:<slotId>[:avail=N,min=M][:searched=N,cheapest=P,ceiling=C]` / `changed_since_pick:<slotId>`.
 
 ### 2. `SysBundleSlots` (Content Blocks + Product Slots)
 *   **Purpose:** The bundle's structure as an ordered sequence of text blocks and product slots. Each row is either a text block (bilingual content) or a product slot (criteria-based). The generator is **structure-preserving** — it swaps the wine in a slot, never adds/removes slots; the operator edits structure by hand.
@@ -277,8 +277,8 @@ A **bundle** (customer-alterable, has qty-0 flexible slots) and a **package** (f
         *   `sbs_ActiveSKU`: The SKU currently assigned.
         *   `sbs_LastRotated`: Timestamp of last product change.
         *   `sbs_HistoryJson`: Rotation history — `[{"sku":"12345","start":"...","end":"...","reason":"..."}]`.
-    *   **For 'Product' Slots — criteria (all optional; blank = unconstrained):**
-        *   `sbs_Category` / `sbs_Category2`: Required product category (e.g. 'Red'); two slots for an AND match.
+    *   **For 'Product' Slots — criteria (category required; the rest optional, blank = unconstrained):**
+        *   `sbs_Category` / `sbs_Category2`: Required product category (e.g. 'Dry Red'); both must match when `sbs_Category2` is set. `sbs_Category` blank is invalid: the slot matches nothing and is flagged `no_category`. A Semi-Dry wine fits only a slot naming Semi-Dry in either column. Pull-created slots arrive blank and must be set by the admin.
         *   `sbs_PriceMin` / `sbs_PriceMax`: Eligible price range. `sbs_PriceMax`, when set, is the slot's hard ceiling (overrides the generator's own running-budget ceiling) and also doubles as the "over-band" deficiency check.
         *   `sbs_Intensity` / `sbs_Complexity` / `sbs_Acidity`: Required attribute level (1-5), exact match.
         *   `sbs_NameContains`: Substring match on product title — the brand/vendor control (JLM product titles begin with the brand, so this is how "Only-in-Israel"-style brand-restricted slots are expressed; no separate brand field exists).
@@ -297,7 +297,12 @@ A **bundle** (customer-alterable, has qty-0 flexible slots) and a **package** (f
 |------------|--------------|-----------|--------------|---------------|--------------|--------------|--------------|-----------------|------------------|
 | SLOT-002 | 12345 | 2 | Product | 44521 | Red | 80 | 150 | 1 | |
 
-### 3. Supporting profit fields (live on `CmxProdM` / `WebProdM`, consumed by bundle scoring)
+### 3. `WebBundles` (website snapshot)
+*   **Purpose:** Mirror of the website's woosb bundles, one row per EN bundle with its HE translation joined by `translations.en`. Rewritten whole by Pull from Web and Restore to web version (each refreshes it first); nothing else writes it. Stored as plain text. Empty = "unknown" (Export refuses, push status untouched).
+*   **Prefix:** `wb_`. **Key:** `wb_BundleId` (EN WC product id = `sb_BundleId`).
+*   **Columns:** `wb_BundleId`, `wb_HeId` (blank if untranslated), `wb_NameEn`, `wb_NameHe`, `wb_Status` (EN WC status), `wb_WoosbIdsEn`, `wb_WoosbIdsHe` (WPClever `woosb_ids` JSON), `wb_Discount`, `wb_DiscountAmount`, `wb_CustomPrice`, `wb_DisableAutoPrice` (EN WOOSB pricing meta, read for the as-presented price), `wb_ShortDescEn`, `wb_LongDescEn`, `wb_ShortDescHe`, `wb_LongDescHe` (editor descriptions), `wb_PulledAt` (shown as "Web snapshot: <time>").
+
+### 4. Supporting profit fields (live on `CmxProdM` / `WebProdM`, consumed by bundle scoring)
 *   `cpm_Cost` (`CmxProdM`, all products): Vendor cost, ex-VAT. Persistent; written by the on-demand cost import (AdminInventory "Product Costs & Margins" card), sourced from a separate Comax cost export. Preserved across the daily sync (master-only, truthiness-keyed).
 *   `wpm_ProfitRate` (`WebProdM`, web products): Cached margin `(exVat − cpm_Cost) / exVat` where `exVat = wpm_RegularPrice / system.pricing.vat_divisor`. **Preserve-only**: recomputed and overwritten whenever a stored `cpm_Cost` exists; otherwise the existing value survives (a manual/assumed backfill — convention `0.25` for unknowns — is never auto-overwritten with a 0). A Comax-only product with no web price has no stored rate; the generator computes one on the fly for that rare case.
 *   `wpm_Featured`: Existing WC "featured" flag (special-buy / high-margin, often high-stock). Read-only scoring input — not a hard filter.

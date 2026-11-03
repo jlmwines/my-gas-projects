@@ -69,11 +69,7 @@ The backend is designed as a collection of services, each exposing global functi
     *   **`OrderService`**: Manages the entire order lifecycle. It handles the import and upsert of order data into the master sheets and is the master controller of the processing state machine in `SysOrdLog`, setting the initial `Eligible` or `Ineligible` status based on defined business rules.
     *   **`PackingSlipService`**: Acts as an enrichment engine. It scans `SysOrdLog` for `Eligible` orders, gathers all necessary data for printing, enriches it with descriptive text, and places the result in `SysPackingCache`. Upon completion, it updates the order's status in `SysOrdLog` to `Ready`.
     *   **`PrintService`**: Handles the final document generation. It reads pre-processed data from `SysPackingCache` for orders marked as `Ready`. For each order, it copies a designated Google Doc template, populates the copy with the order's specific data, and saves the result as a new Google Doc in an output folder. It then completes the workflow by setting the order's status in `SysOrdLog` to `Printed`.
-    *   **`BundleService`**: Manages the entire lifecycle of product bundles. This service uses a rules-based engine defined in the Data Model (`SysBundlesM`, `SysBundleRows`, `SysBundleActiveComponents`). Its primary responsibilities include:
-        *   Monitoring the stock levels of all SKUs listed in `SysBundleActiveComponents`.
-        *   If an active component is low on stock, it consults the eligibility rules for that bundle slot (defined in `SysBundleRows`) to find and suggest suitable replacements.
-        *   Creating tasks via the `TaskService` to alert users to low-stock situations and provide replacement suggestions.
-        *   Logging all component changes to the `SysBundleComponentHistory` sheet to provide a complete audit trail.
+    *   **`BundleService`**: Authors WooCommerce (WPClever) bundles in `SysBundles`/`SysBundleSlots` (the only authority for bundle state) and mirrors the website in the `WebBundles` snapshot. Covers slot criteria and the deficiency test, the Maintain/Re-roll generator (compute-then-write, one locked write per bundle), Pull from Web and Restore to web version (through the `_replaceBundles` safe bulk write, which fails and rolls back if any non-target bundle changes), and the export diff/sheet. Every bundle write runs under the shared script lock, taken only at entry points. Behavior → `WORKFLOWS.md` §15; schema → `DATA_MODEL.md` "Bundle Management Data Model".
     *   `PromotionsEngineService` was never wired in — read a `"Promotions"` sheet that never existed in the schema. Retired dead code (deleted 2026-07-24). No cross-sell/up-sell link generation currently runs during sync.
     *   **`TaskService`**: Manages the creation, updating, and assignment of all tasks (product, content, etc.) in the `TaskQ`.
     *   **`HousekeepingService`**: Contains all logic for scheduled data cleanup and archiving.
@@ -132,7 +128,7 @@ Daily maintenance runs in three phases:
 - Update `task.system.health_status` with results
 
 **Phase 3: Service Updates**
-- `checkBundleHealth()` - Bundle inventory alerts
+- No bundle work: bundle review is manual (Review button); snapshot and push status are refreshed by the admin's Pull from Web.
 - `pullMailchimpSubscribers()` - `ContactImportService.importFromMailchimpApi()`
 - `pullMailchimpCampaigns()` - `CampaignService.pullRecentCampaigns()`
 - `checkBruryaReminder()` - Brurya warehouse reminder
@@ -254,7 +250,7 @@ None of these locks are reentrant or composable across the two pairs — code ho
 
 #### 2.5.4.2. Sync-Active Guard (background work vs. an in-progress sync)
 
-`SyncStateService.isSyncActive()` (stage is set and not `IDLE`/`COMPLETE`/`FAILED`) is the single shared guard against housekeeping or product-pull work running concurrently with a user-driven sync session, replacing hand-copied stage-list checks that had drifted out of sync in three separate places. Applied individually, not as a whole-function gate, to `HousekeepingService.archiveCompletedOrders`/`archiveCompletedTasks`/`purgeOldJobs` and to `WooProductPullService.pullBundleProducts`/`pullProducts`. Building this guard found a third, previously undocumented broken one: `pullProducts` (the main product-pull entry point) had been checking a nonexistent `syncState.currentStage` field instead of `.stage`, so it had silently never fired since it was written.
+`SyncStateService.isSyncActive()` (stage is set and not `IDLE`/`COMPLETE`/`FAILED`) is the single shared guard against housekeeping or product-pull work running concurrently with a user-driven sync session, replacing hand-copied stage-list checks that had drifted out of sync in three separate places. Applied individually, not as a whole-function gate, to `HousekeepingService.archiveCompletedOrders`/`archiveCompletedTasks`/`purgeOldJobs` and to `WooProductPullService.pullProducts` and the bundle snapshot refresh (`BundleService` Pull from Web / Restore). Building this guard found a third, previously undocumented broken one: `pullProducts` (the main product-pull entry point) had been checking a nonexistent `syncState.currentStage` field instead of `.stage`, so it had silently never fired since it was written.
 
 `HousekeepingService.performFrequentMaintenance`'s own top-of-function `isSyncActive()` check can go stale by the time execution reaches its `pullOrders()` call (business-hour math plus a config read happen in between). Rather than lock the whole ~60s+ pull — which would starve `doGet`/`doPost` — it re-checks `isSyncActive()` a second time, fresh, inside a short `withScriptLock` hold, immediately before calling `pullOrders()`, aborting the cycle if a sync started in the gap, then releases the lock before the pull itself runs. A sync starting in the instant between lock release and the pull's first write is an accepted residual risk, the same tradeoff the job-queue locking above already makes for its own inner-service calls.
 
