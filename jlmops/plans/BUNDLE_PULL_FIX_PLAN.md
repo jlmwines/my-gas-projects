@@ -1,6 +1,6 @@
 # Bundle Web Sync + Slot Category Rules
 
-Replaces the bundle "web → ops" machinery with a safe design: a dedicated web snapshot (`WebBundles`), per-bundle writes that can never touch other bundles, and a required category on every slot ("any wine" is no longer valid). Status: **draft; final review and decisions D1-D6 folded in 2026-11-02; D4 prep done; awaiting user approval.** Nothing built. Prompted by the 2026-10-30 incident (14 bundles wiped to 1, restored by hand from version history).
+Replaces the bundle "web → ops" machinery with a safe design: a dedicated web snapshot (`WebBundles`), per-bundle writes that can never touch other bundles, and a required category on every slot ("any wine" is no longer valid). Status: **approved 2026-11-03; building. Step 1 done (live @609, `WebBundles` headed and empty); steps 2-5 not started.** Prompted by the 2026-10-30 incident (14 bundles wiped to 1, restored by hand from version history).
 
 ## 1. What happened (log-verified, `JLMops_Logs - SysLog` export)
 
