@@ -38,7 +38,8 @@
   .pb-daynum { font-size: 11px; color: #6c757d; }
   .pb-pub { display: block; font-size: 11px; font-weight: 600; padding: 1px 4px; margin: 1px 0; border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pb-mark { display: block; font-size: 10px; color: #6c757d; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pb-grid .pb-chip { display: flex; margin: 1px 0; padding: 1px 5px; overflow: hidden; text-overflow: ellipsis; }
+  .pb-grid .pb-chip { display: flex; margin: 1px 0; padding: 1px 5px; overflow: hidden; }
+  .pb-grid .pb-chip .pb-chip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .pb-grid .pb-chip.pb-done { opacity: .55; }
   .pb-more { font-size: 10px; color: #0d6efd; cursor: pointer; }
   @media (max-width: 768px) {
@@ -156,6 +157,7 @@
       // content. Future rows all show; past rows show unless done (a past row
       // with no tasks is overdue, not done). "All" shows everything.
       var visible = rows.filter(function(h) {
+        if (!opts.showHolidays && h.type === 'holiday') return false;
         if (search) {
           var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
           if (hay.indexOf(search) === -1) return false;
@@ -243,7 +245,8 @@
       return PALETTE[order.map[base]];
     }
 
-    function _monthChip(t, openIds, color, pubName) {
+    function _monthChip(t, openIds, color, pub) {
+      var pubName = pub.name || pub.slug || '';
       var closed = TaskWidgets.isClosed(t);
       var label = _label(t);
       var who = t.assignedTo === 'Manager' ? 'M' : (t.assignedTo ? 'A' : '');
@@ -254,7 +257,10 @@
         (t.dueDate ? ' | due ' + esc(TaskWidgets.formatDate(t.dueDate)) : '') + (t.assignedTo ? ' | ' + esc(t.assignedTo) : '');
       return '<span class="' + cls + click + '" style="background:' + color + ';" title="' + tip + '">' +
         (who ? '<span class="pb-who">' + who + '</span> ' : '') +
-        '<span class="pb-chip-text">' + esc(label) + (closed ? ' &#10003;' : '') + '</span></span>';
+        // Content + medium first ("blog FAQ"), then the stage, so two streams
+        // of the same piece (blog FAQ, email FAQ) read apart.
+        '<span class="pb-chip-text"><b>' + esc(pub.type || '') + '</b> ' + esc(pubName) + ' &middot; ' +
+        esc(label) + (closed ? ' &#10003;' : '') + '</span></span>';
     }
 
     function _renderMonth(state, opts, byBase, openIds) {
@@ -271,6 +277,7 @@
 
       (state.holidays || []).slice().sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); })
         .forEach(function(h) {
+          if (!opts.showHolidays && h.type === 'holiday') return;
           if (search) {
             var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
             if (hay.indexOf(search) === -1) return;
@@ -289,7 +296,7 @@
         byBase[base].forEach(function(t) {
           var k = TaskWidgets.formatDate(t.startDate || t.dueDate);
           if (!k) return;   // undated tasks only show on the Rows view
-          day(k).chips.push(_monthChip(t, openIds, color, pub.name || base));
+          day(k).chips.push(_monthChip(t, openIds, color, pub));
         });
       });
 

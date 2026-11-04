@@ -255,6 +255,11 @@
             <button type="button" class="tw-chip active" data-board-filter="open" onclick="PublishingView.switchBoardFilter('open')" title="Undone rows + all future rows">Open</button>
             <button type="button" class="tw-chip" data-board-filter="all" onclick="PublishingView.switchBoardFilter('all')">All</button>
           </span>
+          <span class="small text-muted" style="margin-left:10px;">Holidays:</span>
+          <span style="margin-left:4px;">
+            <button type="button" class="tw-chip" data-board-holidays="show" onclick="PublishingView.switchBoardHolidays('show')">Show</button>
+            <button type="button" class="tw-chip active" data-board-holidays="hide" onclick="PublishingView.switchBoardHolidays('hide')">Hide</button>
+          </span>
         </div>
       </div>
       <div id="pv-board-wrap"><div class="pv-empty">Loading…</div></div>
@@ -489,6 +494,7 @@
       calFilterMode: 'open',
       calShowHolidays: false,
       boardShowAll: false,
+      boardShowHolidays: false,
       boardMode: 'rows',
       boardMonthOffset: 0,
       boardExpandedDay: null,
@@ -701,10 +707,19 @@
       PublishingBoard.render(state, {
         search: searchEl ? searchEl.value : '',
         showAll: state.boardShowAll,
+        showHolidays: state.boardShowHolidays,
         mode: state.boardMode,
         monthOffset: state.boardMonthOffset,
         expandedDay: state.boardExpandedDay
       });
+    }
+
+    function switchBoardHolidays(mode) {
+      state.boardShowHolidays = mode === 'show';
+      document.querySelectorAll('[data-board-holidays]').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-board-holidays') === mode);
+      });
+      renderBoard();
     }
 
     function switchBoardMode(mode) {
@@ -1876,6 +1891,7 @@
       switchTab: switchTab,
       switchBoardFilter: switchBoardFilter,
       switchBoardMode: switchBoardMode,
+      switchBoardHolidays: switchBoardHolidays,
       boardShiftMonth: boardShiftMonth,
       boardExpandDay: boardExpandDay,
       boardJumpToRow: boardJumpToRow,
