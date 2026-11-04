@@ -4,6 +4,9 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-04 — Bundle fix closed out
+- User confirmed 3am housekeeping clean, bundle fix stable. Archived BUNDLE_PULL_FIX_PLAN, deleted local `bundle-rollback` branch, removed STATUS Next Action 0.
+
 ## 2026-11-03 (b) — Bundle web-sync fix shipped; signup message
 - Shipped: jlmops @610 bundle pull fix (WebBundles snapshot, Pull from Web, Restore to web version, safe write + locks, category rules); Update buttons and nightly bundle tasks gone. Live-verified incl. a real Review → Maintain → Export → Pull cycle.
 - Shipped: theme v1.2.33 signup success text "You're on the list" (audience is single opt-in, no confirmation email).

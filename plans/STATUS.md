@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-11-03. Year-over-year review score live @607 (new customers and Israel traffic up ~70% vs a depressed 2025); bundle web-sync fix live @610 and verified (Pull from Web + Restore replace the Update buttons); Golan Heights awaits manager lock.
+**Updated:** 2026-11-04. Bundle web-sync fix @610 stable (clean housekeeping, plan archived); Golan Heights awaits manager lock.
 
 ## At a glance
 
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-11-03 |
+| Last Active | 2026-11-04 |
 | Revenue | Steady |
 | Deploy Version | jlmops @610 · theme v1.2.33 |
 | Deploy Date | jlmops 2026-11-03 · theme 2026-11-03 |
@@ -32,7 +32,6 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
-0. **Bundle web-sync fix — live @610, verified.** Daily cycle: Review → Maintain → Export → Pull from Web (`jlmops/docs/WORKFLOWS.md` §15). Remaining: confirm the next 3am housekeeping log shows no bundle tasks, then archive `jlmops/plans/BUNDLE_PULL_FIX_PLAN.md` and delete the local `bundle-rollback` branch.
 1. **Monthly AYIW email** — October issue (`email-ayiw-2026-10`, "Making Wine - After the Harvest") EN+HE scheduled in Mailchimp for 2026-11-03; HTML at `content/newsletter/2026-10/`, CTA "Read more" to the Wine Talk page. AYIW is becoming a rolling diary post, "Vine, Barrel, Bottle" (`content/plans/VINEYARD_DIARY_PLAN.md`); seasonal vineyard photos and a video link now on hand (`content/vineyard/`, plan Open list).
 2. **Branded shipping cartons — custom-printed plan canceled (2026-07-30); switched to natural brown cartons + a large logo stamp.** The original vendor's shipping cost for custom-printed cartons ran way over the cartons' own cost; after negotiating, that plan was dropped in favor of plain natural-brown cartons with the JLM mark large-stamped on. Size: 6-bottle cartons (user, 2026-10-21). Partner-owned. Track only: nudge in daily review; re-flag if the stamped cartons slip. No Claude action.
 3. **Flyer advertising — Round 1 (Talbiye) done; Round 2 cancelled** (user, 2026-10-21): the website new-visitor popup + `50NEW` discount make another round unnecessary. Plan → `marketing/plans/FLYER_PLAN.md`.
