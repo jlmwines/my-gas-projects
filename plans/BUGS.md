@@ -17,25 +17,26 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-11-02: Heter Mechira = 1 shows no red text in descriptions; check accepted only `true`; short desc never added it. Fixed @604; 61 live products corrected via API 2026-11-02.
 - [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS skipped the first data row; row numbers off by one. Fixed @597, verify on next housekeeping run.
 - [ ] 2026-10-23: Stale failure alerts stay on Admin dash. Fixed @599; verify live, clean up old ones. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
-- [ ] 2026-10-13: Welcome-outreach tasks fired for first-time gift purchasers. Fixed @597 (first order a gift = no welcome); verify on next real gift order.
 - [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`).
 - [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization.
 - [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects — low priority, revisit only if it causes real confusion.
 - [ ] 2026-07-23: `doGet`'s role check is a login gate, not an authorization boundary. `CODE_AUDIT_FIX_SEQUENCE.md` Session R.
 - [ ] 2026-07-20: Admin Products "Correct Product Name" applies with no confirmation step. Fixed @601 (confirm before save); verify live.
-- [ ] 2026-07-16: Dashboard "Schema Validation" indicator doesn't refresh on Admin Dev re-run. Fixed @603 (UI run writes health task); verify.
-- [ ] 2026-07-16: "System Health Status" task date frozen at creation. Fixed @603 (re-dated each run); verify after tonight.
-- [ ] 2026-07-16: Woo Orders heartbeat red overnight/weekends (flat 60-min threshold vs business-hours pull). Fixed @602 (`BusinessHours.js`); verify tomorrow morning.
 - [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates"/"Create Content Tasks". `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
 - [ ] 2026-07-02: `ConfigService.loadConfig` reads only the first key-value pair of non-schema settings (P03-P10 dropped). `jlmops/plans/CONFIG_MULTI_PAIR_PARSE_PLAN.md`.
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
-- [ ] 2026-08-21: Daily maintenance phase 1 missed steps that catch and return false. Fixed @598 (normal skips return 'skipped'); verify Health task after next run.
 - [ ] 2026-08-30: `wdm_IsSoldIndividually` (WebDetM) dead: no UI, no push; site value is pull-only. `jlmops/docs/ARCHITECTURE.md` (WooCommerceFormatter).
 
 ### Resolved (recent)
 
 _One line each; full root-cause analysis lives in the git commit._
+
+- [x] 2026-10-13: Welcome-outreach fired for first-time gift purchasers. Fixed @597, confirmed by user 2026-11-04.
+- [x] 2026-07-16: Schema Validation indicator didn't refresh on Admin Dev re-run. Fixed @603, confirmed by user 2026-11-04.
+- [x] 2026-07-16: System Health Status task date frozen at creation. Fixed @603, re-dated each run (SysTasks export 2026-11-04).
+- [x] 2026-07-16: Woo Orders heartbeat red overnight/weekends. Fixed @602, green 2026-11-04 morning (user).
+- [x] 2026-08-21: Daily maintenance phase 1 counted normal skips as failures. Fixed @598, Health task 2026-11-04 shows no phase failures.
 
 - [x] 2026-10-18: Woo 2xx HTML instead of JSON: 1 hit in 7 days (SiteGround bot page), retry handled it. Closed; @580 logging stays. Ticket SG if frequent.
 - [x] 2026-06-16: Product Replacement read dead `wpm_WebIdEn/He` (blank web IDs, dead web-ID match). Fixed @600, lookup confirmed live 2026-10-27.
