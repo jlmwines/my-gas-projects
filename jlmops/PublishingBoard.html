@@ -1,0 +1,204 @@
+<style>
+  /* Publishing Board (PUBLISHING_BOARD_PLAN.md): one row per calendar row, tasks as chips. */
+  .pb-row {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr) 130px minmax(0, 1fr) 130px;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 4px;
+    border-bottom: 1px solid #f1f3f5;
+  }
+  .pb-head { font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: .03em; border-bottom: 1px solid #dee2e6; }
+  .pb-anchor { background: #f8f9fa; border-radius: 4px; min-height: 28px; padding: 2px; }
+  .pb-lane { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .pb-pub-date { font-size: 12px; color: #6c757d; }
+  .pb-pub-name { font-weight: 600; font-size: 13px; }
+  .pb-pub-type { font-size: 11px; color: #6c757d; }
+  .pb-divider { padding: 3px 4px; font-size: 11px; color: #6c757d; background: #fafbfc; border-bottom: 1px solid #f1f3f5; }
+  .pb-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; line-height: 1.2; padding: 3px 7px; border-radius: 10px;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .pb-chip.pb-click { cursor: pointer; }
+  .pb-chip.pb-click:hover { filter: brightness(0.95); }
+  .pb-chip.pb-late { border-color: #dc3545; color: #dc3545; font-weight: 600; }
+  .pb-chip.pb-undated { background: #f1f3f5; color: #868e96; }
+  .pb-chip .pb-who { font-weight: 700; opacity: .75; }
+  @media (max-width: 768px) {
+    .pb-row { grid-template-columns: 1fr; gap: 4px; }
+    .pb-head { display: none; }
+    .pb-anchor { min-height: 0; }
+    .pb-anchor:empty { display: none; }
+  }
+</style>
+
+<script>
+  // Publishing Board — rendered by PublishingView into #pv-board-wrap from the
+  // data the view already loads (state.holidays = calendar rows, state.tasks +
+  // state.archivedTasks). Chip click opens the shared TaskDetail modal, which
+  // owns every write (dates, close, pack actions such as Mark Published).
+  window.PublishingBoard = (function() {
+    'use strict';
+
+    var TRANSLATE_TYPE = 'task.content.translate';
+    // Each content row has exactly one end point (plan, "Settled details").
+    var END_TYPES = ['task.content.blog_publish', 'task.content.email.send', 'task.content.print.distribute'];
+    var DIVIDER_TYPES = ['holiday', 'blackout', 'note'];
+
+    var esc = function(s) { return TaskWidgets.escape(s == null ? '' : String(s)); };
+
+    function _baseSlug(slug) {
+      slug = slug || '';
+      var tail = slug.slice(-3);
+      return (tail === '-en' || tail === '-he') ? slug.slice(0, -3) : slug;
+    }
+
+    function _isContentTask(t) {
+      return t.typeId && (t.typeId.indexOf('task.content.') === 0 || t.typeId === 'task.newsletter.distribute');
+    }
+
+    function _sortKey(t) {
+      return TaskWidgets.formatDate(t.startDate || t.dueDate) || '';
+    }
+
+    function _chip(t, openIds) {
+      var closed = TaskWidgets.isClosed(t);
+      var label = String(t.title || t.typeId || '').split(':')[0].trim() || 'Task';
+      var lang = (t.entityId || '').slice(-3) === '-he' ? ' HE' : '';
+      var who = t.assignedTo === 'Manager' ? 'M' : (t.assignedTo ? 'A' : '');
+      var due = TaskWidgets.formatDate(t.dueDate);
+      var cls = 'pb-chip';
+      var stateText;
+      if (closed) {
+        cls += ' tw-status-pill done';
+        stateText = '&#10003;';
+      } else if (!t.startDate && !t.dueDate) {
+        cls += ' pb-undated';
+        stateText = 'no date';
+      } else {
+        cls += ' tw-status-pill open';
+        if (TaskWidgets.isOverdue(t.dueDate, t.status)) cls += ' pb-late';
+        stateText = due ? esc(due.slice(5)) : '';
+      }
+      var clickable = !!openIds[t.id];
+      var attrs = clickable
+        ? ' class="' + cls + ' pb-click" onclick="TaskDetail.open(\'' + esc(t.id) + '\')"'
+        : ' class="' + cls + '"';
+      var tip = esc(t.title || '') + (t.startDate ? ' | start ' + esc(TaskWidgets.formatDate(t.startDate)) : '') +
+        (due ? ' | due ' + esc(due) : '') + (t.assignedTo ? ' | ' + esc(t.assignedTo) : '');
+      return '<span' + attrs + ' title="' + tip + '">' + esc(label + lang) +
+        (who ? ' <span class="pb-who">' + who + '</span>' : '') +
+        (stateText ? ' ' + stateText : '') + '</span>';
+    }
+
+    function render(state, opts) {
+      opts = opts || {};
+      var container = document.getElementById('pv-board-wrap');
+      if (!container) return;
+      var search = (opts.search || '').toLowerCase();
+      var showAll = !!opts.showAll;
+
+      // Tasks by base slug — open + archived, content types only.
+      var byBase = {};
+      (state.tasks || []).concat(state.archivedTasks || []).forEach(function(t) {
+        if (!_isContentTask(t)) return;
+        var base = _baseSlug(t.entityId);
+        if (base) (byBase[base] = byBase[base] || []).push(t);
+      });
+      // Only tasks the TaskDetail modal can load (state.tasks) are clickable.
+      var openIds = {};
+      (state.tasks || []).forEach(function(t) { openIds[t.id] = true; });
+
+      var now = new Date();
+      var today = TaskWidgets.formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+
+      var rows = (state.holidays || []).slice().sort(function(a, b) {
+        return (a.date || '').localeCompare(b.date || '');
+      });
+
+      // Range: forward through the last row that has tasks; "All" lifts it.
+      var lastScheduled = '';
+      rows.forEach(function(h) {
+        if (h.slug && byBase[h.slug] && (h.date || '') > lastScheduled) lastScheduled = h.date || '';
+      });
+
+      var visible = rows.filter(function(h) {
+        if (search) {
+          var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        if (showAll) return true;
+        var d = h.date || '';
+        var isDivider = DIVIDER_TYPES.indexOf(h.type) !== -1;
+        var tasks = h.slug ? byBase[h.slug] : null;
+        if (d < today) {
+          // Past: only content rows that still have open work.
+          if (isDivider || !tasks) return false;
+          return TaskWidgets.deriveStatus(tasks) !== 'done';
+        }
+        return !lastScheduled || d <= lastScheduled;
+      });
+
+      if (!visible.length) {
+        container.innerHTML = '<div class="pv-empty">No calendar rows to show.</div>';
+        return;
+      }
+
+      var html = '<div class="pb-row pb-head"><div>Publication</div><div>Tasks</div><div>Translate</div><div>Tasks</div><div>End</div></div>';
+
+      visible.forEach(function(h) {
+        if (DIVIDER_TYPES.indexOf(h.type) !== -1 || !h.slug) {
+          html += '<div class="pb-divider">' + esc(h.date) + ' &middot; ' + esc(h.name) +
+            (h.notes ? ' &middot; ' + esc(h.notes) : '') + '</div>';
+          return;
+        }
+        var tasks = (byBase[h.slug] || []).slice();
+        var left = '<div><div class="pb-pub-date">' + esc(h.date) + ' <span class="pb-pub-type">' + esc(h.type) + '</span></div>' +
+          '<div class="pb-pub-name">' + esc(h.name) + '</div></div>';
+
+        if (!tasks.length) {
+          html += '<div class="pb-row">' + left +
+            '<div class="pb-lane"><button type="button" class="btn btn-sm" onclick="PublishingView.boardCreate(\'' +
+            esc(h.slug) + '\', \'' + esc(h.type) + '\')">Create</button></div><div></div><div></div><div></div></div>';
+          return;
+        }
+
+        // Dated chips by start date, undated last.
+        tasks.sort(function(a, b) {
+          var ka = _sortKey(a), kb = _sortKey(b);
+          if (!ka && !kb) return 0;
+          if (!ka) return 1;
+          if (!kb) return -1;
+          return ka.localeCompare(kb);
+        });
+        var translate = tasks.filter(function(t) { return t.typeId === TRANSLATE_TYPE; });
+        var ends = tasks.filter(function(t) { return END_TYPES.indexOf(t.typeId) !== -1; });
+        var rest = tasks.filter(function(t) { return t.typeId !== TRANSLATE_TYPE && END_TYPES.indexOf(t.typeId) === -1; });
+
+        // Split the free lanes at the Translate milestone's position.
+        var pre = rest, mid = [];
+        if (translate.length) {
+          var tKey = _sortKey(translate[0]);
+          pre = []; mid = [];
+          rest.forEach(function(t) {
+            var k = _sortKey(t);
+            if (k && (!tKey || k <= tKey)) pre.push(t); else mid.push(t);
+          });
+        }
+        var lane = function(list) { return list.map(function(t) { return _chip(t, openIds); }).join(''); };
+
+        html += '<div class="pb-row">' + left +
+          '<div class="pb-lane">' + lane(pre) + '</div>' +
+          '<div class="pb-lane pb-anchor">' + lane(translate) + '</div>' +
+          '<div class="pb-lane">' + lane(mid) + '</div>' +
+          '<div class="pb-lane pb-anchor">' + lane(ends) + '</div>' +
+          '</div>';
+      });
+
+      container.innerHTML = html;
+    }
+
+    return { render: render };
+  })();
+</script>

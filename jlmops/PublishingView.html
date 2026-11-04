@@ -2,6 +2,7 @@
 <?!= include('TaskPacks') ?>
 <?!= include('TaskDetail') ?>
 <?!= include('ContentStreamModal') ?>
+<?!= include('PublishingBoard') ?>
 
 <style>
   /* PublishingView — layout; pv-tab handled entirely by AppView global ds-v2 */
@@ -232,10 +233,28 @@
 
   <!-- Tab bar — admin: Calendar/Library/Campaigns/Projects; manager: Calendar/Tasks/Library -->
   <div class="pv-tabs">
+    <button type="button" class="pv-tab" data-tab="board" onclick="PublishingView.switchTab('board')" data-roles="admin">Board</button>
     <button class="pv-tab active" data-tab="calendar" onclick="PublishingView.switchTab('calendar')">Calendar</button>
     <button class="pv-tab" data-tab="tasks" onclick="PublishingView.switchTab('tasks')">Tasks</button>
     <button class="pv-tab" data-tab="library" onclick="PublishingView.switchTab('library')">Library</button>
     <button class="pv-tab" data-tab="campaigns" onclick="PublishingView.switchTab('campaigns')" data-roles="admin">Campaigns</button>
+  </div>
+
+  <!-- ===== BOARD TAB (admin) — PublishingBoard.html ===== -->
+  <div class="pv-panel" id="pv-panel-board" data-roles="admin">
+    <div class="ds-section">
+      <div class="ds-section-head">
+        <h6>Board</h6>
+        <div class="tw-filter-bar">
+          <input type="search" id="pv-board-search" placeholder="Search title / slug..." />
+          <span style="margin-left:8px;">
+            <button type="button" class="tw-chip active" data-board-filter="open" onclick="PublishingView.switchBoardFilter('open')" title="Open past rows + through the last scheduled row">Open</button>
+            <button type="button" class="tw-chip" data-board-filter="all" onclick="PublishingView.switchBoardFilter('all')">All</button>
+          </span>
+        </div>
+      </div>
+      <div id="pv-board-wrap"><div class="pv-empty">Loading…</div></div>
+    </div>
   </div>
 
   <!-- ===== CALENDAR TAB ===== -->
@@ -465,6 +484,7 @@
       holidays: [],
       calFilterMode: 'open',
       calShowHolidays: false,
+      boardShowAll: false,
       selectedCalRow: null,
       entityStack: [],
       currentEntitySlug: null,
@@ -527,11 +547,15 @@
             .WebAppDashboardV2_revertTaskToAdmin(id);
         },
         close:   function() {},
-        refresh: function() { renderTasks(); },
+        refresh: function() { renderTasks(); renderBoard(); },
         reload:  _loadData
       });
       ContentStreamModal.configure({ reload: _loadData });
+      // Board is the admin's default tab; the manager keeps Calendar.
+      if (document.body.classList.contains('role-admin')) switchTab('board');
       _loadData();
+      var boardSearchEl = document.getElementById('pv-board-search');
+      if (boardSearchEl) boardSearchEl.addEventListener('input', renderBoard);
       var calSearchEl = document.getElementById('pv-cal-search');
       if (calSearchEl) calSearchEl.addEventListener('input', renderCalendar);
       var calStatusEl = document.getElementById('pv-cal-status-filter');
@@ -585,6 +609,7 @@
       // "Loading…" placeholder already in the markup.
       renderLibrary();
       renderTasks();
+      renderBoard();   // no-op on first load (no calendar rows yet); redraws after a task save
       _loadCampaignsAndProjects();
     }
 
@@ -627,6 +652,7 @@
             state.holidays.forEach(function(h) { if (h.slug) state.calDateBySlug[h.slug] = h.date; });
             renderCampaigns();
             renderCalendar();
+            renderBoard();
             // The Library rendered before the calendar arrived; re-render so its dates fill in.
             renderLibrary();
           } else {
@@ -656,6 +682,33 @@
       });
       if (tab === 'tasks') renderTasks();
       if (tab === 'campaigns') renderCampaigns();
+      if (tab === 'board') renderBoard();
+    }
+
+    // ===== BOARD TAB (PublishingBoard.html) =====
+
+    function renderBoard() {
+      // Needs the calendar rows; until they arrive the "Loading…" placeholder stays.
+      if (!state.holidays || !state.holidays.length) return;
+      var searchEl = document.getElementById('pv-board-search');
+      PublishingBoard.render(state, {
+        search: searchEl ? searchEl.value : '',
+        showAll: state.boardShowAll
+      });
+    }
+
+    function switchBoardFilter(mode) {
+      state.boardShowAll = mode === 'all';
+      document.querySelectorAll('[data-board-filter]').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-board-filter') === mode);
+      });
+      renderBoard();
+    }
+
+    // Create button on a board row with no tasks — same as the calendar's
+    // selected-row path into Create Content Tasks.
+    function boardCreate(slug, type) {
+      ContentStreamModal.open({ baseSlug: slug, entityType: type });
     }
 
     // ===== CALENDAR TAB =====
@@ -1775,6 +1828,8 @@
       init: init,
       renderTasks: renderTasks,
       switchTab: switchTab,
+      switchBoardFilter: switchBoardFilter,
+      boardCreate: boardCreate,
       switchPreset: switchPreset,
       spawnForEntity: spawnForEntity,
       toggleCalendarRowSelection: toggleCalendarRowSelection,

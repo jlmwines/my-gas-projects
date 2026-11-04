@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-11-04. Validation per-product task fix live @611; Publishing Board designed and ready to build; Golan Heights awaits manager lock.
+**Updated:** 2026-11-04. Publishing Board (phases 1+2) live @612, awaiting live check; validation per-product task fix live; Golan Heights awaits manager lock.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-11-04 |
 | Revenue | Steady |
-| Deploy Version | jlmops @611 · theme v1.2.33 |
+| Deploy Version | jlmops @612 · theme v1.2.33 |
 | Deploy Date | jlmops 2026-11-04 · theme 2026-11-03 |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -41,7 +41,7 @@ The live "what now" — daily review reads these first.
 7. **Physical inventory — due now that the holidays have passed.** Full count sweep via Admin Inventory's count-task creation (full-sweep mode, batched alphabetically across sessions; design archived at `jlmops/plans/_archive/INVENTORY_COUNT_TASK_REDESIGN.md`). Counting is quantity-only.
 8. **Golan Heights (2026-11-16) and Judea/Foothills (2026-12-14) region posts, per JLMops_Publishing.** Golan Heights body ("Wine's Big Surprise: The Golan Heights", ~1,000 words) is attached in the Library (`blog/blog-region-golan-heights/`); manager edits and locks. Judea not drafted. Negev, Galilee, Central Mountains, and Coastal Plain are published (Coastal companion email HTML ready for Mailchimp). Sources, slot table, and calendar-row state → `content/plans/REGION_POSTS_PLAN.md`.
 9. **After the region posts: the ministry-map anchor, then People.** The anchor introduces the 2026 official map (8 regions, 18 sub-regions) and places our six region posts on it; People profiles are the richer next category (subjects can supply images and share). Grapes anchor stays drafted on the shelf (`content/grapes/grapes-en.post.md`). Plan → `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`.
-10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager). Related: **Publishing Board** (admin-default Board tab: publication rows with task chips, Translate + end-milestone columns, month grid) — design settled, next build session does phases 1+2 in one pass → `jlmops/plans/PUBLISHING_BOARD_PLAN.md`.
+10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager). Related: **Publishing Board** — phases 1+2 live @612 (admin-default Board tab, task chips, Translate + end columns, chip opens task modal); needs live check incl. redraw after save; month grid + manager queue context next → `jlmops/plans/PUBLISHING_BOARD_PLAN.md`.
 11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.
 12. **Deep-review follow-ups (2026-11-03)** — the review now leads with a year-over-year score (Aug-Oct 2026 vs 2025: new customers +71%, Israel traffic +67%, returning customers -25% but buying more often and larger; definition in `business/KPI.md`). Open flags from `plans/reviews/review-deep-2026-11-03.md` awaiting user answers: STRATEGY.md offline-channels line, BUGS line for the broken first-order conversion KPI, three remaining "verify" bugs (audit row offset @597, Correct Product Name confirm @601, stale failure alerts @599: one leftover `status_export.refresh` task to close by hand).
 13. **CardCom plugin 3.6.0.0 — holding, recheck 2026-11-07.** Site meets its new minimums (PHP 8.2 / WP 7.0 / WC 11.1). User is waiting a few days to see whether a follow-up release lands or other merchants report order problems. On recheck: look for a newer version or reported issues, then update and place a test order.
@@ -60,6 +60,8 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Failure alert auto-resolve** (`jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`) — live @599: each failure context resolves on its next success, one-off events auto-close after 7 quiet days. Open: live verification, one-time cleanup of already-stale failure tasks, docs graduation.
 - **WebDetM description backfill** (`jlmops/plans/WEBDETM_DESCRIPTION_BACKFILL_PLAN.md`) — non-wine only. Pass 1 (fill blanks from live) imported and verified; Pass 2 (HTML cleanup) file built and reviewed, import + post-import check pending. Bundles/Ilana's have no description text anywhere.
 - **Vintage-mismatch snapshot fix** (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — live; vintage-mismatch tasks read live data instead of a creation-time snapshot. Not yet smoke-tested (needs a real vintage change; Next Action 13).
+
+- **Publishing Board** (`jlmops/plans/PUBLISHING_BOARD_PLAN.md`) — phases 1+2 live @612, not yet live-checked; open: month grid (3), manager queue context (4).
 
 ## Current State
 
