@@ -12,7 +12,15 @@ The manager's Edit and Translate stages are the main bottleneck. Delivery is irr
 
 A new admin-only **Board** tab inside `PublishingView.html`, next to Calendar/Library/Campaigns, gated with the existing `data-roles="admin"` tab mechanism. It is the **admin's default tab** when the view opens; the manager's default is unchanged. It reuses the data the view already loads (no separate view or nav link). Its markup and script live in their own include file, pulled in the same way as `TaskWidgets`/`TaskPacks`, so the 1,800-line view doesn't grow. The Calendar tab stays untouched until the board is proven; whether it later replaces Calendar, and whether the manager gets it, is decided then.
 
-Build order: (1) board view-only, (2) chip actions, (3) month grid, (4) manager queue context. Check before (2): can the admin close a manager's content task directly, without its pack action.
+Build order: (1) board view-only, (2) chip actions, (3) month grid, (4) manager queue context.
+
+## Build notes (verified against code, 2026-11-04)
+
+- **Data:** no new server call. `WebAppLibrary_getData` already gives `state.tasks` + `state.archivedTasks` (each with `typeId`, `entityId`, `assignedTo`, `status`, `startDate`, `dueDate`) and `WebAppPublishing_getCampaignsAndProjects` gives the calendar rows (`state.holidays`). Group by base slug exactly as `renderCalendar` does (`PublishingView.html` ~674-689), but **include `task.newsletter.distribute`**: the calendar's filter takes only `task.content.*`, which would drop the news row's end milestone. `TaskDetail` already treats that type as content.
+- **Chip actions = open the existing task modal.** Tapping a chip calls `TaskDetail.open(id)`, already configured in this view (`PublishingView.html:475`, `saveTask`/`completeTask` adapters). It gives date edit, the status dropdown (how the admin closes a manager's handed-back task today, so not a new convention), and the task's pack. This matters for the end milestone: a publish task must close through the pack's **Mark Published** (sets `slb_State=published` + URL), not a bare close, and the modal keeps that path. No new write code.
+- **Refresh:** after any modal save or close, re-render the board from the same reload the Tasks tab uses. Watch the open Calendar refresh bug (`CALENDAR_TAB_UX_PLAN.md`): verify the board actually redraws after a change.
+- **UI to copy:** tabs are `.pv-tab` / `.pv-panel` with `switchTab()` (`PublishingView.html:235-238, 649`); admin gating via `data-roles="admin"`; chip state colors via `tw-status-pill` + `TaskWidgets.statusClass()`; buttons `btn btn-sm`; every button `type="button"`. Default tab: set Board active for admin at load, leave Calendar for the manager.
+- **Include file:** new `PublishingBoard.html`, added with `<?!= include('PublishingBoard') ?>`, exposing a `renderBoard()` that `switchTab` and `_onLoaded` call.
 
 ## Board view (agreed)
 
@@ -38,9 +46,9 @@ A second view of the same data, for weekday rhythm. The admin assigns manager wo
 - The point is to spot bad handoffs at a glance, for example a manager task landing on a Thursday, or a week with no email.
 - Optional rhythm markers (candidate): shaded Mon-Wed, a Tuesday email marker, a month-end newsletter line.
 
-## Manager side (agreed direction)
+## Manager side (agreed direction, later phase)
 
-The manager sees the same board, with rights limited to his role. CoSchedule works the same way: a shared calendar plus a personal "my tasks" dashboard. His existing Dashboard queue stays his "my tasks" list. Each of his tasks gains the publication's publish date ("publishes in X days") and a link that opens that publication's row on the board.
+Once the admin board is proven, the manager may get the same board, with rights limited to his role. CoSchedule works the same way: a shared calendar plus a personal "my tasks" dashboard. His existing Dashboard queue stays his "my tasks" list. Each of his tasks gains the publication's publish date ("publishes in X days") and a link that opens that publication's row on the board.
 
 ## Candidates (not decided)
 
@@ -58,7 +66,6 @@ The manager sees the same board, with rights limited to his role. CoSchedule wor
 ## Settled details (user, 2026-11-04)
 
 - **Chip actions** are the same as the Tasks view: change dates and close the task.
-- **Manager column** stays empty for a publication with no manager tasks (e.g. email, news).
 - **Range:** past undone rows, then forward through the last calendar row that has tasks (scheduled content). Untouched rows inside that range show with their Create button; untouched rows beyond it are hidden (visible via the existing All toggle).
 
 - **The fixed middle column is Translate** (`content.translate`), the one unique milestone. A blog runs: manager Edit → admin Extracts → back to the manager to review the extracts and translate everything. His other tasks (Edit, Review Extracts) flow as ordinary chips before the column. Empty when the content has no Translate task (e.g. email, news). The right-edge **end-milestone column** holds the row's single end point, its one publish, send, print or distribute task (Blog Publish for a blog row, Send Email for an email row, Print & Distribute for a news row). A blog and its email are separate content streams, each its own calendar row. Reuse doesn't add end points: AYIW pieces and blog posts feed newsletters, but the newsletter is its own stream with its own row and due date; the build session maps end-milestone types from `CONTENT_STAGES`.
