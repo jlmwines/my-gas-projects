@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-11-04 |
 | Revenue | Steady |
-| Deploy Version | jlmops @612 · theme v1.2.33 |
+| Deploy Version | jlmops @613 · theme v1.2.33 |
 | Deploy Date | jlmops 2026-11-04 · theme 2026-11-03 |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |

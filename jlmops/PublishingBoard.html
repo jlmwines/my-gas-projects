@@ -2,7 +2,8 @@
   /* Publishing Board (PUBLISHING_BOARD_PLAN.md): one row per calendar row, tasks as chips. */
   .pb-row {
     display: grid;
-    grid-template-columns: 190px minmax(0, 1fr) 130px minmax(0, 1fr) 130px;
+    /* Little usually sits between Translate and the end point, so that lane is narrow. */
+    grid-template-columns: 170px minmax(0, 3fr) 130px minmax(40px, 1fr) 130px;
     gap: 8px;
     align-items: center;
     padding: 6px 4px;
@@ -64,7 +65,10 @@
 
     function _chip(t, openIds) {
       var closed = TaskWidgets.isClosed(t);
-      var label = String(t.title || t.typeId || '').split(':')[0].trim() || 'Task';
+      // Title prefix ("Edit: …" → Edit); strip the type namespace when a title
+      // is missing or carries the raw type id (task.content.edit → edit).
+      var label = String(t.title || t.typeId || '').split(':')[0]
+        .replace(/task\.(content|newsletter)\./g, '').replace(/[._]/g, ' ').trim() || 'Task';
       var lang = (t.entityId || '').slice(-3) === '-he' ? ' HE' : '';
       var who = t.assignedTo === 'Manager' ? 'M' : (t.assignedTo ? 'A' : '');
       var due = TaskWidgets.formatDate(t.dueDate);
