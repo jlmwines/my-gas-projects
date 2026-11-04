@@ -26,6 +26,25 @@
   .pb-chip.pb-late { border-color: #dc3545; color: #dc3545; font-weight: 600; }
   .pb-chip.pb-undated { background: #f1f3f5; color: #868e96; }
   .pb-chip .pb-who { font-weight: 700; opacity: .75; }
+  .pb-row.pb-flash { background: #fff3cd; transition: background 1.5s; }
+  /* Month grid */
+  .pb-month-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .pb-month-title { font-weight: 600; min-width: 140px; text-align: center; }
+  .pb-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid #dee2e6; border-left: 1px solid #dee2e6; }
+  .pb-dow { font-size: 11px; color: #6c757d; padding: 2px 4px; border-right: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; background: #f8f9fa; }
+  .pb-day { min-height: 92px; padding: 2px 3px; border-right: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; overflow: hidden; }
+  .pb-day.pb-other { background: #fafbfc; color: #adb5bd; }
+  .pb-day.pb-today { box-shadow: inset 0 0 0 2px #0d6efd; }
+  .pb-daynum { font-size: 11px; color: #6c757d; }
+  .pb-pub { display: block; font-size: 11px; font-weight: 600; padding: 1px 4px; margin: 1px 0; border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pb-mark { display: block; font-size: 10px; color: #6c757d; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pb-grid .pb-chip { display: flex; margin: 1px 0; padding: 1px 5px; overflow: hidden; text-overflow: ellipsis; }
+  .pb-grid .pb-chip.pb-done { opacity: .55; }
+  .pb-more { font-size: 10px; color: #0d6efd; cursor: pointer; }
+  @media (max-width: 768px) {
+    .pb-day { min-height: 60px; }
+    .pb-grid .pb-chip .pb-chip-text { display: none; }
+  }
   @media (max-width: 768px) {
     .pb-row { grid-template-columns: 1fr; gap: 4px; }
     .pb-head { display: none; }
@@ -63,12 +82,19 @@
       return TaskWidgets.formatDate(t.startDate || t.dueDate) || '';
     }
 
+    // Task title is `name` in WebAppLibrary_getData's task shape.
+    function _title(t) { return t.name || t.title || ''; }
+
+    // Title prefix ("Review Extracts: …" → Review Extracts); falls back to the
+    // type id with its namespace stripped (task.content.edit → edit).
+    function _label(t) {
+      return String(_title(t) || t.typeId || '').split(':')[0]
+        .replace(/task\.(content|newsletter)\./g, '').replace(/[._]/g, ' ').trim() || 'Task';
+    }
+
     function _chip(t, openIds) {
       var closed = TaskWidgets.isClosed(t);
-      // Title prefix ("Edit: …" → Edit); strip the type namespace when a title
-      // is missing or carries the raw type id (task.content.edit → edit).
-      var label = String(t.title || t.typeId || '').split(':')[0]
-        .replace(/task\.(content|newsletter)\./g, '').replace(/[._]/g, ' ').trim() || 'Task';
+      var label = _label(t);
       var lang = (t.entityId || '').slice(-3) === '-he' ? ' HE' : '';
       var who = t.assignedTo === 'Manager' ? 'M' : (t.assignedTo ? 'A' : '');
       var due = TaskWidgets.formatDate(t.dueDate);
@@ -89,7 +115,7 @@
       var attrs = clickable
         ? ' class="' + cls + ' pb-click" onclick="TaskDetail.open(\'' + esc(t.id) + '\')"'
         : ' class="' + cls + '"';
-      var tip = esc(t.title || '') + (t.startDate ? ' | start ' + esc(TaskWidgets.formatDate(t.startDate)) : '') +
+      var tip = esc(_title(t)) + (t.startDate ? ' | start ' + esc(TaskWidgets.formatDate(t.startDate)) : '') +
         (due ? ' | due ' + esc(due) : '') + (t.assignedTo ? ' | ' + esc(t.assignedTo) : '');
       return '<span' + attrs + ' title="' + tip + '">' + esc(label + lang) +
         (who ? ' <span class="pb-who">' + who + '</span>' : '') +
@@ -113,6 +139,11 @@
       // Only tasks the TaskDetail modal can load (state.tasks) are clickable.
       var openIds = {};
       (state.tasks || []).forEach(function(t) { openIds[t.id] = true; });
+
+      if (opts.mode === 'month') {
+        container.innerHTML = _renderMonth(state, opts, byBase, openIds);
+        return;
+      }
 
       var now = new Date();
       var today = TaskWidgets.formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -149,7 +180,7 @@
         return;
       }
 
-      var html = '<div class="pb-row pb-head"><div>Publication</div><div>Tasks</div><div>Translate</div><div>Tasks</div><div>End</div></div>';
+      var html = '<div class="pb-row pb-head"><div>Publication</div><div>Tasks</div><div></div><div></div><div>End</div></div>';
 
       visible.forEach(function(h) {
         if (DIVIDER_TYPES.indexOf(h.type) !== -1 || !h.slug) {
@@ -161,8 +192,9 @@
         var left = '<div><div class="pb-pub-date">' + esc(h.date) + ' <span class="pb-pub-type">' + esc(h.type) + '</span></div>' +
           '<div class="pb-pub-name">' + esc(h.name) + '</div></div>';
 
+        var rowOpen = '<div class="pb-row" id="pb-row-' + esc(h.slug) + '">';
         if (!tasks.length) {
-          html += '<div class="pb-row">' + left +
+          html += rowOpen + left +
             '<div class="pb-lane"><button type="button" class="btn btn-sm" onclick="PublishingView.boardCreate(\'' +
             esc(h.slug) + '\', \'' + esc(h.type) + '\')">Create</button></div><div></div><div></div><div></div></div>';
           return;
@@ -192,7 +224,7 @@
         }
         var lane = function(list) { return list.map(function(t) { return _chip(t, openIds); }).join(''); };
 
-        html += '<div class="pb-row">' + left +
+        html += rowOpen + left +
           '<div class="pb-lane">' + lane(pre) + '</div>' +
           '<div class="pb-lane pb-anchor">' + lane(translate) + '</div>' +
           '<div class="pb-lane">' + lane(mid) + '</div>' +
@@ -201,6 +233,102 @@
       });
 
       container.innerHTML = html;
+    }
+
+    // ── Month grid (phase 3) ──────────────────────────────────────────
+    // Same data: publication dates, holidays/notes, and every content task
+    // (admin + manager) on its start date (due date when no start), colored
+    // by publication so a chain reads as one thread.
+    var PALETTE = ['#e3f2fd', '#fde2e4', '#e2f0d9', '#fff2cc', '#ede7f6', '#d9f2f2', '#fce5cd', '#e8eaf6'];
+    var MAX_PER_DAY = 4;
+
+    function _colorFor(base, order) {
+      if (!(base in order.map)) order.map[base] = order.next++ % PALETTE.length;
+      return PALETTE[order.map[base]];
+    }
+
+    function _monthChip(t, openIds, color, pubName) {
+      var closed = TaskWidgets.isClosed(t);
+      var label = _label(t);
+      var who = t.assignedTo === 'Manager' ? 'M' : (t.assignedTo ? 'A' : '');
+      var cls = 'pb-chip' + (closed ? ' pb-done' : '') +
+        (!closed && TaskWidgets.isOverdue(t.dueDate, t.status) ? ' pb-late' : '');
+      var click = openIds[t.id] ? ' pb-click" onclick="TaskDetail.open(\'' + esc(t.id) + '\')' : '';
+      var tip = esc(pubName + ' | ' + _title(t)) +
+        (t.dueDate ? ' | due ' + esc(TaskWidgets.formatDate(t.dueDate)) : '') + (t.assignedTo ? ' | ' + esc(t.assignedTo) : '');
+      return '<span class="' + cls + click + '" style="background:' + color + ';" title="' + tip + '">' +
+        (who ? '<span class="pb-who">' + who + '</span> ' : '') +
+        '<span class="pb-chip-text">' + esc(label) + (closed ? ' &#10003;' : '') + '</span></span>';
+    }
+
+    function _renderMonth(state, opts, byBase, openIds) {
+      var now = new Date();
+      var first = new Date(now.getFullYear(), now.getMonth() + (opts.monthOffset || 0), 1);
+      var monthName = first.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+      var todayKey = TaskWidgets.formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+      var search = (opts.search || '').toLowerCase();
+
+      var pubBySlug = {};
+      var items = {};   // dateKey -> { pubs: [], marks: [], chips: [] }
+      var day = function(k) { return items[k] = items[k] || { pubs: [], marks: [], chips: [] }; };
+      var order = { map: {}, next: 0 };
+
+      (state.holidays || []).slice().sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); })
+        .forEach(function(h) {
+          if (search) {
+            var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
+            if (hay.indexOf(search) === -1) return;
+          }
+          var k = TaskWidgets.formatDate(h.date);
+          if (!k) return;
+          if (DIVIDER_TYPES.indexOf(h.type) !== -1 || !h.slug) { day(k).marks.push(h); return; }
+          pubBySlug[h.slug] = h;
+          day(k).pubs.push(h);
+        });
+
+      Object.keys(byBase).forEach(function(base) {
+        var pub = pubBySlug[base];
+        if (!pub) return;   // search-filtered out, or no calendar row
+        var color = _colorFor(base, order);
+        byBase[base].forEach(function(t) {
+          var k = TaskWidgets.formatDate(t.startDate || t.dueDate);
+          if (!k) return;   // undated tasks only show on the Rows view
+          day(k).chips.push(_monthChip(t, openIds, color, pub.name || base));
+        });
+      });
+
+      var html = '<div class="pb-month-nav">' +
+        '<button type="button" class="btn btn-sm" onclick="PublishingView.boardShiftMonth(-1)">&lsaquo;</button>' +
+        '<span class="pb-month-title">' + esc(monthName) + '</span>' +
+        '<button type="button" class="btn btn-sm" onclick="PublishingView.boardShiftMonth(1)">&rsaquo;</button>' +
+        (opts.monthOffset ? '<button type="button" class="btn btn-sm" onclick="PublishingView.boardShiftMonth(0)">Today</button>' : '') +
+        '</div><div class="pb-grid">';
+      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(function(d) { html += '<div class="pb-dow">' + d + '</div>'; });
+
+      var cursor = new Date(first.getFullYear(), first.getMonth(), 1 - first.getDay());
+      for (var i = 0; i < 42; i++) {
+        var key = TaskWidgets.formatDate(cursor);
+        var inMonth = cursor.getMonth() === first.getMonth();
+        if (i >= 35 && !inMonth) break;   // drop a trailing week that's all next month
+        var cell = items[key] || { pubs: [], marks: [], chips: [] };
+        var cls = 'pb-day' + (inMonth ? '' : ' pb-other') + (key === todayKey ? ' pb-today' : '');
+        html += '<div class="' + cls + '"><div class="pb-daynum">' + cursor.getDate() + '</div>';
+        cell.marks.forEach(function(h) { html += '<span class="pb-mark" title="' + esc(h.notes || h.name) + '">' + esc(h.name) + '</span>'; });
+        cell.pubs.forEach(function(h) {
+          var pubColor = (h.slug in order.map) ? PALETTE[order.map[h.slug]] : '#f1f3f5';
+          html += '<span class="pb-pub" style="background:' + pubColor + ';" title="' + esc(h.type + ': ' + h.name) +
+            '" onclick="PublishingView.boardJumpToRow(\'' + esc(h.slug) + '\')">' + esc(h.name) + '</span>';
+        });
+        var expanded = opts.expandedDay === key;
+        var shown = expanded ? cell.chips : cell.chips.slice(0, MAX_PER_DAY);
+        html += shown.join('');
+        if (!expanded && cell.chips.length > MAX_PER_DAY) {
+          html += '<span class="pb-more" onclick="PublishingView.boardExpandDay(\'' + key + '\')">+' + (cell.chips.length - MAX_PER_DAY) + ' more</span>';
+        }
+        html += '</div>';
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return html + '</div>';
     }
 
     return { render: render };
