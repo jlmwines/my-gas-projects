@@ -4,6 +4,11 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-04 (c) — Publishing Board built and live (@612-@616)
+- Shipped: admin-default Board tab in PublishingView (`PublishingBoard.html` include, no server changes): Rows (chips by start date, Translate + end columns, Create on task-less rows) and Month grid (all tasks by start date, colored by publication, type+name+stage labels). Chips open the shared TaskDetail modal.
+- Gotchas found live: task title field is `name` in WebAppLibrary_getData (not `title`); range must match Calendar Open view — every calendar row is scheduled content, tasks follow (user correction).
+- Next: phase 4 (manager queue shows publish date + link to board row); scheduling new calendar rows from the board is proposed in the plan, on hold by user.
+
 ## 2026-11-04 (b) — Validation per-product fix @611; Publishing Board designed
 - Shipped jlmops @611: product validation failures always one task per product; summary roll-up only for crm/order/row-count. Trigger: Oct 26 "Comax Name Changed (Summary: 13)" kept 5 SKUs; 13 reconstructed from Comax archives (Drive `ComaxProducts.csv_<ts>`, Windows-1255, source imports never purged) as La Porte Blanche, user chose to ignore.
 - Designed Publishing Board (`jlmops/plans/PUBLISHING_BOARD_PLAN.md`): admin-default Board tab in PublishingView, chips by start date, fixed Translate + end-milestone columns, month grid. Next: build phases 1+2 in one fresh-session pass.

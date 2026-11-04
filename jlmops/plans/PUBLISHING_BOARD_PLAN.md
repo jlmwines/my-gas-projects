@@ -1,6 +1,6 @@
 # Publishing Board Plan
 
-A new admin and manager working surface for content: one row per publication with its tasks laid out left to right, plus a month calendar grid of the same tasks. It replaces the gap between the Calendar tab (which shows only a coarse status per row) and AdminTasks filtered to Content (which shows tasks either all at once or for a single slug). Status: **phases 1+2 live and checked by the user; phase 3 (month grid, a Rows/Month toggle on the Board tab) live @614, not yet checked; phase 4 (manager queue context) not started.**
+A new admin and manager working surface for content: one row per publication with its tasks laid out left to right, plus a month calendar grid of the same tasks. It replaces the gap between the Calendar tab (which shows only a coarse status per row) and AdminTasks filtered to Content (which shows tasks either all at once or for a single slug). Status: **phases 1+2 live and checked by the user; phase 3 (month grid, a Rows/Month toggle on the Board tab) live and in use; phase 4 (manager queue context) not started.**
 
 ## Problem
 
