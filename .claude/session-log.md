@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-04 (b) — Validation per-product fix @611; Publishing Board designed
+- Shipped jlmops @611: product validation failures always one task per product; summary roll-up only for crm/order/row-count. Trigger: Oct 26 "Comax Name Changed (Summary: 13)" kept 5 SKUs; 13 reconstructed from Comax archives (Drive `ComaxProducts.csv_<ts>`, Windows-1255, source imports never purged) as La Porte Blanche, user chose to ignore.
+- Designed Publishing Board (`jlmops/plans/PUBLISHING_BOARD_PLAN.md`): admin-default Board tab in PublishingView, chips by start date, fixed Translate + end-milestone columns, month grid. Next: build phases 1+2 in one fresh-session pass.
+- CardCom 3.6.0.0 held, recheck 2026-11-07 (STATUS NA 13). Manager's own HE packing-insert original deleted by user (attach had copied it; expected).
+- clasp needed `clasp login` (invalid_rapt) before deploy.
+
 ## 2026-11-04 — Bundle fix closed out
 - User confirmed 3am housekeeping clean, bundle fix stable. Archived BUNDLE_PULL_FIX_PLAN, deleted local `bundle-rollback` branch, removed STATUS Next Action 0.
 - Verify bugs: 5 of 8 resolved via SysTasks export compare (exchange/, old file was August) + user confirmations. Left: audit row offset @597, Correct Product Name @601, one leftover `status_export.refresh` failure task to close by hand.

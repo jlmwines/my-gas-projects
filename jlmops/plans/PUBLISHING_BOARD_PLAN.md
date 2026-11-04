@@ -1,6 +1,6 @@
 # Publishing Board Plan
 
-A new admin and manager working surface for content: one row per publication with its tasks laid out left to right, plus a month calendar grid of the same tasks. It replaces the gap between the Calendar tab (which shows only a coarse status per row) and AdminTasks filtered to Content (which shows tasks either all at once or for a single slug). Status: **design captured in conversation (user, 2026-11-04), nothing built**. Open questions are listed at the end.
+A new admin and manager working surface for content: one row per publication with its tasks laid out left to right, plus a month calendar grid of the same tasks. It replaces the gap between the Calendar tab (which shows only a coarse status per row) and AdminTasks filtered to Content (which shows tasks either all at once or for a single slug). Status: **design settled (user, 2026-11-04), ready to build phases 1+2 in one pass; nothing built yet.**
 
 ## Problem
 
@@ -8,14 +8,20 @@ As admin, the user can't see the state of several publications at once. The Cale
 
 The manager's Edit and Translate stages are the main bottleneck. Delivery is irregular, so the admin re-plans dates by hand.
 
+## Placement (agreed)
+
+A new admin-only **Board** tab inside `PublishingView.html`, next to Calendar/Library/Campaigns, gated with the existing `data-roles="admin"` tab mechanism. It is the **admin's default tab** when the view opens; the manager's default is unchanged. It reuses the data the view already loads (no separate view or nav link). Its markup and script live in their own include file, pulled in the same way as `TaskWidgets`/`TaskPacks`, so the 1,800-line view doesn't grow. The Calendar tab stays untouched until the board is proven; whether it later replaces Calendar, and whether the manager gets it, is decided then.
+
+Build order: (1) board view-only, (2) chip actions, (3) month grid, (4) manager queue context. Check before (2): can the admin close a manager's content task directly, without its pack action.
+
 ## Board view (agreed)
 
 - **One row per publication**, sorted by publish date like today's calendar. Date and name sit on the left edge. Holidays and notes appear as thin divider rows. A row with no tasks shows a Create button, which replaces today's row-select-then-Create-Content-Tasks flow. Today's filters and search stay.
 - **Each chip is a task.** Chips run left to right, ordered by start date, with as many as the publication has. There are no fixed per-type columns. Undated tasks go at the end, greyed out, as a "not fully planned" signal; that should be rare, since the admin usually dates a whole stream when creating it.
 - **Two fixed, vertically aligned anchor columns:**
-  - **Manager: Edit + Translate.** The manager does both, edit first and then translate. This is the bottleneck, so it aligns across rows; looking down the column shows where he stands on every piece.
-  - **Publish / distribute**, on the right edge, as the end goal.
-  - Admin and other tasks flow into the free lanes before and between the anchors: `[prep chips] | Manager: Edit + Translate | [chips] | Publish/distribute`.
+  - **Translate.** The manager edits, reviews extracts, then translates everything; Translate is the unique milestone and the bottleneck, so it aligns across rows. Looking down the column shows where every piece stands.
+  - **End milestones** (publish, print, distribute, send), on the right edge, as the end goal.
+  - All other tasks (admin and manager) flow into the free lanes before and between the anchors: `[chips] | Translate | [chips] | End milestones`.
 - **Act from the chip.** Tap a chip to close the task (including closing a manager task he handed back), change its start or due date, or open the Doc or the full task. Setting dates chip by chip across a row also serves for planning a new stream.
 - **Chip state:** done (checkmark), open with its date, or late (red).
 - **Phone:** the chip strip wraps under the publication name.
@@ -49,9 +55,10 @@ The manager sees the same board, with rights limited to his role. CoSchedule wor
 - Asana: dependent-task auto-shift with a preview of the changes ([help](https://help.asana.com/s/article/auto-shifting-dates-for-dependent-tasks)).
 - ClickUp and Teamwork calendar views: task filters and "+N more" overflow.
 
-## Open questions
+## Settled details (user, 2026-11-04)
 
-- Which chip actions belong on the tap menu versus the full task.
-- Whether the board replaces the Calendar tab outright or sits beside it at first.
-- Which task types map to each anchor column for every content type (email and news chains have no manager Edit/Translate today).
-- How far ahead the board shows by default (the Calendar tab's "Open" rule, or a fixed window).
+- **Chip actions** are the same as the Tasks view: change dates and close the task.
+- **Manager column** stays empty for a publication with no manager tasks (e.g. email, news).
+- **Range:** past undone rows, then forward through the last calendar row that has tasks (scheduled content). Untouched rows inside that range show with their Create button; untouched rows beyond it are hidden (visible via the existing All toggle).
+
+- **The fixed middle column is Translate** (`content.translate`), the one unique milestone. A blog runs: manager Edit → admin Extracts → back to the manager to review the extracts and translate everything. His other tasks (Edit, Review Extracts) flow as ordinary chips before the column. Empty when the content has no Translate task (e.g. email, news). The right-edge **end-milestone column** holds the row's single end point, its one publish, send, print or distribute task (Blog Publish for a blog row, Send Email for an email row, Print & Distribute for a news row). A blog and its email are separate content streams, each its own calendar row. Reuse doesn't add end points: AYIW pieces and blog posts feed newsletters, but the newsletter is its own stream with its own row and due date; the build session maps end-milestone types from `CONTENT_STAGES`.

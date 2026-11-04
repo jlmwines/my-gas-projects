@@ -157,7 +157,7 @@ Blog core chain:
 | 2 | **Edit** | `content.edit` | EN | **Manager** (body + title locked) | Open Doc → Editing Done |
 | 3 | Extracts | `content.admin_review` (repurposed) | EN | Admin | Open Doc → Editing Done |
 | 4 | **Review Extracts** | `content.print_newsletter_body` (repurposed) | EN | **Manager** | Open Doc → Editing Done |
-| 5 | Translate | `content.translate` | HE | Admin | **Create translation text** (when the EN peer has a Doc) → Editing Done |
+| 5 | Translate | `content.translate` | HE | Admin (configured; in practice the Manager translates, reassignment tracked in `plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` §3) | **Create translation text** (when the EN peer has a Doc) → Editing Done |
 | 6 | **Edit Translation** | `content.translate_edit` | HE | **Manager** | Open Doc → Editing Done |
 | 7 | Blog Publish | `content.blog_publish` | EN | Admin | External URL → Mark Published |
 
