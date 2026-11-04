@@ -48,7 +48,7 @@ Every success point above was confirmed by reading its function (2026-10-27).
 1. **Category A:** add `NotificationService.resolveFailure(<same context>, sessionId)` on each success path, mirroring the @594 failed-job sweep. `resolveFailure` is already a cheap no-op when nothing is open, and fails soft.
 2. **Category B:** auto-close after a quiet period (user, 2026-10-27): daily housekeeping closes a category-B failure task (via `resolveFailure`, `resolvedBy: 'auto-quiet'`) once 7 days have passed with no new occurrence. The category-B context list lives in one place in code, next to the quiet-period constant.
 3. **Remove `reportStepSuccess`** (dead, and a trap: it clears the alert but leaves the task open), or rewrite it as a thin wrapper over `resolveFailure`. Recommend remove.
-4. **One-time cleanup** of currently open stale failure tasks: list them from a fresh `SysTasks` export; user decides which to close. No code needed if the count is small.
+4. **One-time cleanup** of currently open stale failure tasks: list them from a fresh `SysTasks` export; user decides which to close. No code needed if the count is small. The 2026-11-04 export shows exactly one: `status_export.refresh` (old pre-split key, 2026-10-19), to close by hand.
 
 ## Steps
 
