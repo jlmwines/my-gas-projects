@@ -13,7 +13,7 @@ Decided (user, 2026-10-18):
 
 Why parked: almost every content type is `one_week`, so a full blog chain plans over about 7 weeks. Durations need rethinking first (changing a type's `due_pattern` in `config/taskDefinitions.json` also changes its forward deadline).
 
-Open when it resumes: realistic per-stage durations, and what "compress" does.
+Open when it resumes: realistic per-stage durations, and what "compress" does. Candidate inputs from the board design (`PUBLISHING_BOARD_PLAN.md`): base durations on the manager's actual turnaround history, and when a stage closes late, preview new downstream dates for the admin to accept.
 
 ## 2. Clear-all toggle in the content dialog
 

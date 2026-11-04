@@ -27,6 +27,7 @@ This workflow orchestrates the synchronization of data between the Web (WooComme
 4.  **Validation (Automated):**
     *   **Trigger:** Automatically starts after Comax Import completes.
     *   **Process:** Runs master data validation (SKU checks, price integrity). A rule that returns `ERROR` is treated the same as one that `FAILED` — no longer a silent pass (fixed 2026-08-27).
+    *   **Tasks:** Product failures (name, vintage, field, status, stock, discrepancy, missing translation, etc.) always create one task per product, however many fail, because each is a clue the admin acts on. Only non-product types (`crm_data_integrity`, `order_staging_failure`, `row_count_decrease`) collapse into one "(Summary: N Items)" task when a run finds more than 10, and that task's notes keep only the first 5 keys (`ValidationOrchestratorService.js` `summaryAllowedTypes`).
     *   **State:** Transitions to `VALIDATING`.
 
 5.  **Update Web Inventory:**

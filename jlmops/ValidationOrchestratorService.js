@@ -41,9 +41,15 @@ const ValidationOrchestratorService = (function() {
             const discrepancies = result.discrepancies;
 
             // Aggregation Logic
-            // Some task types require individual tasks per entity (e.g., inventory tasks need SKU for export)
-            const noSummaryTypes = ['task.validation.comax_internal_audit'];
-            const allowSummary = !noSummaryTypes.includes(rule.on_failure_task_type);
+            // Product tasks (name/vintage/field/status/stock etc.) are always one per
+            // product: each is a clue the admin needs, and a summary keeps only 5 keys.
+            // Only these non-product types may collapse into a summary task.
+            const summaryAllowedTypes = [
+                'task.validation.crm_data_integrity',
+                'task.validation.order_staging_failure',
+                'task.validation.row_count_decrease'
+            ];
+            const allowSummary = summaryAllowedTypes.includes(rule.on_failure_task_type);
 
             if (discrepancies.length > 10 && allowSummary) {
                 // Create Summary Task
