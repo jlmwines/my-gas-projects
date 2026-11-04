@@ -152,12 +152,9 @@
         return (a.date || '').localeCompare(b.date || '');
       });
 
-      // Range: forward through the last row that has tasks; "All" lifts it.
-      var lastScheduled = '';
-      rows.forEach(function(h) {
-        if (h.slug && byBase[h.slug] && (h.date || '') > lastScheduled) lastScheduled = h.date || '';
-      });
-
+      // Range = the Calendar tab's Open view: every calendar row is scheduled
+      // content. Future rows all show; past rows show unless done (a past row
+      // with no tasks is overdue, not done). "All" shows everything.
       var visible = rows.filter(function(h) {
         if (search) {
           var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
@@ -168,11 +165,10 @@
         var isDivider = DIVIDER_TYPES.indexOf(h.type) !== -1;
         var tasks = h.slug ? byBase[h.slug] : null;
         if (d < today) {
-          // Past: only content rows that still have open work.
-          if (isDivider || !tasks) return false;
-          return TaskWidgets.deriveStatus(tasks) !== 'done';
+          if (isDivider) return false;
+          return !tasks || TaskWidgets.deriveStatus(tasks) !== 'done';
         }
-        return !lastScheduled || d <= lastScheduled;
+        return true;
       });
 
       if (!visible.length) {
