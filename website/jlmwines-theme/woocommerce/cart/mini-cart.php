@@ -5,7 +5,13 @@
  * Layered on top of WC's default template at /templates/cart/mini-cart.php.
  * Adds inline +/- qty controls and a remove (×) button per line item.
  *
+ * Core changes through 11.2.2 ported (instanceof check, get_item_product_name,
+ * role="button" on remove link). Visibility filter intentionally stays
+ * woocommerce_cart_item_visible (core uses woocommerce_widget_cart_item_visible).
+ *
  * @see https://woocommerce.com/document/template-structure/
+ * @package WooCommerce\Templates
+ * @version 11.2.2
  */
 
 defined('ABSPATH') || exit;
@@ -23,11 +29,12 @@ do_action('woocommerce_before_mini_cart');
             $_product   = apply_filters('woocommerce_cart_item_product', $cart_item['data'], $cart_item, $cart_item_key);
             $product_id = apply_filters('woocommerce_cart_item_product_id', $cart_item['product_id'], $cart_item, $cart_item_key);
 
-            if (!$_product || !$_product->exists() || $cart_item['quantity'] <= 0 || !apply_filters('woocommerce_cart_item_visible', true, $cart_item, $cart_item_key)) {
+            if (!($_product instanceof WC_Product) || !$_product->exists() || $cart_item['quantity'] <= 0 || !apply_filters('woocommerce_cart_item_visible', true, $cart_item, $cart_item_key)) {
                 continue;
             }
 
-            $product_name      = apply_filters('woocommerce_cart_item_name', $_product->get_name(), $cart_item, $cart_item_key);
+            $cart_item_name    = WC()->cart->get_item_product_name($cart_item, $_product);
+            $product_name      = apply_filters('woocommerce_cart_item_name', $cart_item_name, $cart_item, $cart_item_key);
             $thumbnail         = apply_filters('woocommerce_cart_item_thumbnail', $_product->get_image('thumbnail'), $cart_item, $cart_item_key);
             $product_price     = apply_filters('woocommerce_cart_item_price', WC()->cart->get_product_price($_product), $cart_item, $cart_item_key);
             $product_permalink = apply_filters('woocommerce_cart_item_permalink', $_product->is_visible() ? $_product->get_permalink($cart_item) : '', $cart_item, $cart_item_key);
@@ -49,7 +56,7 @@ do_action('woocommerce_before_mini_cart');
                         <a class="mini-cart-item-title" href="<?php echo esc_url($product_permalink); ?>"><?php echo wp_kses_post($product_name); ?></a>
                     <?php endif; ?>
 
-                    <?php echo wc_get_formatted_cart_item_data($cart_item); // phpcs:ignore ?>
+                    <?php echo wc_get_formatted_cart_item_data($cart_item, false, $cart_item_name); // phpcs:ignore ?>
 
                     <div class="mini-cart-item-meta">
                         <div class="mini-cart-qty" data-cart-item-key="<?php echo esc_attr($cart_item_key); ?>">
@@ -65,7 +72,7 @@ do_action('woocommerce_before_mini_cart');
                 echo apply_filters( // phpcs:ignore
                     'woocommerce_cart_item_remove_link',
                     sprintf(
-                        '<a href="%s" class="remove remove_from_cart_button mini-cart-item-remove" aria-label="%s" data-product_id="%s" data-cart_item_key="%s" data-product_sku="%s">&times;</a>',
+                        '<a role="button" href="%s" class="remove remove_from_cart_button mini-cart-item-remove" aria-label="%s" data-product_id="%s" data-cart_item_key="%s" data-product_sku="%s">&times;</a>',
                         esc_url(wc_get_cart_remove_url($cart_item_key)),
                         /* translators: %s is the product name */
                         esc_attr(sprintf(__('Remove %s from cart', 'woocommerce'), wp_strip_all_tags($product_name))),
