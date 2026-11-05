@@ -11,7 +11,6 @@ Projects: jlmops, web, marketing, content
 - [ ] 2025-12-22: refactor config JSON files - remove empty padding, consolidate repetitive entries
 - [ ] 2025-12-29: Texts lookup is random and probably inefficient - need to examine
 - [ ] Smarter reprint logic: Track first immutable print separately
-- [ ] Remove one-time backfill code when CRM is stable
 - [ ] 2026-06-08: **Bundles — surface missed profit opportunities.** Flag high-profit wines (`wpm_ProfitRate`) that aren't used in ANY bundle (cross-bundle `usage` = 0, the Stage 6 index) so the operator can pull them into a bundle. The signals already exist (profit from Stage 2, usage from Stage 6); this is a read-only "high-margin wines not in any bundle" report/card on AdminBundles. Capstone to the Stage 7 generator.
 - [ ] WhatsApp Business account is set up and in use (site links point to it); full segmentation/broadcast/automation build (labels, opt-in sync, broadcast lists) has no near-term plan. Scoped spec if revisited: `marketing/plans/_archive/WHATSAPP_TRANSITION.md`, `jlmops/plans/WHATSAPP_CRM_INTEGRATION.md`.
 - [ ] Mailchimp export from CRM
@@ -25,7 +24,6 @@ Projects: jlmops, web, marketing, content
 ## web
 
 - [ ] 2025-12-29: Risk that redundant text is affecting SEO - research enriched text in products
-- [ ] 2026-10-23 (low): Remove or reverse `_invoice_note` product meta, left over from a failed attempt to get packing slip data into standard Woo output (WPML Copy field).
 - [ ] 2026-01-22: Examine website cache and other speed-related settings to optimize
 - [ ] 2026-05-15: **Nav menu structure + mobile review** (consolidates 2026-04-29 + 2026-05-07 notes). Audit desktop layout, mobile drawer hierarchy, deep-link targets (e.g., `#footer-contact`). What customers actually need vs. what the menu currently has. Check mobile drawer appearance against design system. Single audit pass.
 

@@ -76,76 +76,6 @@ function runFormatDataSheets() {
 }
 
 /**
- * Backfills order totals in WebOrdM_Archive from CSV file.
- * @param {string} fileName - CSV filename (default: order_history_2025-12-16.csv)
- */
-function backfillArchiveOrderTotalsFromCsv(fileName) {
-  fileName = fileName || 'order_history_2025-12-16.csv';
-
-  // Find the CSV file
-  const files = DriveApp.getFilesByName(fileName);
-  if (!files.hasNext()) {
-    console.log('File not found: ' + fileName);
-    return;
-  }
-  const file = files.next();
-  const csvContent = file.getBlob().getDataAsString();
-
-  // Parse CSV and build OrderId -> OrderTotal lookup
-  const rows = Utilities.parseCsv(csvContent);
-  const headers = rows[0];
-  const orderIdIdx = headers.indexOf('order_id');
-  const orderTotalIdx = headers.indexOf('order_total');
-
-  if (orderIdIdx === -1 || orderTotalIdx === -1) {
-    console.log('CSV missing order_id or order_total columns');
-    return;
-  }
-
-  const totalsByOrderId = {};
-  for (let i = 1; i < rows.length; i++) {
-    const orderId = String(rows[i][orderIdIdx]).trim();
-    const total = parseFloat(rows[i][orderTotalIdx]) || 0;
-    if (orderId) {
-      totalsByOrderId[orderId] = total;
-    }
-  }
-  console.log(`Loaded ${Object.keys(totalsByOrderId).length} order totals from CSV`);
-
-  // Get archive sheet
-  const allConfig = ConfigService.getAllConfig();
-  const archiveSheet = SheetAccessor.getDataSheet('WebOrdM_Archive', false);
-
-  if (!archiveSheet) {
-    console.log('WebOrdM_Archive not found');
-    return;
-  }
-
-  const archiveData = archiveSheet.getDataRange().getValues();
-  const archiveHeaders = archiveData[0];
-  const archiveOrderIdIdx = archiveHeaders.indexOf('woma_OrderId');
-  const archiveTotalIdx = archiveHeaders.indexOf('woma_OrderTotal');
-
-  if (archiveTotalIdx === -1) {
-    console.log('woma_OrderTotal column not found in archive');
-    return;
-  }
-
-  let updated = 0;
-  for (let i = 1; i < archiveData.length; i++) {
-    const orderId = String(archiveData[i][archiveOrderIdIdx]).trim();
-    const existingTotal = archiveData[i][archiveTotalIdx];
-
-    if (orderId && totalsByOrderId[orderId] !== undefined && !existingTotal) {
-      archiveSheet.getRange(i + 1, archiveTotalIdx + 1).setValue(totalsByOrderId[orderId]);
-      updated++;
-    }
-  }
-
-  console.log(`Backfilled ${updated} order totals in WebOrdM_Archive`);
-}
-
-/**
  * Calculate and store spend for all contacts.
  * @param {number} year - Optional calendar year (e.g., 2024). If omitted, uses rolling 12 months.
  */
@@ -799,7 +729,6 @@ function HousekeepingService() {
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
       { name: 'runLibraryIntegrityReport', fn: () => this.runLibraryIntegrityReport() },
       { name: 'reconcileLibraryDuplicates', fn: () => LibraryService.reconcileLibraryDuplicates() },
-      { name: 'backfillActivities', fn: () => this.backfillActivities() },
       { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() },
       { name: 'closeQuietFailures', fn: () => this.closeQuietFailures() },
       { name: 'refreshKpiBlock', fn: () => StatusReportService.refreshKpiBlock(sessionId) },
@@ -1002,8 +931,7 @@ function HousekeepingService() {
       }
 
       // Keep order.placed activity current — new orders log an activity row on
-      // the same cadence as the aggregate update above (ongoing counterpart to
-      // the run-once backfillOrderActivity). Idempotent.
+      // the same cadence as the aggregate update above. Idempotent.
       if (typeof ActivityBackfillService !== 'undefined' && ActivityBackfillService.syncRecentOrderActivity) {
         const activityResult = ActivityBackfillService.syncRecentOrderActivity();
         logger.info('HousekeepingService', functionName,
@@ -2607,15 +2535,6 @@ function HousekeepingService() {
       logger.error('HousekeepingService', functionName, `Error during import file cleanup: ${e.message}`, e);
       return false;
     }
-  };
-
-  /**
-   * Backfills activity records from order history and subscriptions.
-   * DISABLED: One-time migration completed. New activities are created through normal order/subscription flows.
-   */
-  this.backfillActivities = function() {
-    // One-time backfill completed - no longer needed
-    return true;
   };
 
   /**

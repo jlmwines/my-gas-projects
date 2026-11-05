@@ -138,7 +138,6 @@ Daily maintenance runs in three phases:
 - `createWelcomeOutreachTasks()` - Welcome new contacts
 - `runLibraryIntegrityReport()` - Library health check
 - `reconcileLibraryDuplicates()` - De-dup library files
-- `backfillActivities()` - CRM activity backfill
 - `runCrmIntelligence()` - Generate campaign suggestions
 - `refreshKpiBlock()` - Regenerate KPI section of `jlmops-status.md`
 - `applyPendingCalendarUpdates()` - Scans the `system.folder.calendar` staging folder for session-authored calendar-row files, upserts them into `JLMops_Publishing` keyed on `cal_Slug` (a row with no `cal_Slug` is skipped, not added), archives processed files (`StatusReportService.js`). `JLMops_Publishing` is otherwise directly admin-edited, never regenerated — CALENDAR_LIBRARY_LOOP_PLAN Phase 1, replaces the old `refreshCalendarExport` wipe-and-rebuild.
