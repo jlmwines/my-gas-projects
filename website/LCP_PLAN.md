@@ -1,6 +1,6 @@
 # Mobile LCP Plan
 
-Plan to bring mobile LCP on jlmwines.com from 3.9s to under 2.5s (Google's "good" mark). Status: **draft, not started** (2026-11-05). Each step below is one live theme deploy, measured before the next starts.
+Plan to bring mobile LCP on jlmwines.com from 3.9s to under 2.5s (Google's "good" mark). Status: **in progress**: steps 0-2 and 2b(a) done (LCP 4.1s → 3.6s); steps 3-4 next. Each step below is one live theme deploy, measured before the next starts.
 
 ## Where we are
 
@@ -29,7 +29,7 @@ The mobile LCP element is the hero photo (confirmed in PageSpeed, step 0).
 
 **1. Logo stops claiming high priority.** Done, theme v1.2.35 live 2026-11-05: `get_custom_logo_image_attributes` filter in `inc/enqueue.php` sets the logo to `fetchpriority="auto"`; live HTML confirms the hero is now the only high-priority image. Result: EN LCP 4.1s → 3.9s after cache purge (small, within run-to-run noise). As expected, the remaining delay is render-blocking.
 
-**2. Drop or defer plugin stylesheets.** Done, theme v1.2.36 live 2026-11-05 (site-wide). WPML registers its switcher CSS after our dequeue runs, so both files are stripped at tag output (`style_loader_tag` in `inc/enqueue.php`); the menu-item switcher's 6 rules live at the top of `main.css` (top keeps the original cascade order). Complianz (2) and accessibility-widget (2) stylesheets load via `media="print"` onload swap with a `<noscript>` fallback. Live homepage now has `main.css` as its only blocking stylesheet. Result: pending user PageSpeed rerun and visual check (switcher, cookie banner, a11y widget, EN/HE).
+**2. Drop or defer plugin stylesheets.** Done, theme v1.2.36 live 2026-11-05 (site-wide). WPML registers its switcher CSS after our dequeue runs, so both files are stripped at tag output (`style_loader_tag` in `inc/enqueue.php`); the menu-item switcher's 6 rules live at the top of `main.css` (top keeps the original cascade order). Complianz (2) and accessibility-widget (2) stylesheets load via `media="print"` onload swap with a `<noscript>` fallback. Live homepage now has `main.css` as its only blocking stylesheet. Result (with 2b logo fix, v1.2.37): mobile FCP 1.5s, LCP 3.6s; switcher, cookie banner and popup verified by user.
 
 **2b. Image delivery (PageSpeed "Improve image delivery").** Not LCP-critical except the hero, but flagged by PageSpeed. Findings 2026-11-05: (a) logo displays at 48px tall but its `sizes` attribute says "100vw up to 512px", so phones download the 512px file (33 KB) instead of the 100px variant; fix by setting `sizes` in the existing `get_custom_logo_image_attributes` filter. (b) hero on mobile picks the 760w file because the 599w variant is just under the needed width; acceptable, revisit only if PageSpeed still flags it after (a). (c) below-the-fold images hardcoded without srcset: `evyatar-cohen-10.png` (68 KB, `front-page.php`/`template-homepage.php`), footer newsletter `evyatar-at-the-vineyard-1200.828.jpg` (167 KB, `footer.php`), popup avatar `evyatar-cohen-04.jpg` shown at 40px (30 KB, `inc/exit-intent-popup.php`). These are lazy-loaded so they don't affect LCP; fix by switching to sized variants. Status: (a) done, theme v1.2.37 live 2026-11-05 (logo `sizes="48px"`); (c) open.
 
