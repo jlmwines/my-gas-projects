@@ -13,7 +13,7 @@ Images are not the problem. The hero (`evyatar-cohen-09.jpg`) and the logo both 
 
 Also, two images on the homepage ask for `fetchpriority="high"`: the hero (set in `front-page.php`) and the header logo (added automatically by WordPress, which treats the 512x512 logo as the main image). They compete for first place in the download queue.
 
-Not yet known: which element Google counts as the mobile LCP (hero photo or hero headline text). Step 0 settles it, because it changes which fix matters most.
+The mobile LCP element is the hero photo (confirmed in PageSpeed, step 0).
 
 ## Constraints
 
@@ -25,9 +25,9 @@ Not yet known: which element Google counts as the mobile LCP (hero photo or hero
 
 ## Steps (lowest risk first)
 
-**0. Baseline and LCP element.** Run PageSpeed mobile 3 times on the EN and HE homepages; record median LCP and the "Largest Contentful Paint element" shown in the report. No code change.
+**0. Baseline and LCP element.** Baseline recorded 2026-11-05 (3rd run, EN and HE identical): FCP 1.8s, LCP 4.1s, Speed Index 2.5s. LCP element: the hero photo (`evyatar-cohen-09.jpg.webp`, already eager + `fetchpriority="high"`), so step 1 applies.
 
-**1. Logo stops claiming high priority.** Filter the custom-logo image attributes so the logo gets `fetchpriority="auto"`, leaving the hero as the only high-priority image. Tiny change, near-zero risk. Matters most if the LCP element is the hero photo.
+**1. Logo stops claiming high priority.** Done, theme v1.2.35 live 2026-11-05: `get_custom_logo_image_attributes` filter in `inc/enqueue.php` sets the logo to `fetchpriority="auto"`; live HTML confirms the hero is now the only high-priority image. Result: pending user PageSpeed rerun.
 
 **2. Drop or defer plugin stylesheets on the homepage.** The theme already tries to sweep the two WPML switcher stylesheets (pattern list in `inc/enqueue.php`), but they still print, so WPML adds them some other way; find the real hook and remove them if the header switcher still looks right without them. Load Complianz and accessibility-plugin CSS without blocking (`media="print" onload` swap) if their UI is unaffected; otherwise leave them. Verify: header language switcher, cookie banner, accessibility widget, EN and HE.
 

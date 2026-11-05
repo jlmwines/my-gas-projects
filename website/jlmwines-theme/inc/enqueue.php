@@ -62,6 +62,17 @@ add_filter('wp_resource_hints', function ($hints, $relation_type) {
 }, 10, 2);
 
 /**
+ * Header logo: normal fetch priority. WordPress auto-marks the 512px logo
+ * as fetchpriority="high", which competes with the homepage hero photo
+ * (the measured mobile LCP element). Passing fetchpriority explicitly
+ * stops core from adding "high". See website/LCP_PLAN.md step 1.
+ */
+add_filter('get_custom_logo_image_attributes', function ($attr) {
+    $attr['fetchpriority'] = 'auto';
+    return $attr;
+});
+
+/**
  * Strip the cdn.elementor.com dns-prefetch hint. Elementor is
  * uninstalled but the hint still appears in <head> — likely added
  * by a plugin via its own wp_head action or by Elementor's leftover
