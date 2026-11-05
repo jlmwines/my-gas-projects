@@ -3,6 +3,16 @@
    Fonts loaded via wp_enqueue_style (see inc/enqueue.php).
    ───────────────────────────────────────────────────────────────── */
 
+/* WPML menu-item switcher (copied from WPML templates/language-switchers/menu-item/style.min.css;
+ * WPML's own file is stripped in inc/enqueue.php to cut a render-blocking request).
+ * Kept at the top so theme rules below still override it, as when WPML's file loaded first. */
+.wpml-ls-menu-item .wpml-ls-flag { display: inline; vertical-align: baseline; }
+.wpml-ls-menu-item .wpml-ls-flag + span { margin-left: .3em; }
+.rtl .wpml-ls-menu-item .wpml-ls-flag + span { margin-left: 0; margin-right: .3em; }
+ul .wpml-ls-menu-item a { display: flex; align-items: center; }
+ul .wpml-ls-menu-item a .wpml-ls-native + span { margin-left: .3em; }
+.rtl ul .wpml-ls-menu-item a .wpml-ls-native + span { margin-left: 0; margin-right: .3em; }
+
 /* ─── Tokens ─────────────────────────────────────────────────────── */
 :root {
   /* Colors — 8 tokens only */
@@ -3345,3 +3355,4 @@ body.page-template-template-gifts {
   transition: color var(--transition-fast);
 }
 .bundle-edit-hint-close:hover { color: var(--c-ink); }
+

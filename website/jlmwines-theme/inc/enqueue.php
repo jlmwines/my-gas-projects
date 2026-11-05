@@ -111,6 +111,30 @@ add_filter('style_loader_tag', function ($tag, $handle) {
 }, 10, 2);
 
 /**
+ * Plugin stylesheets off the render-blocking path (website/LCP_PLAN.md step 2).
+ *
+ * - WPML switcher CSS: the header uses only the menu-item switcher, whose few
+ *   rules are copied into main.css ("WPML menu-item switcher" block). Both
+ *   WPML switcher files are dropped. WPML registers them after our
+ *   wp_enqueue_scripts dequeue runs, so they're stripped at tag output.
+ * - Complianz + accessibility-widget CSS: loaded non-blocking (print-media
+ *   swap). Their UI (cookie banner, a11y widget, skip link) is either hidden
+ *   until JS shows it or only visible on keyboard focus, so a late stylesheet
+ *   doesn't flash. <noscript> fallback keeps them for no-JS visitors.
+ */
+add_filter('style_loader_tag', function ($tag, $handle) {
+    if (in_array($handle, ['wpml-legacy-horizontal-list-0', 'wpml-menu-item-0'], true)) {
+        return '';
+    }
+    $deferred = ['cmplz-general', 'cmplz-banner-1-optin', 'ea11y-widget-fonts', 'ea11y-skip-link'];
+    if (in_array($handle, $deferred, true) && strpos($tag, "media='all'") !== false) {
+        $async = str_replace("media='all'", "media='print' onload=\"this.media='all'\"", $tag);
+        return $async . '<noscript>' . $tag . '</noscript>';
+    }
+    return $tag;
+}, 20, 2);
+
+/**
  * Reusable predicate for routes that render no Gutenberg block content.
  * Used by the block-CSS dequeue below. NOTE: this predicate is broader than
  * the WC-classic-CSS filter scope — shop/category/cart/checkout legitimately
