@@ -9,6 +9,7 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Remaining Site Health items reviewed as no-action (reasons in `website/tasks.md`); OPcache warning likely false on Ultrafast PHP.
 - CardCom 3.6.0.0 installed by user today; next real order confirms it and the new email templates (STATUS NA 13).
 - Site Health async tests are readable via REST (`/wp-json/wp-site-health/v1/tests/<name>`) with `.wp-credentials`; direct tests are not.
+- Later: mobile LCP plan (`website/LCP_PLAN.md`) steps 1-3b shipped, theme v1.2.35-v1.2.39 (logo priority/sizes, plugin CSS off render path, homepage critical CSS, hero preload) plus popup mobile button fix. Score 90, FCP 1.2s, lab LCP ~3.5s; paused, no CrUX data. Critical CSS must be regenerated (`website/critical-css.js`) after homepage header/hero layout changes.
 
 ## 2026-11-04 (c) — Publishing Board built and live (@612-@616)
 - Shipped: admin-default Board tab in PublishingView (`PublishingBoard.html` include, no server changes): Rows (chips by start date, Translate + end columns, Create on task-less rows) and Month grid (all tasks by start date, colored by publication, type+name+stage labels). Chips open the shared TaskDetail modal.
