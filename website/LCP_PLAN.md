@@ -8,7 +8,7 @@ Buyers land on home EN/HE, product pages (Search Console's top pages after home)
 
 Read-only probes, 2026-11-05 (logged out, from Israel):
 
-- **Page cache never hits.** Every repeat request returns `x-proxy-cache=MISS`; product pages also send `sg-f-cache=BYPASS`. Every page is built by PHP on every visit: 0.57-1.19s before the first byte.
+- **Pages wait ~0.6s for the first byte.** The server page cache works, but the base CDN only caches static files, so each page makes a round trip from the CDN edge to the server in Europe (F1).
 - **Product photo is lazy-loaded.** The main product image (`wp-post-image`) ships as a placeholder GIF with `data-src` and loads only after SiteGround's `lazysizes` script runs. WebPageTest (Europe) bundle page: FCP 1.7s, LCP 3.3s, versus home LCP 1.5s.
 - **Fonts.** Rubik is served as 4 `.ttf` weights from fonts.gstatic.com, inlined by SiteGround's "Combine Google Fonts" (no woff2, extra connection).
 - **Cart/checkout** take about 2.0s before the first byte (uncacheable by design).
@@ -24,7 +24,7 @@ Read-only probes, 2026-11-05 (logged out, from Israel):
 
 ## Funnel steps (highest leverage first)
 
-**F1. Make the page cache hit.** Site Tools → Speed → Caching: confirm Dynamic Cache is on, then find what forces MISS/BYPASS (a plugin sending no-cache headers, a cookie from the age gate/Complianz/WPML, or the exclusion list). Settings only. Expected: first byte ~0.6s → ~0.1s on every cacheable page.
+**F1. Serve cached pages from the CDN edge (decision: Premium CDN).** The server page cache works: behind SiteGround's base CDN, pages always report `x-proxy-cache: MISS` / `sg-f-cache: BYPASS` (SiteGround support, 2026-11-05), so check by timing, not headers. Measured 2026-11-05 (median of 5, `/he/`): cached page 0.6s, forced-uncached (unique query) 1.07s, static file from the CDN edge 0.07s. The base CDN caches static files only (`x-cdn-c: static`), so every page still makes the ~0.5s trip from the edge to the server in Europe. Premium CDN caches pages at the edge too, which should bring cacheable pages to roughly 0.1s. No effect on cart/checkout. User decides on cost. Exclusions are checkout and wp-admin (favorites removed 2026-11-05, unused).
 
 **F2. Load the main product image immediately.** Exclude it from SiteGround lazy load (Speed Optimizer → Media → exclusions, class `wp-post-image`; theme filter if the setting can't). Give it `fetchpriority="high"`, same pattern as the hero (`jlmwines_hero_image_sources()` in `inc/enqueue.php`). Same for the first row of shop/category thumbnails. Blog posts have the same problem (the `post-hero-image wp-post-image` featured image is lazy-loaded), so the same class exclusion fixes them. Expected product and blog LCP ~1.5-2s.
 
@@ -58,7 +58,7 @@ Read-only probes, 2026-11-05 (logged out, from Israel):
 
 ## Verification (every step)
 
-- F1: repeat `curl` shows `x-proxy-cache=HIT`.
+- F1: a cached page responds in about the same time as a static file (~0.1s), median of 5 requests. Headers are not a reliable check behind the CDN.
 - WebPageTest Europe, median of 3, before and after: home EN/HE, shop, a wine product, a bundle, a blog post, cart.
 - After any theme step: add to cart, mini-cart qty/remove, checkout to the Cardcom page, cookie banner, newsletter popup, EN and HE.
 
