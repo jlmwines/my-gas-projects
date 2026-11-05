@@ -246,3 +246,4 @@ Entries through 2026-10-03 were condensed per this file's header and the kernel'
 
 Lessons from that period already captured as standing rules: "bug report ≠ ship order" (`.claude/CLAUDE.md`), check git log first on "this broke" (memory), theme deploy is live not staging (`.claude/CLAUDE.md`), session never originates Hebrew for blog posts (memory), body-first drafting gate (`content/CLAUDE.md`). One open gap noted 2026-07-31: `UNIFIED_TASK_UI_PLAN.md` no longer exists anywhere, its facts unverified against `ARCHITECTURE.md`. Full narrative is in git history.
 - @624: one-time CRM backfill code removed (restorable from git); invoice_note/_invoice_note meta deleted from live DB via phpMyAdmin (2,963 rows, after full SiteGround backup).
+- Yoast leftovers: 706 _yoast_* postmeta rows deleted (Rank Math holds its own data). Yoast options/tables (wpseo%, wpq5_yoast_*) left; optional cleanup.
