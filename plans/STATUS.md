@@ -24,7 +24,7 @@ One current-state line per business area. The umbrella has no single phase label
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
 | Open Bugs | See `plans/BUGS.md` + `jlmops/plans/BUG_FIX_SEQUENCE.md`. Open sessions: F, H, I. Code-audit fix sequence (Sessions K–U) done 2026-07-24; only server-side authorization remains, tracked separately. |
-| Mobile PageSpeed | Score 86 · FCP 1.8 / LCP 3.9 / SI 3.7 (2026-11-05). Remaining lever: LCP (render-blocking main.css critical-CSS + jQuery defer). |
+| Mobile PageSpeed | Score 86 · FCP 1.8 / LCP 3.9 / SI 3.7 (2026-11-05). LCP plan → `website/LCP_PLAN.md` (draft). |
 | Desktop PageSpeed | EN FCP 0.7 / LCP 0.8 · HE FCP 0.7 / LCP 1.2 |
 | Blockers | 0 |
 
