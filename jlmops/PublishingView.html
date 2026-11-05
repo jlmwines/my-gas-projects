@@ -8,6 +8,9 @@
   /* PublishingView — layout; pv-tab handled entirely by AppView global ds-v2 */
   .pv-container { padding: 0; }
   .pv-tabs { display:flex; gap:1px; overflow-x:auto; }
+  /* Admin: Calendar sits last (retiring). Manager: Tasks first (his default). */
+  .role-admin .pv-tab[data-tab="calendar"] { order: 99; }
+  .role-manager .pv-tab[data-tab="tasks"] { order: -1; }
 
   /* Panels */
   .pv-panel { display: none; }
@@ -231,24 +234,24 @@
 
 <div class="pv-container ds-v2">
 
-  <!-- Tab bar — admin: Calendar/Library/Campaigns/Projects; manager: Calendar/Tasks/Library -->
+  <!-- Tab bar — admin: List/Month/Tasks/Library/Campaigns/Calendar (Calendar retires once the board's
+       schedule form ships, PUBLISHING_BOARD_PLAN phase 4); manager: Tasks (default)/Calendar/Library.
+       List and Month are the board's two views and share one panel. -->
   <div class="pv-tabs">
-    <button type="button" class="pv-tab" data-tab="board" onclick="PublishingView.switchTab('board')" data-roles="admin">Board</button>
     <button class="pv-tab active" data-tab="calendar" onclick="PublishingView.switchTab('calendar')">Calendar</button>
+    <button type="button" class="pv-tab" data-tab="list" onclick="PublishingView.switchTab('list')" data-roles="admin">List</button>
+    <button type="button" class="pv-tab" data-tab="month" onclick="PublishingView.switchTab('month')" data-roles="admin">Month</button>
     <button class="pv-tab" data-tab="tasks" onclick="PublishingView.switchTab('tasks')">Tasks</button>
     <button class="pv-tab" data-tab="library" onclick="PublishingView.switchTab('library')">Library</button>
     <button class="pv-tab" data-tab="campaigns" onclick="PublishingView.switchTab('campaigns')" data-roles="admin">Campaigns</button>
   </div>
 
-  <!-- ===== BOARD TAB (admin) — PublishingBoard.html ===== -->
+  <!-- ===== BOARD PANEL (admin: List + Month tabs) — PublishingBoard.html ===== -->
   <div class="pv-panel" id="pv-panel-board" data-roles="admin">
     <div class="ds-section">
       <div class="ds-section-head">
-        <h6>Board</h6>
-        <span>
-          <button type="button" class="tw-chip active" data-board-mode="rows" onclick="PublishingView.switchBoardMode('rows')">Rows</button>
-          <button type="button" class="tw-chip" data-board-mode="month" onclick="PublishingView.switchBoardMode('month')">Month</button>
-        </span>
+        <h6 id="pv-board-title">List</h6>
+        <button type="button" class="btn btn-sm" onclick="PublishingView.openSchedule()">Schedule</button>
         <div class="tw-filter-bar">
           <input type="search" id="pv-board-search" placeholder="Search title / slug..." />
           <span style="margin-left:8px;">
@@ -439,10 +442,11 @@
 <div class="modal-overlay" id="pvDrawerAttachModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
   <div style="background:white;border-radius:4px;max-width:520px;width:90%;">
     <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Attach new version</h6>
+      <h6 class="mb-0" id="pv-drawer-attach-title">Attach new version</h6>
     </div>
     <div style="padding:15px;">
-      <p class="mb-2 small">Paste the Drive URL of the new Doc for <strong id="pv-drawer-attach-slug"></strong>. The current Doc is archived and superseded.</p>
+      <div id="pv-drawer-attach-found" class="mb-2 small" style="display:none;"></div>
+      <p class="mb-2 small">Paste the Drive URL of the <span id="pv-drawer-attach-which">new </span>Doc for <strong id="pv-drawer-attach-slug"></strong>.<span id="pv-drawer-attach-note"> The current Doc is archived and superseded.</span></p>
       <input type="url" class="form-control form-control-sm" id="pv-drawer-attach-url" placeholder="https://docs.google.com/document/d/..." />
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
@@ -465,6 +469,41 @@
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
       <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('pvCalDateModal')">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="pv-btn-cal-date-save" onclick="PublishingView.saveCalendarDate()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Board schedule form (PUBLISHING_BOARD_PLAN phase 4): one form to add a calendar row
+     or re-date an existing one. Edit mode locks everything but the date. -->
+<div class="modal-overlay" id="pvScheduleModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:420px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0" id="pv-sched-title">Schedule content</h6>
+    </div>
+    <div style="padding:15px;">
+      <label class="small mb-0" for="pv-sched-date">Publish date</label>
+      <input type="date" class="form-control form-control-sm mb-2" id="pv-sched-date" />
+      <label class="small mb-0" for="pv-sched-type">Type</label>
+      <select class="form-control form-control-sm mb-2" id="pv-sched-type" onchange="PublishingView.scheduleSuggestSlug()">
+        <option value="blog">blog</option>
+        <option value="email">email</option>
+        <option value="news">news</option>
+        <option value="print">print</option>
+        <option value="social">social</option>
+        <option value="mention">mention</option>
+        <option value="other">other</option>
+      </select>
+      <label class="small mb-0" for="pv-sched-name">Name</label>
+      <input type="text" class="form-control form-control-sm mb-2" id="pv-sched-name" oninput="PublishingView.scheduleSuggestSlug()" />
+      <label class="small mb-0" for="pv-sched-slug">Slug</label>
+      <input type="text" class="form-control form-control-sm mb-2" id="pv-sched-slug" oninput="PublishingView.scheduleSlugEdited()" />
+      <label class="small mb-0" for="pv-sched-notes">Notes</label>
+      <input type="text" class="form-control form-control-sm" id="pv-sched-notes" />
+      <div class="small text-muted mt-2" id="pv-sched-hint"></div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('pvScheduleModal')">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="pv-btn-sched-save" onclick="PublishingView.saveSchedule()">Save</button>
     </div>
   </div>
 </div>
@@ -564,8 +603,10 @@
         reload:  _loadData
       });
       ContentStreamModal.configure({ reload: _loadData });
-      // Board is the admin's default tab; the manager keeps Calendar.
-      if (document.body.classList.contains('role-admin')) switchTab('board');
+      // Default tab: admin opens on List (the board), the manager on Tasks
+      // (what he needs to do now).
+      if (document.body.classList.contains('role-admin')) switchTab('list');
+      else switchTab('tasks');
       _loadData();
       var boardSearchEl = document.getElementById('pv-board-search');
       if (boardSearchEl) boardSearchEl.addEventListener('input', renderBoard);
@@ -612,6 +653,7 @@
         document.getElementById('pv-library-table-wrap').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
         return;
       }
+      state.dataLoaded = true;
       state.tasks = res.data.tasks || [];
       state.archivedTasks = res.data.archivedTasks || [];
       state.library = res.data.library || [];
@@ -687,15 +729,18 @@
 
     function switchTab(tab) {
       state.activeTab = tab;
+      // List and Month are the board's two views on one panel.
+      var panel = (tab === 'list' || tab === 'month') ? 'board' : tab;
       document.querySelectorAll('.pv-tab').forEach(function(b) {
         b.classList.toggle('active', b.getAttribute('data-tab') === tab);
       });
       document.querySelectorAll('.pv-panel').forEach(function(p) {
-        p.classList.toggle('active', p.id === 'pv-panel-' + tab);
+        p.classList.toggle('active', p.id === 'pv-panel-' + panel);
       });
-      if (tab === 'tasks') renderTasks();
+      // Before the first load, keep the "Loading…" placeholder (_onLoaded renders).
+      if (tab === 'tasks' && state.dataLoaded) renderTasks();
       if (tab === 'campaigns') renderCampaigns();
-      if (tab === 'board') renderBoard();
+      if (panel === 'board') switchBoardMode(tab === 'month' ? 'month' : 'rows');
     }
 
     // ===== BOARD TAB (PublishingBoard.html) =====
@@ -724,9 +769,7 @@
 
     function switchBoardMode(mode) {
       state.boardMode = mode;
-      document.querySelectorAll('[data-board-mode]').forEach(function(b) {
-        b.classList.toggle('active', b.getAttribute('data-board-mode') === mode);
-      });
+      document.getElementById('pv-board-title').textContent = mode === 'month' ? 'Month' : 'List';
       // Open/All only applies to Rows.
       document.querySelectorAll('[data-board-filter]').forEach(function(b) {
         b.style.display = mode === 'month' ? 'none' : '';
@@ -749,7 +792,7 @@
     // Month-grid publication click: show its row on the Rows view, highlighted.
     // "All" makes sure the row is in range even if it's past or far ahead.
     function boardJumpToRow(slug) {
-      switchBoardMode('rows');
+      switchTab('list');
       if (!document.getElementById('pb-row-' + slug)) switchBoardFilter('all');
       var el = document.getElementById('pb-row-' + slug);
       if (!el) return;
@@ -770,6 +813,88 @@
     // selected-row path into Create Content Tasks.
     function boardCreate(slug, type) {
       ContentStreamModal.open({ baseSlug: slug, entityType: type });
+    }
+
+    // Attach on a board row with no Doc for that language. Same endpoint as
+    // the drawer; the server creates the entity lazily if it doesn't exist.
+    function boardAttach(slug) {
+      _openAttachModal(slug, false, false);
+    }
+
+    // ── Schedule form: add a calendar row, or re-date one (date only) ──
+    // New → WebAppPublishing_addCalendarRow; edit → the same
+    // WebAppPublishing_updateCalendarDate the Calendar tab's date cell uses.
+    function openSchedule(slug, isoDate) {
+      var row = slug ? (state.holidays || []).filter(function(h) { return h.slug === slug; })[0] : null;
+      if (slug && !row) return;
+      state.schedSlug = row ? slug : null;
+      state.schedSlugEdited = false;
+      var set = function(id, v, locked) {
+        var el = document.getElementById(id);
+        el.value = v || '';
+        el.disabled = !!locked;
+      };
+      document.getElementById('pv-sched-title').textContent = row ? 'Change publish date' : 'Schedule content';
+      set('pv-sched-date', row ? row.date : (isoDate || ''), false);
+      set('pv-sched-type', row ? row.type : 'blog', !!row);
+      set('pv-sched-name', row ? row.name : '', !!row);
+      set('pv-sched-slug', row ? row.slug : '', !!row);
+      set('pv-sched-notes', row ? row.notes : '', !!row);
+      document.getElementById('pv-sched-hint').textContent = row
+        ? 'Task dates are not moved; re-date them from their chips.'
+        : 'Slug is suggested from type + name; edit it before saving if needed. It cannot change later.';
+      ModalOverlay.open('pvScheduleModal');
+    }
+
+    // type-name-words → "blog-name-words"; stops once the slug is hand-edited.
+    function scheduleSuggestSlug() {
+      if (state.schedSlug || state.schedSlugEdited) return;
+      var type = document.getElementById('pv-sched-type').value;
+      var words = document.getElementById('pv-sched-name').value.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      document.getElementById('pv-sched-slug').value = words ? type + '-' + words : '';
+    }
+
+    function scheduleSlugEdited() { state.schedSlugEdited = true; }
+
+    function saveSchedule() {
+      var isoDate = document.getElementById('pv-sched-date').value;
+      if (!isoDate) { TaskWidgets.toast('Pick a date', 'warning'); return; }
+      var editSlug = state.schedSlug;
+      var row = editSlug ? null : {
+        date: isoDate,
+        type: document.getElementById('pv-sched-type').value,
+        name: document.getElementById('pv-sched-name').value.trim(),
+        slug: document.getElementById('pv-sched-slug').value.trim(),
+        notes: document.getElementById('pv-sched-notes').value.trim()
+      };
+      if (row && (!row.name || !row.slug)) { TaskWidgets.toast('Name and slug required', 'warning'); return; }
+      var btn = document.getElementById('pv-btn-sched-save');
+      btn.disabled = true;
+      var runner = google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          if (!res || !res.success) {
+            TaskWidgets.toast((res && res.error) ? res.error : 'Save failed', 'error');
+            return;
+          }
+          ModalOverlay.close('pvScheduleModal');
+          TaskWidgets.toast(editSlug ? 'Date changed to ' + isoDate : 'Scheduled ' + row.slug, 'success');
+          _loadCampaignsAndProjects();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          TaskWidgets.toast(err && err.message ? err.message : 'Network error', 'error');
+        });
+      if (editSlug) runner.WebAppPublishing_updateCalendarDate(editSlug, isoDate);
+      else runner.WebAppPublishing_addCalendarRow(row);
+    }
+
+    // Month grid: a tap on a day's empty space schedules content on that day.
+    function boardDayClick(ev, isoDate) {
+      var t = ev.target;
+      if (t.closest && t.closest('.pb-chip, .pb-pub, .pb-more, .pb-mark')) return;
+      openSchedule(null, isoDate);
     }
 
     // ===== CALENDAR TAB =====
@@ -1798,14 +1923,59 @@
     // regardless of which (or whether any) task produced it.
     function drawerAttachNewVersion() {
       if (!state.currentEntity) return;
-      document.getElementById('pv-drawer-attach-slug').textContent = state.currentEntity.slug;
+      _openAttachModal(state.currentEntity.slug, true, true);
+    }
+
+    // Shared by the drawer and the Board row's Attach (PUBLISHING_BOARD_PLAN
+    // phase 4). hasDoc picks the wording; fromDrawer reloads the drawer after.
+    function _openAttachModal(slug, hasDoc, fromDrawer) {
+      state.attachSlug = slug;
+      state.attachFromDrawer = !!fromDrawer;
+      document.getElementById('pv-drawer-attach-title').textContent = hasDoc ? 'Attach new version' : 'Attach Doc';
+      document.getElementById('pv-drawer-attach-which').textContent = hasDoc ? 'new ' : '';
+      document.getElementById('pv-drawer-attach-note').style.display = hasDoc ? '' : 'none';
+      document.getElementById('pv-drawer-attach-slug').textContent = slug;
       document.getElementById('pv-drawer-attach-url').value = '';
+      var found = document.getElementById('pv-drawer-attach-found');
+      found.style.display = 'none';
+      found.innerHTML = '';
       ModalOverlay.open('pvDrawerAttachModal');
+      // First attach: offer unattached files already in the canonical folder.
+      if (hasDoc) return;
+      found.style.display = '';
+      found.innerHTML = '<span class="text-muted">Looking in the library folder…</span>';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (state.attachSlug !== slug) return;   // modal reopened for another row
+          if (!res || !res.ok) { found.innerHTML = '<span class="text-muted">' + TaskWidgets.escape((res && res.error) || 'Lookup failed') + '</span>'; return; }
+          if (!res.files.length) { found.innerHTML = '<span class="text-muted">No unattached file in ' + TaskWidgets.escape(res.folder) + '.</span>'; return; }
+          state.attachCandidates = res.files;
+          found.innerHTML = '<div class="text-muted mb-1">In ' + TaskWidgets.escape(res.folder) + ':</div>' +
+            res.files.map(function(f, i) {
+              return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">' +
+                '<a class="tw-file-link" href="' + TaskWidgets.escape(f.url) + '" target="_blank" rel="noopener">' +
+                (f.exact ? '<b>' : '') + TaskWidgets.escape(f.name) + (f.exact ? '</b>' : '') + '</a>' +
+                '<button type="button" class="btn btn-sm btn-light" onclick="PublishingView.attachCandidate(' + i + ')">Attach</button></div>';
+            }).join('');
+        })
+        .withFailureHandler(function(err) {
+          if (state.attachSlug !== slug) return;
+          found.innerHTML = '<span class="text-muted">' + TaskWidgets.escape(err && err.message ? err.message : 'Lookup failed') + '</span>';
+        })
+        .WebAppLibrary_findDocCandidates({ entityId: slug });
+    }
+
+    function attachCandidate(i) {
+      var f = (state.attachCandidates || [])[i];
+      if (!f) return;
+      document.getElementById('pv-drawer-attach-url').value = f.url;
+      submitDrawerAttachDoc();
     }
 
     function submitDrawerAttachDoc() {
-      if (!state.currentEntity) return;
-      var entityId = state.currentEntity.slug;
+      var entityId = state.attachSlug;
+      if (!entityId) return;
+      var fromDrawer = state.attachFromDrawer;
       var url = document.getElementById('pv-drawer-attach-url').value.trim();
       if (!url) { TaskWidgets.toast('Drive URL required', true); return; }
       var btn = document.getElementById('pv-btn-drawer-attach-submit');
@@ -1820,7 +1990,7 @@
           ModalOverlay.close('pvDrawerAttachModal');
           TaskWidgets.toast((result.copied ? 'Copy attached' : 'Doc attached') + (result.superseded ? ', previous archived' : ''));
           _loadData();
-          _loadEntityDrawer(entityId);
+          if (fromDrawer) _loadEntityDrawer(entityId);
         })
         .withFailureHandler(function(err) {
           btn.disabled = false; btn.textContent = 'Attach';
@@ -1896,6 +2066,13 @@
       boardExpandDay: boardExpandDay,
       boardJumpToRow: boardJumpToRow,
       boardCreate: boardCreate,
+      boardAttach: boardAttach,
+      openSchedule: openSchedule,
+      scheduleSuggestSlug: scheduleSuggestSlug,
+      scheduleSlugEdited: scheduleSlugEdited,
+      saveSchedule: saveSchedule,
+      boardDayClick: boardDayClick,
+      attachCandidate: attachCandidate,
       switchPreset: switchPreset,
       spawnForEntity: spawnForEntity,
       toggleCalendarRowSelection: toggleCalendarRowSelection,

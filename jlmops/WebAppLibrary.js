@@ -371,6 +371,22 @@ function WebAppLibrary_attachExistingDoc(params) {
 }
 
 /**
+ * Find-only lookup of unattached files in a slug's canonical Library folder,
+ * for one-tap first attach from the Publishing Board.
+ * @param {Object} params - { entityId }
+ * @returns {Object} { ok, folder, files: [{ name, url, updated, exact }], error? }
+ */
+function WebAppLibrary_findDocCandidates(params) {
+  try {
+    const result = LibraryService.findDocCandidates(params || {});
+    return { ok: true, folder: result.folder, files: result.files };
+  } catch (e) {
+    LoggerService.error('WebAppLibrary', 'findDocCandidates', e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
  * Creates a fresh Hebrew translation draft (copy of the just-finished EN
  * entity's Doc + prompt, attached as the HE entity's current version — the HE
  * entity is created lazily if it doesn't exist yet).

@@ -438,14 +438,63 @@ const LibraryService = (function() {
      * @private
      */
     function _getCanonicalFolder(type, concept) {
+        const typeFolder = _getOrCreateChildFolder(_getLibraryRoot(), type);
+        return _getOrCreateChildFolder(typeFolder, concept);
+    }
+
+    /** Library root folder from `system.folder.library`. @private */
+    function _getLibraryRoot() {
         const rootCfg = ConfigService.getConfig('system.folder.library');
         const rootFolderId = rootCfg && rootCfg.id ? String(rootCfg.id).trim() : '';
         if (!rootFolderId) {
             throw new Error('system.folder.library not configured (expected ConfigService.getConfig(...).id)');
         }
-        const rootFolder = DriveApp.getFolderById(rootFolderId);
-        const typeFolder = _getOrCreateChildFolder(rootFolder, type);
-        return _getOrCreateChildFolder(typeFolder, concept);
+        return DriveApp.getFolderById(rootFolderId);
+    }
+
+    /**
+     * Find-only: lists files sitting directly in `slug`'s canonical folder
+     * (<type>/<concept>) that no SysLibrary entity has attached, so a first
+     * attach can be one tap instead of a pasted URL (PUBLISHING_BOARD_PLAN
+     * phase 4). Never creates folders. Already-attached files are excluded so
+     * the EN Doc can't be offered (and then moved/renamed) as the HE Doc.
+     * Exact `<slug> <ts>` name matches sort first, then newest.
+     * @returns {{ folder: string, files: Array<{name, url, updated, exact}> }}
+     */
+    function findDocCandidates(params) {
+        const slug = params && params.entityId;
+        if (!slug) throw new Error('entityId is required');
+        const { rows } = _openLibrary();
+        const existing = rows.find(r => r.slb_Slug === slug);
+        const type = (existing && existing.slb_ContentType) || _deriveEntityFieldsFromSlug(slug).type;
+        const concept = _deriveConcept(slug);
+        const folderPath = type + '/' + concept;
+
+        const typeIt = _getLibraryRoot().getFoldersByName(type);
+        if (!typeIt.hasNext()) return { folder: folderPath, files: [] };
+        const conceptIt = typeIt.next().getFoldersByName(concept);
+        if (!conceptIt.hasNext()) return { folder: folderPath, files: [] };
+
+        const attached = {};
+        rows.forEach(r => {
+            const m = String(r.slb_DocUrl || '').match(/[-\w]{25,}/);
+            if (m) attached[m[0]] = true;
+        });
+
+        const files = [];
+        const it = conceptIt.next().getFiles();
+        while (it.hasNext()) {
+            const f = it.next();
+            if (f.isTrashed() || attached[f.getId()]) continue;
+            files.push({
+                name: f.getName(),
+                url: f.getUrl(),
+                updated: f.getLastUpdated().toISOString(),
+                exact: _slugFromFileName(f.getName()) === slug
+            });
+        }
+        files.sort((a, b) => (b.exact - a.exact) || b.updated.localeCompare(a.updated));
+        return { folder: folderPath, files: files };
     }
 
     /**
@@ -1284,12 +1333,14 @@ const LibraryService = (function() {
     }
 
     return {
+        VALID_TYPES: VALID_TYPES,
         addEntity: addEntity,
         setEntityCampaign: setEntityCampaign,
         getEntityContent: getEntityContent,
         spawnContentChain: spawnContentChain,
         createBlankDoc: createBlankDoc,
         attachExistingDoc: attachExistingDoc,
+        findDocCandidates: findDocCandidates,
         createTranslationDraft: createTranslationDraft,
         lockVersion: lockVersion,
         requestCorrection: requestCorrection,

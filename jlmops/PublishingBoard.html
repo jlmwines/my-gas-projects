@@ -15,6 +15,11 @@
   .pb-pub-date { font-size: 12px; color: #6c757d; }
   .pb-pub-name { font-weight: 600; font-size: 13px; }
   .pb-pub-type { font-size: 11px; color: #6c757d; }
+  .pb-redate { cursor: pointer; border-bottom: 1px dashed #adb5bd; }
+  .pb-redate:hover { color: #0d6efd; }
+  .pb-day { cursor: pointer; }
+  .pb-docs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px; font-size: 11px; }
+  .pb-docs .btn { padding: 0 6px; font-size: 11px; line-height: 1.5; }
   .pb-divider { padding: 3px 4px; font-size: 11px; color: #6c757d; background: #fafbfc; border-bottom: 1px solid #f1f3f5; }
   .pb-chip {
     display: inline-flex; align-items: center; gap: 4px;
@@ -123,6 +128,28 @@
         (stateText ? ' ' + stateText : '') + '</span>';
     }
 
+    // Doc links for a row: one per language slug the row's tasks or library
+    // entities carry (EN, HE, or a language-neutral slug). An attached Doc opens;
+    // a missing one gets an Attach button (PUBLISHING_BOARD_PLAN phase 4).
+    function _docLinks(base, tasks, libBySlug, libByBase) {
+      var slugs = {};
+      tasks.forEach(function(t) { if (t.entityId) slugs[t.entityId] = true; });
+      (libByBase[base] || []).forEach(function(e) { slugs[e.slug] = true; });
+      var rank = function(s) { var x = s.slice(-3); return x === '-en' ? 0 : x === '-he' ? 1 : 2; };
+      var list = Object.keys(slugs).sort(function(a, b) { return rank(a) - rank(b); });
+      if (!list.length) return '';
+      return '<div class="pb-docs">' + list.map(function(slug) {
+        var tail = slug.slice(-3);
+        var lang = tail === '-en' ? 'EN' : tail === '-he' ? 'HE' : 'Doc';
+        var e = libBySlug[slug];
+        if (e && e.docUrl) {
+          return '<a class="tw-file-link" href="' + esc(e.docUrl) + '" target="_blank" rel="noopener" title="Open ' + esc(slug) + '">&#8599; ' + lang + '</a>';
+        }
+        return '<button type="button" class="btn btn-sm btn-light" title="Attach a Doc to ' + esc(slug) +
+          '" onclick="PublishingView.boardAttach(\'' + esc(slug) + '\')">Attach ' + lang + '</button>';
+      }).join('') + '</div>';
+    }
+
     function render(state, opts) {
       opts = opts || {};
       var container = document.getElementById('pv-board-wrap');
@@ -145,6 +172,14 @@
         container.innerHTML = _renderMonth(state, opts, byBase, openIds);
         return;
       }
+
+      var libBySlug = {}, libByBase = {};
+      (state.library || []).forEach(function(e) {
+        if (!e.slug) return;
+        libBySlug[e.slug] = e;
+        var b = _baseSlug(e.slug);
+        (libByBase[b] = libByBase[b] || []).push(e);
+      });
 
       var now = new Date();
       var today = TaskWidgets.formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -187,8 +222,11 @@
           return;
         }
         var tasks = (byBase[h.slug] || []).slice();
-        var left = '<div><div class="pb-pub-date">' + esc(h.date) + ' <span class="pb-pub-type">' + esc(h.type) + '</span></div>' +
-          '<div class="pb-pub-name">' + esc(h.name) + '</div></div>';
+        // Date opens the schedule form in edit mode (re-date this row).
+        var left = '<div><div class="pb-pub-date"><span class="pb-redate" title="Change publish date" onclick="PublishingView.openSchedule(\'' +
+          esc(h.slug) + '\')">' + esc(h.date) + '</span> <span class="pb-pub-type">' + esc(h.type) + '</span></div>' +
+          '<div class="pb-pub-name">' + esc(h.name) + '</div>' +
+          _docLinks(h.slug, tasks, libBySlug, libByBase) + '</div>';
 
         var rowOpen = '<div class="pb-row" id="pb-row-' + esc(h.slug) + '">';
         if (!tasks.length) {
@@ -315,7 +353,8 @@
         if (i >= 35 && !inMonth) break;   // drop a trailing week that's all next month
         var cell = items[key] || { pubs: [], marks: [], chips: [] };
         var cls = 'pb-day' + (inMonth ? '' : ' pb-other') + (key === todayKey ? ' pb-today' : '');
-        html += '<div class="' + cls + '"><div class="pb-daynum">' + cursor.getDate() + '</div>';
+        html += '<div class="' + cls + '" onclick="PublishingView.boardDayClick(event, \'' + key + '\')" title="Tap empty space to schedule on this day">' +
+          '<div class="pb-daynum">' + cursor.getDate() + '</div>';
         cell.marks.forEach(function(h) { html += '<span class="pb-mark" title="' + esc(h.notes || h.name) + '">' + esc(h.name) + '</span>'; });
         cell.pubs.forEach(function(h) {
           var pubColor = (h.slug in order.map) ? PALETTE[order.map[h.slug]] : '#f1f3f5';

@@ -1,6 +1,6 @@
 # Publishing Board Plan
 
-A new admin and manager working surface for content: one row per publication with its tasks laid out left to right, plus a month calendar grid of the same tasks. It replaces the gap between the Calendar tab (which shows only a coarse status per row) and AdminTasks filtered to Content (which shows tasks either all at once or for a single slug). Status: **phases 1+2 live and checked by the user; phase 3 (month grid, a Rows/Month toggle on the Board tab) live and in use; phase 4 (manager queue context) not started.**
+A new admin and manager working surface for content: one row per publication with its tasks laid out left to right, plus a month calendar grid of the same tasks. It replaces the gap between the Calendar tab (which shows only a coarse status per row) and AdminTasks filtered to Content (which shows tasks either all at once or for a single slug). Status: **phases 1+2 live and checked by the user; phase 3 (month grid, a Rows/Month toggle on the Board tab) live and in use; phase 4 (perfect the board for the admin so it replaces the Calendar and Tasks views) in progress: row Doc links + Attach (with library-folder lookup) live, and the board's two views promoted to top tabs List and Month (Calendar last for the admin until it retires), manager defaults to Tasks, and the schedule form (add row + re-date) @620. Remaining: live check of the form, then retire the Calendar tab (admin) and the Library Deficiency preset.**
 
 ## Problem
 
@@ -12,7 +12,18 @@ The manager's Edit and Translate stages are the main bottleneck. Delivery is irr
 
 A new admin-only **Board** tab inside `PublishingView.html`, next to Calendar/Library/Campaigns, gated with the existing `data-roles="admin"` tab mechanism. It is the **admin's default tab** when the view opens; the manager's default is unchanged. It reuses the data the view already loads (no separate view or nav link). Its markup and script live in their own include file, pulled in the same way as `TaskWidgets`/`TaskPacks`, so the 1,800-line view doesn't grow. The Calendar tab stays untouched until the board is proven; whether it later replaces Calendar, and whether the manager gets it, is decided then.
 
-Build order: (1) board view-only, (2) chip actions, (3) month grid, (4) manager queue context.
+Build order: (1) board view-only, (2) chip actions, (3) month grid, (4) admin board complete (below), (5) manager gets the board.
+
+## Phase 4: admin board complete (agreed direction, user 2026-11-05)
+
+The board should be perfected for the admin before the manager sees it. The goal is for it to replace the Calendar tab and the admin's content use of the Tasks view. Three additions on each row:
+
+- **Open Doc links**, EN and HE, from the row's library entities. The view already loads each entity's `docUrl` (the Tasks tab's "↗ Doc" button uses it), so no server change.
+- **Attach Doc** on the row, reusing the existing `WebAppLibrary_attachExistingDoc` path the Library drawer uses (canonical placement and versioning happen server-side).
+- **Find the Doc for a first attach.** When the row's Attach opens, a find-only server lookup lists files in the slug's canonical Library folder (`<type>/<concept>`) whose names start with the full slug, newest first; each has a one-tap Attach through the same `attachExistingDoc` path. The paste box stays as the fallback for Docs drafted elsewhere. The lookup never creates folders.
+- **One schedule form for new and existing rows.** Editing a row's publish date and adding a new calendar row share a single small form: date, type, name, slug suggested from type + name (editable on new rows only), optional notes. Edit writes `cal_Date` through the existing `StatusReportService.updateCalendarDate` path; new appends a `JLMops_Publishing` row through a new server function that refuses a duplicate `cal_Slug` and re-sorts (DATA_MODEL "Publishing Calendar" write rules gain this second UI write path). An empty-day tap on the month grid opens the form prefilled with that date.
+
+Once these are in use, the Calendar tab and the Library's Deficiency preset retire: the board's Open range plus late chips cover what Deficiency showed, and add which stage is late and who holds it. Library stays as the entity catalog, since it holds items with no calendar row (images, templates) and entity actions such as campaign assignment.
 
 ## Build notes (verified against code, 2026-11-04)
 
@@ -48,16 +59,14 @@ A second view of the same data, for weekday rhythm. The admin assigns manager wo
 
 ## Manager side (agreed direction, later phase)
 
-Once the admin board is proven, the manager may get the same board, with rights limited to his role. CoSchedule works the same way: a shared calendar plus a personal "my tasks" dashboard. His existing Dashboard queue stays his "my tasks" list. Each of his tasks gains the publication's publish date ("publishes in X days") and a link that opens that publication's row on the board.
+Once the admin board is proven, the manager may get the same board, with rights limited to his role. CoSchedule works the same way: a shared calendar plus a personal "my tasks" dashboard. His existing Dashboard queue stays his "my tasks" list. Publish dates don't help him: they can be far off, and the admin still has work after his Edit and Translate, so his own task due dates are what matter. The value for him is opening the Doc from the board.
 
 ## Candidates (not decided)
 
 - **Consolidation:** the board becomes the main working screen and the Calendar tab folds into it. Library stays the entity catalog, reached from a chip. Open: whether Library and Tasks tabs remain as-is.
 - **Overnight auto-attach:** the admin often forgets to attach a Doc. Today `reconcileLibraryDuplicates` only repoints existing entities to the newest file, and `runLibraryIntegrityReport` only logs orphans (`docs/ARCHITECTURE.md` housekeeping Phase 3). Candidate: nightly, attach a Doc in the canonical folder whose slug matches an open task with no entity, or flag the chip as "Doc found, not attached".
 - **Scheduling tie-ins** (`CONTENT_CHAIN_SCHEDULING_PLAN.md`): stages tied to the publish date, so moving the publish date moves the chain (CoSchedule-style); when a stage closes late, a preview of new downstream dates for the admin to accept (Asana-style "shift only on conflict, show the changes first"); durations derived from the manager's actual turnaround history.
-- **Schedule new content from the Board (proposed, on hold — user 2026-11-04):** a Schedule button on the Board (and an empty-day tap on the month grid, prefilled with that date) opens a small form: date, type, name, slug suggested from type + name (editable), optional notes. A new server function appends the `JLMops_Publishing` row, refuses a duplicate `cal_Slug`, and re-sorts, mirroring `StatusReportService.updateCalendarDate` (DATA_MODEL "Publishing Calendar" write rules would gain this as a second UI write path). The new row then shows its Create button.
 - **Coaching data:** days late per stage for the manager over time, for review with him rather than for nagging.
-- **Open files from the row (user 2026-11-05):** links on a board row to the row's relevant files (e.g. the post Doc, images, email), so the admin doesn't detour through Library or the task modal to reach them.
 
 ## Inspiration
 

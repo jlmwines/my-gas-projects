@@ -153,6 +153,22 @@ function WebAppPublishing_updateCalendarDate(slug, isoDate) {
 }
 
 /**
+ * Adds one content row to JLMops_Publishing from the Publishing Board's
+ * schedule form (admin only in the UI). Duplicate cal_Slug is refused.
+ * @param {Object} row - { date 'YYYY-MM-DD', type, name, slug, notes }
+ * @returns {Object} { success } or { success:false, error }.
+ */
+function WebAppPublishing_addCalendarRow(row) {
+  const sessionId = Utilities.getUuid();
+  try {
+    return StatusReportService.addCalendarRow(row, sessionId);
+  } catch (e) {
+    LoggerService.error('WebAppPublishing', 'addCalendarRow', e.message, e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
  * Sets slb_CampaignId on a Library entity (admin-only field update).
  * @param {Object} params - { entityId, campaignId }
  * @returns {Object} { success, data: { entity }, error? }

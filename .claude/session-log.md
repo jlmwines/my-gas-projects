@@ -4,6 +4,11 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-05 (b) — Publishing Board phase 4 (@617-@620)
+- Shipped: row Doc links + Attach (lists unattached files in the canonical folder for one tap), List/Month promoted to top tabs (Calendar last for admin), manager defaults to Tasks, schedule form (add calendar row via new `addCalendarRow`, re-date via `updateCalendarDate`).
+- Phase 4 redefined by user: perfect the admin board before the manager gets it; "publishes in X days" for the manager dropped (his task due dates matter, not publish dates).
+- Next: user live-checks the schedule form, then retire the admin Calendar tab + Library Deficiency preset; then manager gets the board.
+
 ## 2026-11-05 — Site Health review; theme v1.2.34 live
 - Shipped: WC template overrides reconciled with core 11.2.2 (2 order emails + mini-cart), theme v1.2.34; user confirmed mini-cart works and Site Health warnings cleared. Memcached on (Site Tools + Speed Optimizer toggle). Jetpack + WordPress Importer deleted; Worker kept (user's ManageWP).
 - Remaining Site Health items reviewed as no-action (reasons in `website/tasks.md`); OPcache warning likely false on Ultrafast PHP.

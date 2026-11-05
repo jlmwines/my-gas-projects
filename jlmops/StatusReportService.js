@@ -1093,11 +1093,64 @@ const StatusReportService = (function() {
     }
   }
 
+  /**
+   * Appends one content row to JLMops_Publishing (Publishing Board schedule
+   * form, admin only in the UI), then re-sorts. cal_Slug is the row's single
+   * authority, so a duplicate is refused; it must be a base slug (no -en/-he,
+   * which belong to entities). Type must be a LibraryService content type.
+   * @param {Object} row { date 'YYYY-MM-DD', type, name, slug, notes }.
+   * @param {string} sessionId correlation id (CCP-2).
+   * @returns {Object} { success } or { success:false, error }.
+   */
+  function addCalendarRow(row, sessionId) {
+    const fnName = 'addCalendarRow';
+    try {
+      row = row || {};
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row.date || ''));
+      if (!m) throw new Error('Invalid date: ' + row.date);
+      const type = String(row.type || '').trim();
+      if (LibraryService.VALID_TYPES.indexOf(type) === -1) throw new Error('Unknown type: ' + type);
+      const name = String(row.name || '').trim();
+      if (!name) throw new Error('Name is required');
+      const slug = String(row.slug || '').trim();
+      if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) throw new Error('Slug must be lowercase letters, digits and hyphens');
+      if (/-(en|he)$/.test(slug)) throw new Error('Calendar slug has no -en/-he suffix');
+      if (slug !== type && slug.indexOf(type + '-') !== 0) throw new Error('Slug must start with "' + type + '-"');
+
+      const allConfig = ConfigService.getAllConfig();
+      const calSheetId = allConfig['system.calendar.sheet_id'] && allConfig['system.calendar.sheet_id'].id;
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(10000)) throw new Error('Calendar busy, try again');
+      try {
+        const cal = _openCalendarSheet(calSheetId);
+        if (cal.slugToRow[slug]) throw new Error('Slug already on the calendar: ' + slug);
+        const values = {
+          cal_Date: new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])),   // local date, as updateCalendarDate
+          cal_Name: name,
+          cal_Type: type,
+          cal_Notes: String(row.notes || '').trim(),
+          cal_Slug: slug
+        };
+        cal.calSheet.appendRow(cal.calHeaders.map(function(h) { return h in values ? values[h] : ''; }));
+        _sortCalendarByDate(cal.calSheet, cal.calHeaders);
+      } finally {
+        lock.releaseLock();
+      }
+
+      logger.info(SERVICE_NAME, fnName, 'Calendar row added: ' + slug + ' on ' + row.date, { sessionId: sessionId });
+      return { success: true };
+    } catch (e) {
+      logger.error(SERVICE_NAME, fnName, 'Calendar row add failed: ' + e.message, e, { sessionId: sessionId });
+      return { success: false, error: e.message };
+    }
+  }
+
   return {
     refreshLiveBlocks: refreshLiveBlocks,
     refreshKpiBlock: refreshKpiBlock,
     applyPendingCalendarUpdates: applyPendingCalendarUpdates,
     updateCalendarDate: updateCalendarDate,
+    addCalendarRow: addCalendarRow,
     // Pure helpers exported for tests (traffic series, business/KPI.md, Data path)
     _seriesPlan: _seriesPlan,
     _gscTabMonth: _gscTabMonth,

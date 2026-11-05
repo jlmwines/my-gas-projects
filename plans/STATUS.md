@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-11-04. Publishing Board (rows + month grid) live @616 as the admin's default tab; manager queue context and scheduling-from-board next; Golan Heights awaits manager lock.
+**Updated:** 2026-11-05. Publishing Board live @620 as the admin's List + Month tabs (Doc links, one-tap Attach, schedule/re-date form); after a live check, Calendar tab and Deficiency preset retire; Golan Heights awaits manager lock.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-11-04 |
 | Revenue | Steady |
-| Deploy Version | jlmops @616 · theme v1.2.39 |
-| Deploy Date | jlmops 2026-11-04 · theme 2026-11-03 |
+| Deploy Version | jlmops @620 · theme v1.2.39 |
+| Deploy Date | jlmops 2026-11-05 · theme 2026-11-03 |
 | CRM Contacts | 548 enriched |
 | Content | 12 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -41,7 +41,7 @@ The live "what now" — daily review reads these first.
 7. **Physical inventory — due now that the holidays have passed.** Full count sweep via Admin Inventory's count-task creation (full-sweep mode, batched alphabetically across sessions; design archived at `jlmops/plans/_archive/INVENTORY_COUNT_TASK_REDESIGN.md`). Counting is quantity-only.
 8. **Golan Heights (2026-11-16) and Judea/Foothills (2026-12-14) region posts, per JLMops_Publishing.** Golan Heights body ("Wine's Big Surprise: The Golan Heights", ~1,000 words) is attached in the Library (`blog/blog-region-golan-heights/`); manager edits and locks. Judea not drafted. Negev, Galilee, Central Mountains, and Coastal Plain are published (Coastal companion email HTML ready for Mailchimp). Sources, slot table, and calendar-row state → `content/plans/REGION_POSTS_PLAN.md`.
 9. **After the region posts: the ministry-map anchor, then People.** The anchor introduces the 2026 official map (8 regions, 18 sub-regions) and places our six region posts on it; People profiles are the richer next category (subjects can supply images and share). Grapes anchor stays drafted on the shelf (`content/grapes/grapes-en.post.md`). Plan → `content/plans/ISRAELI_WINE_GUIDE_PLAN.md`.
-10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager). Related: **Publishing Board** — phases 1-3 live (admin-default Board tab, Rows + Month views, chip opens task modal); manager queue context (phase 4) next, scheduling new rows from the board proposed and on hold → `jlmops/plans/PUBLISHING_BOARD_PLAN.md`.
+10. **Content chain scheduling — must get done, not yet designed.** "Set due date now" in the Create Content Tasks dialog dates every stage forward from today (each type's default deadline), which doesn't fit a chain. Wanted: dates worked back from the calendar goal date (publish/send), manager stages Mon-Wed only, warn and offer to compress when time is short. Blocked on realistic stage durations (the current defaults are too generous). Plan → `jlmops/plans/CONTENT_CHAIN_SCHEDULING_PLAN.md` (also holds the dialog's clear-all toggle and Translate-to-Manager). Related: **Publishing Board** — phases 1-3 live (admin-default Board tab, Rows + Month views, chip opens task modal); phase 4 built (List/Month tabs, Doc links + Attach, schedule/re-date form); after a live check the admin's Calendar tab and Deficiency preset retire, then the manager gets the board → `jlmops/plans/PUBLISHING_BOARD_PLAN.md`.
 11. **Packing slip insert → What's in the Box post → FAQ (in that order).** English copy for all three is in the library with calendar rows and tasks (FAQ includes its email); Evyatar edits, manager translates. Then a session builds the eight seasonal print templates and jlmops gets the Hebrew-date template picker. Plan → `website/PACKING_SLIP_EXPLAINER_PLAN.md`; FAQ still needs the Google reviews link.
 12. **Deep-review follow-ups (2026-11-03)** — the review now leads with a year-over-year score (Aug-Oct 2026 vs 2025: new customers +71%, Israel traffic +67%, returning customers -25% but buying more often and larger; definition in `business/KPI.md`). Open flags from `plans/reviews/review-deep-2026-11-03.md` awaiting user answers: STRATEGY.md offline-channels line, BUGS line for the broken first-order conversion KPI, three remaining "verify" bugs (audit row offset @597, Correct Product Name confirm @601, stale failure alerts @599: one leftover `status_export.refresh` task to close by hand).
 13. **CardCom plugin 3.6.0.0 — updated 2026-11-05; confirm the next real order.** Check that the charge succeeds and the order moves to Processing automatically (Cardcom's payment notification). Close this item once one order lands cleanly.
@@ -61,7 +61,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **WebDetM description backfill** (`jlmops/plans/WEBDETM_DESCRIPTION_BACKFILL_PLAN.md`) — non-wine only. Pass 1 (fill blanks from live) imported and verified; Pass 2 (HTML cleanup) file built and reviewed, import + post-import check pending. Bundles/Ilana's have no description text anywhere.
 - **Vintage-mismatch snapshot fix** (`jlmops/plans/VINTAGE_MISMATCH_SNAPSHOT_FIX_PLAN.md`) — live; vintage-mismatch tasks read live data instead of a creation-time snapshot. Not yet smoke-tested (needs a real vintage change; Next Action 13).
 
-- **Publishing Board** (`jlmops/plans/PUBLISHING_BOARD_PLAN.md`) — rows (1+2) and month grid (3) live and in use; open: manager queue context (4); scheduling from the board on hold.
+- **Publishing Board** (`jlmops/plans/PUBLISHING_BOARD_PLAN.md`) — rows (1+2) and month grid (3) live and in use; phase 4 built @620; open: live check of the schedule form, retire Calendar tab + Deficiency preset, then the manager gets the board.
 
 ## Current State
 
