@@ -57,6 +57,7 @@ Once the admin board is proven, the manager may get the same board, with rights 
 - **Scheduling tie-ins** (`CONTENT_CHAIN_SCHEDULING_PLAN.md`): stages tied to the publish date, so moving the publish date moves the chain (CoSchedule-style); when a stage closes late, a preview of new downstream dates for the admin to accept (Asana-style "shift only on conflict, show the changes first"); durations derived from the manager's actual turnaround history.
 - **Schedule new content from the Board (proposed, on hold — user 2026-11-04):** a Schedule button on the Board (and an empty-day tap on the month grid, prefilled with that date) opens a small form: date, type, name, slug suggested from type + name (editable), optional notes. A new server function appends the `JLMops_Publishing` row, refuses a duplicate `cal_Slug`, and re-sorts, mirroring `StatusReportService.updateCalendarDate` (DATA_MODEL "Publishing Calendar" write rules would gain this as a second UI write path). The new row then shows its Create button.
 - **Coaching data:** days late per stage for the manager over time, for review with him rather than for nagging.
+- **Open files from the row (user 2026-11-05):** links on a board row to the row's relevant files (e.g. the post Doc, images, email), so the admin doesn't detour through Library or the task modal to reach them.
 
 ## Inspiration
 
