@@ -336,7 +336,8 @@ const WooCommerceFormatter = (function() {
                 col2Lines.push(`${isEn ? 'Kashrut' : 'כשרות'}: ${kashrutNames.join(', ')}`);
             }
             if (_isFlagOn(heterMechira)) {
-                col2Lines.push(`<span style="color:#c00;"><b>${isEn ? 'Heter Mechira' : 'היתר מכירה'}</b></span>`);
+                // Red at normal weight (user 2026-11-05), matching the live pages.
+                col2Lines.push(`<span style="color:#c00;">${isEn ? 'Heter Mechira' : 'היתר מכירה'}</span>`);
             }
             if (_isFlagOn(isMevushal)) {
                 col2Lines.push(isEn ? 'Mevushal' : 'מבושל');

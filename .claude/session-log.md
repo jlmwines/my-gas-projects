@@ -9,6 +9,7 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Phase 4 redefined by user: perfect the admin board before the manager gets it; "publishes in X days" for the manager dropped (his task due dates matter, not publish dates).
 - @621: Tasks tab rows link both EN+HE Docs of the publication (manager's HE translate task can open the EN source). Attach ownership: manager attaching his own Doc transfers it (no copy); admin attaching the manager's Doc copies it, leaving his original behind.
 - @622: manager gets List + Month (writes admin-only), Calendar tab + Library Deficiency preset retired from UI; Apply Pending Updates moved to List header. Retired code still in PublishingView.html, delete once user confirms.
+- Heter Mechira: 122 live long descriptions unbolded via WC REST; Gofna Cab Reserve EN short-desc marker removed (not flagged in WebDetM 11-02 export); formatter unbolded @623. All 61 flagged SKUs match live. clasp needed `clasp login` again (invalid_rapt).
 - Close: `CALENDAR_TAB_UX_PLAN.md` archived (tab retired); its open refresh bug moved to the board plan's Refresh note + BUGS line. Next session: user feedback on List/Month, then delete retired Calendar/Deficiency code in PublishingView.html.
 - Earlier next (superseded): user live-checks the schedule form, then retire the admin Calendar tab + Library Deficiency preset; then manager gets the board.
 

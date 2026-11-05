@@ -14,7 +14,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 ### Open
 
-- [ ] 2026-11-02: Heter Mechira = 1 shows no red text in descriptions; check accepted only `true`; short desc never added it. Fixed @604; 61 live products corrected via API 2026-11-02.
 - [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS skipped the first data row; row numbers off by one. Fixed @597, verify on next housekeeping run.
 - [ ] 2026-10-23: Stale failure alerts stay on Admin dash. Fixed @599; verify live, clean up old ones. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
 - [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`).
@@ -32,6 +31,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 _One line each; full root-cause analysis lives in the git commit._
 
+- [x] 2026-11-05: Heter Mechira marker bold in long descriptions. Fixed @623 (red, normal weight); 122 live pages unbolded via REST, all 61 flagged SKUs match WebDetM.
 - [x] 2026-10-13: Welcome-outreach fired for first-time gift purchasers. Fixed @597, confirmed by user 2026-11-04.
 - [x] 2026-07-16: Schema Validation indicator didn't refresh on Admin Dev re-run. Fixed @603, confirmed by user 2026-11-04.
 - [x] 2026-07-16: System Health Status task date frozen at creation. Fixed @603, re-dated each run (SysTasks export 2026-11-04).
