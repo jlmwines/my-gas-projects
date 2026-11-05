@@ -9,7 +9,8 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Phase 4 redefined by user: perfect the admin board before the manager gets it; "publishes in X days" for the manager dropped (his task due dates matter, not publish dates).
 - @621: Tasks tab rows link both EN+HE Docs of the publication (manager's HE translate task can open the EN source). Attach ownership: manager attaching his own Doc transfers it (no copy); admin attaching the manager's Doc copies it, leaving his original behind.
 - @622: manager gets List + Month (writes admin-only), Calendar tab + Library Deficiency preset retired from UI; Apply Pending Updates moved to List header. Retired code still in PublishingView.html, delete once user confirms.
-- Next (superseded below where done): user live-checks the schedule form, then retire the admin Calendar tab + Library Deficiency preset; then manager gets the board.
+- Close: `CALENDAR_TAB_UX_PLAN.md` archived (tab retired); its open refresh bug moved to the board plan's Refresh note + BUGS line. Next session: user feedback on List/Month, then delete retired Calendar/Deficiency code in PublishingView.html.
+- Earlier next (superseded): user live-checks the schedule form, then retire the admin Calendar tab + Library Deficiency preset; then manager gets the board.
 
 ## 2026-11-05 — Site Health review; theme v1.2.34 live
 - Shipped: WC template overrides reconciled with core 11.2.2 (2 order emails + mini-cart), theme v1.2.34; user confirmed mini-cart works and Site Health warnings cleared. Memcached on (Site Tools + Speed Optimizer toggle). Jetpack + WordPress Importer deleted; Worker kept (user's ManageWP).

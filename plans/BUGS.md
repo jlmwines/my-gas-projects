@@ -22,7 +22,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 - [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects — low priority, revisit only if it causes real confusion.
 - [ ] 2026-07-23: `doGet`'s role check is a login gate, not an authorization boundary. `CODE_AUDIT_FIX_SEQUENCE.md` Session R.
 - [ ] 2026-07-20: Admin Products "Correct Product Name" applies with no confirmation step. Fixed @601 (confirm before save); verify live.
-- [ ] 2026-07-09: Calendar tab doesn't refresh after "Apply Pending Updates"/"Create Content Tasks". `jlmops/plans/CALENDAR_TAB_UX_PLAN.md` Phase 1.
+- [ ] 2026-07-09: Publishing calendar view (now List/Month) may not refresh after "Apply Pending Updates"/"Create Content Tasks". `jlmops/plans/PUBLISHING_BOARD_PLAN.md` Build notes, Refresh.
 - [ ] 2026-07-02: `ConfigService.loadConfig` reads only the first key-value pair of non-schema settings (P03-P10 dropped). `jlmops/plans/CONFIG_MULTI_PAIR_PARSE_PLAN.md`.
 - [ ] 2026-05-04: Audit timestamps + date formats system-wide (storage vs. display standardization). Future step, no plan doc yet.
 - [ ] 2026-05-04: Audit on-demand count-task creation (dedupe + split data/count validation paths). Future step, no plan doc yet.
