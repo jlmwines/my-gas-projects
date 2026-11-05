@@ -8,8 +8,7 @@
   /* PublishingView — layout; pv-tab handled entirely by AppView global ds-v2 */
   .pv-container { padding: 0; }
   .pv-tabs { display:flex; gap:1px; overflow-x:auto; }
-  /* Admin: Calendar sits last (retiring). Manager: Tasks first (his default). */
-  .role-admin .pv-tab[data-tab="calendar"] { order: 99; }
+  /* Manager: Tasks first (his default). */
   .role-manager .pv-tab[data-tab="tasks"] { order: -1; }
 
   /* Panels */
@@ -234,24 +233,24 @@
 
 <div class="pv-container ds-v2">
 
-  <!-- Tab bar — admin: List/Month/Tasks/Library/Campaigns/Calendar (Calendar retires once the board's
-       schedule form ships, PUBLISHING_BOARD_PLAN phase 4); manager: Tasks (default)/Calendar/Library.
-       List and Month are the board's two views and share one panel. -->
+  <!-- Tab bar — both roles: List/Month/Tasks/Library, admin adds Campaigns. Admin defaults to List,
+       manager to Tasks (shown first for him). List and Month are the board's two views on one panel.
+       The Calendar tab is retired (PUBLISHING_BOARD_PLAN phase 4); its panel markup awaits removal. -->
   <div class="pv-tabs">
-    <button class="pv-tab active" data-tab="calendar" onclick="PublishingView.switchTab('calendar')">Calendar</button>
-    <button type="button" class="pv-tab" data-tab="list" onclick="PublishingView.switchTab('list')" data-roles="admin">List</button>
-    <button type="button" class="pv-tab" data-tab="month" onclick="PublishingView.switchTab('month')" data-roles="admin">Month</button>
+    <button type="button" class="pv-tab active" data-tab="list" onclick="PublishingView.switchTab('list')">List</button>
+    <button type="button" class="pv-tab" data-tab="month" onclick="PublishingView.switchTab('month')">Month</button>
     <button class="pv-tab" data-tab="tasks" onclick="PublishingView.switchTab('tasks')">Tasks</button>
     <button class="pv-tab" data-tab="library" onclick="PublishingView.switchTab('library')">Library</button>
     <button class="pv-tab" data-tab="campaigns" onclick="PublishingView.switchTab('campaigns')" data-roles="admin">Campaigns</button>
   </div>
 
-  <!-- ===== BOARD PANEL (admin: List + Month tabs) — PublishingBoard.html ===== -->
-  <div class="pv-panel" id="pv-panel-board" data-roles="admin">
+  <!-- ===== BOARD PANEL (List + Month tabs, both roles; writes admin-only) — PublishingBoard.html ===== -->
+  <div class="pv-panel active" id="pv-panel-board">
     <div class="ds-section">
       <div class="ds-section-head">
         <h6 id="pv-board-title">List</h6>
-        <button type="button" class="btn btn-sm" onclick="PublishingView.openSchedule()">Schedule</button>
+        <button type="button" class="btn btn-sm" onclick="PublishingView.openSchedule()" data-roles="admin">Schedule</button>
+        <button class="btn btn-sm" id="pv-btn-apply-calendar-updates" data-roles="admin" title="Merge session-staged calendar files now (also runs nightly)">Apply Pending Updates</button>
         <div class="tw-filter-bar">
           <input type="search" id="pv-board-search" placeholder="Search title / slug..." />
           <span style="margin-left:8px;">
@@ -270,12 +269,11 @@
   </div>
 
   <!-- ===== CALENDAR TAB ===== -->
-  <div class="pv-panel active" id="pv-panel-calendar">
+  <div class="pv-panel" id="pv-panel-calendar">
     <div class="ds-section">
       <div class="ds-section-head">
         <h6>Calendar</h6>
         <button class="btn btn-sm" id="pv-btn-open-content-stream-cal" data-roles="admin">Create Content Tasks</button>
-        <button class="btn btn-sm" id="pv-btn-apply-calendar-updates" data-roles="admin">Apply Pending Updates</button>
         <div class="tw-filter-bar">
           <input type="search" id="pv-cal-search" placeholder="Search title / slug..." />
           <select id="pv-cal-status-filter">
@@ -333,7 +331,6 @@
       <div class="ds-section-actions">
         <div class="pv-library-presets" style="margin-bottom:6px;">
           <button class="tw-chip active" data-preset="all" onclick="PublishingView.switchPreset('all')">Library</button>
-          <button class="tw-chip" data-preset="deficiency" onclick="PublishingView.switchPreset('deficiency')" title="Pieces due soon or overdue — the demand view">Deficiency</button>
           <button class="tw-chip" data-preset="blog" onclick="PublishingView.switchPreset('blog')">Blog</button>
           <button class="tw-chip" data-preset="campaigns" onclick="PublishingView.switchPreset('campaigns')">Campaigns</button>
           <button class="tw-chip" data-preset="template" onclick="PublishingView.switchPreset('template')">Templates</button>
@@ -520,7 +517,7 @@
     };
 
     var state = {
-      activeTab: 'calendar',
+      activeTab: 'list',
       tasks: [],
       library: [],
       campaigns: [],
@@ -892,6 +889,7 @@
 
     // Month grid: a tap on a day's empty space schedules content on that day.
     function boardDayClick(ev, isoDate) {
+      if (!document.body.classList.contains('role-admin')) return;   // scheduling is admin-only
       var t = ev.target;
       if (t.closest && t.closest('.pb-chip, .pb-pub, .pb-more, .pb-mark')) return;
       openSchedule(null, isoDate);
@@ -1496,12 +1494,13 @@
       var html = '<table class="pv-cal-table"><thead><tr>' +
         TASK_COLUMNS.map(function(col) { return '<th>' + col.label + '</th>'; }).join('') +
         '</tr></thead><tbody>';
+      // Doc links cover the whole publication (EN + HE), not just this task's
+      // own slug: a Hebrew translate task needs the English source open too.
+      var docIdx = PublishingBoard.docIndex(state);
       contentTasks.forEach(function(t) {
         var entity = libBySlug[t.entityId] || null;
         var due = t.dueDate ? TaskWidgets.formatDate(t.dueDate) : '—';
-        var docBtn = (entity && entity.docUrl)
-          ? '<a class="btn btn-sm btn-light" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">&#8599; Doc</a>'
-          : '';
+        var docBtn = PublishingBoard.docLinksForTask(t, docIdx);
         html += '<tr style="cursor:pointer" onclick="TaskDetail.open(\'' + TaskWidgets.escape(t.id) + '\')">' +
           TASK_COLUMNS.map(function(col) { return _renderPvTaskCell(col.key, t, entity, due, docBtn); }).join('') +
           '</tr>';

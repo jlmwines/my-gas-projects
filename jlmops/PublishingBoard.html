@@ -17,7 +17,7 @@
   .pb-pub-type { font-size: 11px; color: #6c757d; }
   .pb-redate { cursor: pointer; border-bottom: 1px dashed #adb5bd; }
   .pb-redate:hover { color: #0d6efd; }
-  .pb-day { cursor: pointer; }
+  .role-admin .pb-day { cursor: pointer; }
   .pb-docs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px; font-size: 11px; }
   .pb-docs .btn { padding: 0 6px; font-size: 11px; line-height: 1.5; }
   .pb-divider { padding: 3px 4px; font-size: 11px; color: #6c757d; background: #fafbfc; border-bottom: 1px solid #f1f3f5; }
@@ -131,10 +131,13 @@
     // Doc links for a row: one per language slug the row's tasks or library
     // entities carry (EN, HE, or a language-neutral slug). An attached Doc opens;
     // a missing one gets an Attach button (PUBLISHING_BOARD_PLAN phase 4).
-    function _docLinks(base, tasks, libBySlug, libByBase) {
+    // Also used by the Tasks tab (attach=false: links only), so a Hebrew
+    // translate task can open the English source too.
+    function _docLinks(base, idx, attach) {
+      var libBySlug = idx.libBySlug;
       var slugs = {};
-      tasks.forEach(function(t) { if (t.entityId) slugs[t.entityId] = true; });
-      (libByBase[base] || []).forEach(function(e) { slugs[e.slug] = true; });
+      (idx.tasksByBase[base] || []).forEach(function(t) { if (t.entityId) slugs[t.entityId] = true; });
+      (idx.libByBase[base] || []).forEach(function(e) { slugs[e.slug] = true; });
       var rank = function(s) { var x = s.slice(-3); return x === '-en' ? 0 : x === '-he' ? 1 : 2; };
       var list = Object.keys(slugs).sort(function(a, b) { return rank(a) - rank(b); });
       if (!list.length) return '';
@@ -145,9 +148,38 @@
         if (e && e.docUrl) {
           return '<a class="tw-file-link" href="' + esc(e.docUrl) + '" target="_blank" rel="noopener" title="Open ' + esc(slug) + '">&#8599; ' + lang + '</a>';
         }
+        if (!attach) return '';
         return '<button type="button" class="btn btn-sm btn-light" title="Attach a Doc to ' + esc(slug) +
           '" onclick="PublishingView.boardAttach(\'' + esc(slug) + '\')">Attach ' + lang + '</button>';
       }).join('') + '</div>';
+    }
+
+    // Tasks by base slug — open + archived, content types only.
+    function _tasksByBase(state) {
+      var byBase = {};
+      (state.tasks || []).concat(state.archivedTasks || []).forEach(function(t) {
+        if (!_isContentTask(t)) return;
+        var base = _baseSlug(t.entityId);
+        if (base) (byBase[base] = byBase[base] || []).push(t);
+      });
+      return byBase;
+    }
+
+    // Lookup tables for _docLinks; build once per render, not per row.
+    function docIndex(state, tasksByBase) {
+      var libBySlug = {}, libByBase = {};
+      (state.library || []).forEach(function(e) {
+        if (!e.slug) return;
+        libBySlug[e.slug] = e;
+        var b = _baseSlug(e.slug);
+        (libByBase[b] = libByBase[b] || []).push(e);
+      });
+      return { libBySlug: libBySlug, libByBase: libByBase, tasksByBase: tasksByBase || _tasksByBase(state) };
+    }
+
+    // Public: links-only Doc entries for the publication a task belongs to.
+    function docLinksForTask(t, idx) {
+      return _docLinks(_baseSlug(t.entityId), idx, false);
     }
 
     function render(state, opts) {
@@ -157,13 +189,8 @@
       var search = (opts.search || '').toLowerCase();
       var showAll = !!opts.showAll;
 
-      // Tasks by base slug — open + archived, content types only.
-      var byBase = {};
-      (state.tasks || []).concat(state.archivedTasks || []).forEach(function(t) {
-        if (!_isContentTask(t)) return;
-        var base = _baseSlug(t.entityId);
-        if (base) (byBase[base] = byBase[base] || []).push(t);
-      });
+      var byBase = _tasksByBase(state);
+      var isAdmin = document.body.classList.contains('role-admin');
       // Only tasks the TaskDetail modal can load (state.tasks) are clickable.
       var openIds = {};
       (state.tasks || []).forEach(function(t) { openIds[t.id] = true; });
@@ -173,13 +200,7 @@
         return;
       }
 
-      var libBySlug = {}, libByBase = {};
-      (state.library || []).forEach(function(e) {
-        if (!e.slug) return;
-        libBySlug[e.slug] = e;
-        var b = _baseSlug(e.slug);
-        (libByBase[b] = libByBase[b] || []).push(e);
-      });
+      var docIdx = docIndex(state, byBase);
 
       var now = new Date();
       var today = TaskWidgets.formatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -222,16 +243,18 @@
           return;
         }
         var tasks = (byBase[h.slug] || []).slice();
-        // Date opens the schedule form in edit mode (re-date this row).
-        var left = '<div><div class="pb-pub-date"><span class="pb-redate" title="Change publish date" onclick="PublishingView.openSchedule(\'' +
-          esc(h.slug) + '\')">' + esc(h.date) + '</span> <span class="pb-pub-type">' + esc(h.type) + '</span></div>' +
+        // Admin: date opens the schedule form in edit mode (re-date this row).
+        var dateHtml = isAdmin
+          ? '<span class="pb-redate" title="Change publish date" onclick="PublishingView.openSchedule(\'' + esc(h.slug) + '\')">' + esc(h.date) + '</span>'
+          : esc(h.date);
+        var left = '<div><div class="pb-pub-date">' + dateHtml + ' <span class="pb-pub-type">' + esc(h.type) + '</span></div>' +
           '<div class="pb-pub-name">' + esc(h.name) + '</div>' +
-          _docLinks(h.slug, tasks, libBySlug, libByBase) + '</div>';
+          _docLinks(h.slug, docIdx, true) + '</div>';
 
         var rowOpen = '<div class="pb-row" id="pb-row-' + esc(h.slug) + '">';
         if (!tasks.length) {
           html += rowOpen + left +
-            '<div class="pb-lane"><button type="button" class="btn btn-sm" onclick="PublishingView.boardCreate(\'' +
+            '<div class="pb-lane"><button type="button" class="btn btn-sm" data-roles="admin" onclick="PublishingView.boardCreate(\'' +
             esc(h.slug) + '\', \'' + esc(h.type) + '\')">Create</button></div><div></div><div></div><div></div></div>';
           return;
         }
@@ -373,6 +396,6 @@
       return html + '</div>';
     }
 
-    return { render: render };
+    return { render: render, docIndex: docIndex, docLinksForTask: docLinksForTask };
   })();
 </script>
