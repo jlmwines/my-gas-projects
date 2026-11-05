@@ -36,7 +36,7 @@ These fixes are one-time config or code changes. Each is low risk and has multip
 **Effort:** 2 minutes. **Risk:** zero.
 
 ### 1b. WPML Custom Fields Translation — verify + fix
-**What:** WPML → Settings → Custom Fields Translation → confirm each `_rank_math_*` field is set to **Translate**, not Copy.
+**What:** WPML → Settings → Custom Fields Translation → confirm each `rank_math_*` field is set to **Translate**, not Copy.
 **Why it matters:** if any field is on Copy, HE pages inherit EN meta title/description/focus keyword. This is the single most-common WPML × RankMath failure mode. We don't know the current state — this is the key unknown.
 **Effort:** 15-minute wp-admin walk. **Risk:** zero (read-only audit; fixes are individual field dropdowns).
 **After:** for any field that was on Copy, existing HE pages need their RankMath sidebar values set manually. Audit scope: homepage, 3 product pages, 3 blog posts.
@@ -91,7 +91,7 @@ When region posts publish, each should link to 3-5 specific products from that r
 - **Spot-check category HE pages** (§2b) — view-source one HE category page and confirm title/description are HE-specific.
 
 ### After each region post publishes
-- Verify HE translation has its own `_rank_math_title` + `_rank_math_description` populated (not inherited) — use `get-post-seo-meta` on the HE post ID.
+- Verify HE translation has its own `rank_math_title` + `rank_math_description` populated (not inherited) — use `get-post-seo-meta` on the HE post ID.
 - Confirm internal links to products are included in the post body.
 
 ---

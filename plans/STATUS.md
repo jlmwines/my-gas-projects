@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-11-05. Publishing List + Month tabs live @622 for admin and manager (Calendar tab and Deficiency preset retired); retired code awaits removal; Golan Heights awaits manager lock.
+**Updated:** 2026-11-05. Publishing List + Month tabs live for admin and manager; one-time CRM backfill code removed @624; product SEO titles standardized (Name | JLM Wines); Golan Heights awaits manager lock.
 
 ## At a glance
 

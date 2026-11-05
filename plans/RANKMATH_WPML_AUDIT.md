@@ -4,38 +4,40 @@
 
 **Run from:** wp-admin on live (or staging — same WPML config). All steps read-only except where flagged "**FIX**".
 
-**Updated:** 2026-06-12 (Rank Math MCP gained four read abilities after a plugin update — see bottom)
+**Updated:** 2026-11-05
+
+**Current state (verified 2026-11-05).** Meta keys are `rank_math_*` (no leading underscore). Products carry no per-product `rank_math_title` overrides; all use the global template, rendering `Name | JLM Wines` (global separator `|`). Yoast leftovers (`_yoast_*` postmeta) are deleted.
 
 ---
 
 ## A. Custom Fields Translation (highest-impact)
 
-The single most-common WPML × RankMath gap. Each `_rank_math_*` field needs to be set to **Translate** so HE versions of pages can have their own values. If any field is set to **Copy** or **Don't translate**, that field is shared/inherited across languages.
+The single most-common WPML × RankMath gap. Each `rank_math_*` field needs to be set to **Translate** so HE versions of pages can have their own values. If any field is set to **Copy** or **Don't translate**, that field is shared/inherited across languages.
 
 **Path:** wp-admin → WPML → Settings → scroll to **Custom Fields Translation**
 
 Verify each of the following is set to **Translate**:
 
-- [ ] `_rank_math_title` — the SEO title shown in search results
-- [ ] `_rank_math_description` — the meta description
-- [ ] `_rank_math_focus_keyword` — focus keyword for analysis
-- [ ] `_rank_math_robots` — index/noindex settings
-- [ ] `_rank_math_canonical_url` — canonical URL
-- [ ] `_rank_math_facebook_title` — Facebook OG title
-- [ ] `_rank_math_facebook_description` — Facebook OG description
-- [ ] `_rank_math_facebook_image` — Facebook OG image URL
-- [ ] `_rank_math_facebook_image_id` — Facebook OG image attachment ID
-- [ ] `_rank_math_twitter_title` — Twitter card title
-- [ ] `_rank_math_twitter_description` — Twitter card description
-- [ ] `_rank_math_twitter_image` — Twitter card image URL
-- [ ] `_rank_math_twitter_image_id` — Twitter card image attachment ID
-- [ ] `_rank_math_breadcrumb_title` — breadcrumb override
-- [ ] `_rank_math_news_sitemap_robots` — news-sitemap robots (if news SEO active)
-- [ ] `_rank_math_advanced_robots` — advanced robots tag
+- [ ] `rank_math_title` — the SEO title shown in search results
+- [ ] `rank_math_description` — the meta description
+- [ ] `rank_math_focus_keyword` — focus keyword for analysis
+- [ ] `rank_math_robots` — index/noindex settings
+- [ ] `rank_math_canonical_url` — canonical URL
+- [ ] `rank_math_facebook_title` — Facebook OG title
+- [ ] `rank_math_facebook_description` — Facebook OG description
+- [ ] `rank_math_facebook_image` — Facebook OG image URL
+- [ ] `rank_math_facebook_image_id` — Facebook OG image attachment ID
+- [ ] `rank_math_twitter_title` — Twitter card title
+- [ ] `rank_math_twitter_description` — Twitter card description
+- [ ] `rank_math_twitter_image` — Twitter card image URL
+- [ ] `rank_math_twitter_image_id` — Twitter card image attachment ID
+- [ ] `rank_math_breadcrumb_title` — breadcrumb override
+- [ ] `rank_math_news_sitemap_robots` — news-sitemap robots (if news SEO active)
+- [ ] `rank_math_advanced_robots` — advanced robots tag
 
 **FIX (if any are wrong):** click the dropdown for that field → select **Translate** → Save. WPML will then surface the field in its translation editor for each translatable page.
 
-**FIX (after switching to Translate):** existing HE pages may need their `_rank_math_*` values populated manually — switching the setting doesn't auto-translate existing values. Edit each HE page → RankMath sidebar → set the SEO fields per HE page.
+**FIX (after switching to Translate):** existing HE pages may need their `rank_math_*` values populated manually — switching the setting doesn't auto-translate existing values. Edit each HE page → RankMath sidebar → set the SEO fields per HE page.
 
 ---
 

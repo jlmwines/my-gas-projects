@@ -248,3 +248,4 @@ Lessons from that period already captured as standing rules: "bug report ≠ shi
 - @624: one-time CRM backfill code removed (restorable from git); invoice_note/_invoice_note meta deleted from live DB via phpMyAdmin (2,963 rows, after full SiteGround backup).
 - Yoast leftovers: 706 _yoast_* postmeta rows deleted (Rank Math holds its own data). Yoast options/tables (wpseo%, wpq5_yoast_*) left; optional cleanup.
 - Rank Math audit (offline export): 392 inherited per-product rank_math_title overrides deleted; all products now use global template (Name JLM Wines). Global separator set to | (titles now Name | JLM Wines). Open: wrong descriptions on Dalton Wild One Chenin Blanc + Negohot Citrus Blossom Honey (need EN/HE text).
+- Next: delete retired Calendar/Deficiency code after user feedback on List/Month; Comax cost bug blocks high-margin bundle report.
