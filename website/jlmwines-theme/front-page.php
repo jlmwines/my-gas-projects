@@ -67,9 +67,9 @@ get_header();
                      * by the image optimizer; the <img> JPG fallback ships if
                      * either WebP isn't supported or a sidecar is missing.
                      */
-                    $hero_sizes  = '(max-width: 899px) 100vw, 50vw';
-                    $jpg_srcset  = wp_get_attachment_image_srcset($hero_image_id, 'large');
-                    $webp_srcset = $jpg_srcset ? str_replace('.jpg', '.jpg.webp', $jpg_srcset) : '';
+                    $hero_src    = jlmwines_hero_image_sources($hero_image_id); // inc/enqueue.php, shared with the <head> preload
+                    $hero_sizes  = $hero_src['sizes'];
+                    $webp_srcset = $hero_src['webp_srcset'];
                     ?>
                     <picture>
                         <?php if ($webp_srcset) : ?>
