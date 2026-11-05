@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-05 — Site Health review; theme v1.2.34 live
+- Shipped: WC template overrides reconciled with core 11.2.2 (2 order emails + mini-cart), theme v1.2.34; user confirmed mini-cart works and Site Health warnings cleared. Memcached on (Site Tools + Speed Optimizer toggle). Jetpack + WordPress Importer deleted; Worker kept (user's ManageWP).
+- Remaining Site Health items reviewed as no-action (reasons in `website/tasks.md`); OPcache warning likely false on Ultrafast PHP.
+- CardCom 3.6.0.0 installed by user today; next real order confirms it and the new email templates (STATUS NA 13).
+- Site Health async tests are readable via REST (`/wp-json/wp-site-health/v1/tests/<name>`) with `.wp-credentials`; direct tests are not.
+
 ## 2026-11-04 (c) — Publishing Board built and live (@612-@616)
 - Shipped: admin-default Board tab in PublishingView (`PublishingBoard.html` include, no server changes): Rows (chips by start date, Translate + end columns, Create on task-less rows) and Month grid (all tasks by start date, colored by publication, type+name+stage labels). Chips open the shared TaskDetail modal.
 - Gotchas found live: task title field is `name` in WebAppLibrary_getData (not `title`); range must match Calendar Open view — every calendar row is scheduled content, tasks follow (user correction).
