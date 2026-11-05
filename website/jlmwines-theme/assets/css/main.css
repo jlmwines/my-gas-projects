@@ -1858,6 +1858,9 @@ body.offer-popup-open { overflow: hidden; }
 @media (max-width: 480px) {
   .offer-popup-modal { padding: 28px 20px 20px; }
   .offer-popup-headline { font-size: 22px; }
+  /* Stack email + button: the nowrap button overflows the modal side by side. */
+  .offer-popup-form { flex-direction: column; }
+  .offer-popup-form button { width: 100%; }
 }
 
 /* Israel-only checkout guard (inc/woocommerce.php) — reuses the offer

@@ -66,9 +66,15 @@ add_filter('wp_resource_hints', function ($hints, $relation_type) {
  * as fetchpriority="high", which competes with the homepage hero photo
  * (the measured mobile LCP element). Passing fetchpriority explicitly
  * stops core from adding "high". See website/LCP_PLAN.md step 1.
+ *
+ * sizes: the logo renders at 48px (main.css .custom-logo-link img
+ * max-height, square image). Core's default sizes ("100vw up to 512px")
+ * made phones download the 512px file; 48px lets the browser pick the
+ * 100w/150w variant. Update if the header logo size changes. Step 2b.
  */
 add_filter('get_custom_logo_image_attributes', function ($attr) {
     $attr['fetchpriority'] = 'auto';
+    $attr['sizes']         = '48px';
     return $attr;
 });
 
