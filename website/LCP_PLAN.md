@@ -1,6 +1,6 @@
 # Site Speed Plan (sales funnel)
 
-Plan to make every page a buyer passes through load fast, measured as LCP under 2.5s and CLS under 0.1 on mobile. Home page work is done (score 90, FCP 1.2s, lab LCP ~3.5s). Funnel-wide steps F1-F7 below are planned, not started. Each step is one change, measured before the next; theme steps are live deploys (no staging) and need explicit user OK.
+Plan to make every page on the site load fast, starting with the pages a buyer passes through, measured as LCP under 2.5s and CLS under 0.1 on mobile. Home page work is done (score 90, FCP 1.2s, lab LCP ~3.5s). Funnel-wide steps F1-F7 below are planned, not started. Each step is one change, measured before the next; theme steps are live deploys (no staging) and need explicit user OK.
 
 ## The funnel and where it stands
 
@@ -26,7 +26,7 @@ Read-only probes, 2026-11-05 (logged out, from Israel):
 
 **F1. Make the page cache hit.** Site Tools → Speed → Caching: confirm Dynamic Cache is on, then find what forces MISS/BYPASS (a plugin sending no-cache headers, a cookie from the age gate/Complianz/WPML, or the exclusion list). Settings only. Expected: first byte ~0.6s → ~0.1s on every cacheable page.
 
-**F2. Load the main product image immediately.** Exclude it from SiteGround lazy load (Speed Optimizer → Media → exclusions, class `wp-post-image`; theme filter if the setting can't). Give it `fetchpriority="high"`, same pattern as the hero (`jlmwines_hero_image_sources()` in `inc/enqueue.php`). Same for the first row of shop/category thumbnails. Expected product LCP ~1.5-2s.
+**F2. Load the main product image immediately.** Exclude it from SiteGround lazy load (Speed Optimizer → Media → exclusions, class `wp-post-image`; theme filter if the setting can't). Give it `fetchpriority="high"`, same pattern as the hero (`jlmwines_hero_image_sources()` in `inc/enqueue.php`). Same for the first row of shop/category thumbnails. Blog posts have the same problem (the `post-hero-image wp-post-image` featured image is lazy-loaded), so the same class exclusion fixes them. Expected product and blog LCP ~1.5-2s.
 
 **F3. Self-host fonts.** Rubik woff2 (Hebrew + Latin subsets) in the theme, only the weights in use, body weight preloaded; turn off Combine Google Fonts.
 
@@ -34,7 +34,7 @@ Read-only probes, 2026-11-05 (logged out, from Israel):
 
 **F5. Prefetch on hover.** Speculation rules eagerness `moderate`; exclude cart, checkout, add-to-cart and logout URLs. With F1 done, the next funnel page opens near-instantly.
 
-**F6. Critical CSS for product and shop.** Extend `website/critical-css.js` (the home page method, step 3 below) to the product and shop templates; load photoswipe and bundle CSS without blocking.
+**F6. Critical CSS for every template.** Extend `website/critical-css.js` (the home page method, step 3 below) template by template, which covers every page on the site: product, shop/category, single post, standard page (about, contact, FAQ and other top-level pages), then cart/checkout last (highest risk). Posts and pages wait on 6 stylesheets today; load photoswipe and bundle CSS without blocking.
 
 **F7. Measure real visitors.** Send LCP/INP/CLS from `main.js` (web-vitals library, ~2 KB) to GA4 as events tagged with page type and EN/HE. Replaces the missing CrUX field data; OPS can later fold it into `jlmops-status.md`.
 
