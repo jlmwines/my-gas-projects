@@ -328,14 +328,15 @@ const StatusReportService = (function() {
       const H = v[0] || [];
       const col = k => H.indexOf(src[1] + k);
       const c = { id: col('OrderId'), d: col('OrderDate'), st: col('Status'), em: col('BillingEmail'), tot: col('OrderTotal'),
-        note: col('CustomerNote'), bl: col('BillingLastName'), sl: col('ShippingLastName') };
+        note: col('CustomerNote'), bl: col('BillingLastName'), sl: col('ShippingLastName'), cp: col('CouponItems') };
       for (let i = 1; i < v.length; i++) {
         const id = String(v[i][c.id] || '');
         if (!id || seen[id]) continue;
         seen[id] = true;
         out.push({ id: id, date: v[i][c.d] ? new Date(v[i][c.d]) : null, status: v[i][c.st],
           email: String(v[i][c.em] || '').toLowerCase(), total: _num(v[i][c.tot]),
-          customerNote: v[i][c.note], billingLastName: v[i][c.bl], shippingLastName: v[i][c.sl] });
+          customerNote: v[i][c.note], billingLastName: v[i][c.bl], shippingLastName: v[i][c.sl],
+          coupons: c.cp !== -1 ? String(v[i][c.cp] || '') : '' });
       }
     });
     return out;
@@ -1151,6 +1152,9 @@ const StatusReportService = (function() {
     applyPendingCalendarUpdates: applyPendingCalendarUpdates,
     updateCalendarDate: updateCalendarDate,
     addCalendarRow: addCalendarRow,
+    // Shared with KPISummaryService (first-order conversion from orders)
+    _readOrderHistory: _readOrderHistory,
+    _isValidOrderStatus: _isValidOrderStatus,
     // Pure helpers exported for tests (traffic series, business/KPI.md, Data path)
     _seriesPlan: _seriesPlan,
     _gscTabMonth: _gscTabMonth,

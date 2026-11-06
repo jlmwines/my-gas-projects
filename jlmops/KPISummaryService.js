@@ -4,7 +4,7 @@
  * customers EN/HE, first-order conversion + AOV, 90-day return rate,
  * newsletter subscribers + engagement) into SysKPISummary, so
  * StatusReportService's KPI block can read 13 rows instead of walking
- * SysContacts/SysCouponUsage/SysCampaigns per session. Full spec:
+ * SysContacts/orders (WebOrdM + archive)/SysCampaigns per session. Full spec:
  * jlmops/plans/KPI_SUMMARY_TAB.md.
  *
  * "New customer" is defined by sc_FirstCompletedDate (first COMPLETED
@@ -41,6 +41,30 @@ const KPISummaryService = (function() {
     const cfg = allConfig['kpi.first_purchase_coupons'];
     const raw = cfg && cfg.value ? String(cfg.value) : '';
     return raw.split(',').map(function(s) { return s.trim().toLowerCase(); }).filter(Boolean);
+  }
+
+  /**
+   * First-purchase coupon orders in [start, end): valid-status orders whose
+   * coupon list (comma-separated wom_CouponItems) contains one of `codes`.
+   * The coupon itself only redeems on a first purchase, so no first-order
+   * flag is needed. Pure - exported for tests.
+   * @param {Array<{date: Date, status: string, total: number, coupons: string}>} orders
+   * @param {string[]} codes lowercase coupon codes
+   * @param {function(string): boolean} isValidStatus
+   * @returns {{count: number, total: number}}
+   */
+  function _firstCouponOrders(orders, codes, start, end, isValidStatus) {
+    let count = 0, total = 0;
+    if (!codes.length) return { count: count, total: total };
+    orders.forEach(function(o) {
+      if (!o.date || isNaN(o.date) || o.date < start || o.date >= end) return;
+      if (!isValidStatus(o.status)) return;
+      const used = String(o.coupons || '').split(',').map(function(s) { return s.trim().toLowerCase(); });
+      if (!used.some(function(c) { return codes.indexOf(c) !== -1; })) return;
+      count++;
+      total += Number(o.total) || 0;
+    });
+    return { count: count, total: total };
   }
 
   /**
@@ -81,25 +105,12 @@ const KPISummaryService = (function() {
       }
     }
 
-    // --- SysCouponUsage: first-order conversion rate + AOV ---
-    const couSheet = ds.getSheetByName(sheetNames.SysCouponUsage || 'SysCouponUsage');
-    const firstPurchaseCodes = _firstPurchaseCoupons(allConfig);
-    let convCount = 0, convTotal = 0;
-    if (couSheet && couSheet.getLastRow() > 1) {
-      const uv = couSheet.getDataRange().getValues();
-      const UH = _headerIndex(uv[0]);
-      for (let i = 1; i < uv.length; i++) {
-        const row = uv[i];
-        const dRaw = row[UH.scu_OrderDate];
-        const d = dRaw ? new Date(dRaw) : null;
-        if (!d || isNaN(d) || d < start || d >= end) continue;
-        if (!_isTrue(row[UH.scu_WasFirstOrder])) continue;
-        const code = String(row[UH.scu_Code] || '').trim().toLowerCase();
-        if (firstPurchaseCodes.length && firstPurchaseCodes.indexOf(code) === -1) continue;
-        convCount++;
-        convTotal += Number(row[UH.scu_OrderTotal]) || 0;
-      }
-    }
+    // --- Orders (WebOrdM + archive): first-order conversion rate + AOV ---
+    const conv = _firstCouponOrders(
+      StatusReportService._readOrderHistory(ds, sheetNames),
+      _firstPurchaseCoupons(allConfig), start, end,
+      StatusReportService._isValidOrderStatus);
+    const convCount = conv.count, convTotal = conv.total;
     const newCustomersTotal = newEN + newHE;
 
     // --- SysCampaigns: campaigns sent + mean open/click in window ---
@@ -286,7 +297,8 @@ const KPISummaryService = (function() {
     recomputeCurrent: recomputeCurrent,
     closeMonth: closeMonth,
     maybeCloseMonth: maybeCloseMonth,
-    backfillMonths: backfillMonths
+    backfillMonths: backfillMonths,
+    _firstCouponOrders: _firstCouponOrders
   };
 })();
 

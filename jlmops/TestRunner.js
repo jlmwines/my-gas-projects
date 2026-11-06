@@ -27,7 +27,8 @@ const TestRunner = (function() {
       WooProductPullServiceTest,
       WooInventoryPushServiceTest,
       ValidationOrchestratorServiceTest,
-      BundleServiceTest
+      BundleServiceTest,
+      KPISummaryServiceTest
     ];
 
     // Suites deliberately feed adapters malformed input to verify error handling;

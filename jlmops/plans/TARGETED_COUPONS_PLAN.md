@@ -19,7 +19,7 @@ The email list lives on the Woo coupon (`email_restrictions`). Per contact, jlmo
 
 The daily coupon pull gains a real job: **reconcile** jlmops-owned coupons (emails, terms, expiry) against what jlmops defined and flag differences. Hand-made coupons are pulled read-only as now.
 
-`SysCouponUsage` is retired: nothing writes it (`CouponService.recordUsage` has no caller), so the KPI first-order figure moves to `coupon.used` activity.
+`SysCouponUsage` is retired: nothing writes it (`CouponService.recordUsage` has no caller), so the KPI first-order figure reads the orders themselves (build step 1).
 
 ## jlmops UI
 
@@ -45,7 +45,12 @@ Extended Coupon Features' per-coupon "message on apply" (WPML-translated, e.g. S
 
 ## Build order
 
-1. **`coupon.used` daily.** Add the coupon step to `ActivityBackfillService.syncRecentOrderActivity` (today only the manual full backfill writes it). Move the KPI first-order figure to activity; retire `SysCouponUsage`. Valuable on its own.
+1. **KPI first-order conversion from orders (fixes the BROKEN KPI; standalone).** Orders already carry their coupon codes (`wom_CouponItems` / `woma_CouponItems`, from Woo `coupon_lines`), and 50NEW only redeems on a first purchase, so no separate first-order flag is needed.
+   - `StatusReportService._readOrderHistory` (WebOrdM + archive, de-duped) gains a `coupons` field; it and `_isValidOrderStatus` are exported so the KPI reuses them instead of duplicating.
+   - New pure helper in `KPISummaryService`: orders in `[start, end)`, valid status, coupon list containing a `kpi.first_purchase_coupons` code (50NEW) → count + total. Exported for a unit test.
+   - `_computeWindow` swaps its `SysCouponUsage` block for that helper. Rate = count / new customers (unchanged denominator); AOV = total / count.
+   - Verify: after deploy, run `runKpiSummaryRecompute` (`KPISummaryService.js`), read `jlmops-status.md`, and check that BROKEN is gone and the count roughly matches 50NEW orders in Woo for the last 90 days.
+   - Later, a separate step: remove `SysCouponUsage`'s dead reader/writer in `CouponService.js` and its schema. Daily `coupon.used` activity is still wanted for the targeted-offer work (step 3), not for this KPI.
 2. **Verifications** (no user-facing change): Woo API key can create/update coupons (inventory push suggests read/write); storage key of the plugin's apply message; WooCommerce Multilingual accepts the HE translation of a product-limited coupon's product.
 3. **jlmops targeted coupons:** `SysCoupons` columns, Woo create/update/expire, Export Audience coupon section, `coupon.offered`, reconcile in the daily pull, active-offers list, drawer "Current offers".
 4. **Theme:** email auto-apply → checkout lookup → popup line → offer-line patterns (after the HE sheet is approved). Each theme deploy is a live-site push needing per-task OK.
