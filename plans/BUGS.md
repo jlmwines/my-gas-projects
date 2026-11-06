@@ -16,7 +16,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 - [ ] 2026-11-05: Comax product cost unreliable in the Comax export, so margins can't trust it. Blocks WISHLIST high-margin bundle report. No plan doc yet.
 - [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS skipped the first data row; row numbers off by one. Fixed @597, verify on next housekeeping run.
-- [ ] 2026-10-23: Stale failure alerts stay on Admin dash. Fixed @599; verify live, clean up old ones. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
+- [ ] 2026-10-23: Stale failure alerts stay on Admin dash. Fixed @599, old leftover gone; verify live auto-close. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
 - [ ] 2026-08-04: `task.system.failure` tasks misuse `st_LinkedEntityId` as a dedup key, breaking entity-drawer lookups (`NotificationService.js#_createFailureTask`).
 - [ ] 2026-07-24: Admin Dashboard Tasks card (`_getAdminTasksList`) dumps 200+ open tasks with no grouping/counts — needs summarization.
 - [ ] 2026-07-24: Manager Dashboard Projects card includes COMPLETED/ARCHIVED projects — low priority, revisit only if it causes real confusion.
