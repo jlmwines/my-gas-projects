@@ -45,7 +45,7 @@ Extended Coupon Features' per-coupon "message on apply" (WPML-translated, e.g. S
 
 ## Build order
 
-1. **KPI first-order conversion from orders (fixes the BROKEN KPI; standalone).** Orders already carry their coupon codes (`wom_CouponItems` / `woma_CouponItems`, from Woo `coupon_lines`), and 50NEW only redeems on a first purchase, so no separate first-order flag is needed.
+1. **KPI first-order conversion from orders — done @625 (live 60% / AOV ₪447, 2026-11-06); only the dead-code removal below remains.** Orders already carry their coupon codes (`wom_CouponItems` / `woma_CouponItems`, from Woo `coupon_lines`), and 50NEW only redeems on a first purchase, so no separate first-order flag is needed.
    - `StatusReportService._readOrderHistory` (WebOrdM + archive, de-duped) gains a `coupons` field; it and `_isValidOrderStatus` are exported so the KPI reuses them instead of duplicating.
    - New pure helper in `KPISummaryService`: orders in `[start, end)`, valid status, coupon list containing a `kpi.first_purchase_coupons` code (50NEW) → count + total. Exported for a unit test.
    - `_computeWindow` swaps its `SysCouponUsage` block for that helper. Rate = count / new customers (unchanged denominator); AOV = total / count.

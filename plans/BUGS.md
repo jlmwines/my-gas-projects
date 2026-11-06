@@ -14,7 +14,6 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 ### Open
 
-- [ ] 2026-11-06: KPI first-order conversion reads 0% (BROKEN): reads `SysCouponUsage`, which nothing writes. Fix = build step 1 of `jlmops/plans/TARGETED_COUPONS_PLAN.md`.
 - [ ] 2026-11-05: Comax product cost unreliable in the Comax export, so margins can't trust it. Blocks WISHLIST high-margin bundle report. No plan doc yet.
 - [ ] 2026-10-27: INTERNAL_AUDIT + DATA_COMPLETENESS skipped the first data row; row numbers off by one. Fixed @597, verify on next housekeeping run.
 - [ ] 2026-10-23: Stale failure alerts stay on Admin dash. Fixed @599; verify live, clean up old ones. `jlmops/plans/FAILURE_ALERT_AUTO_RESOLVE_PLAN.md`.
@@ -33,6 +32,7 @@ Resolved entries are kept ~60 days, then pruned (git history holds them).
 
 _One line each; full root-cause analysis lives in the git commit._
 
+- [x] 2026-11-06: KPI first-order conversion read 0% (BROKEN): its source `SysCouponUsage` was never written. Fixed @625 (counts 50NEW orders); live reads 60% / AOV ₪447.
 - [x] 2026-11-05: Heter Mechira marker bold in long descriptions. Fixed @623 (red, normal weight); 122 live pages unbolded via REST, all 61 flagged SKUs match WebDetM.
 - [x] 2026-10-13: Welcome-outreach fired for first-time gift purchasers. Fixed @597, confirmed by user 2026-11-04.
 - [x] 2026-07-16: Schema Validation indicator didn't refresh on Admin Dev re-run. Fixed @603, confirmed by user 2026-11-04.
