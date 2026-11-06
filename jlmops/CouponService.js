@@ -34,16 +34,6 @@ const CouponService = (function () {
   }
 
   /**
-   * Gets the SysCouponUsage sheet.
-   * @returns {GoogleAppsScript.Spreadsheet.Sheet}
-   */
-  function _getUsageSheet() {
-    const allConfig = ConfigService.getAllConfig();
-    const sheetNames = allConfig['system.sheet_names'];
-    return SheetAccessor.getDataSheet(sheetNames.SysCouponUsage, false);
-  }
-
-  /**
    * Gets column indices for SysCoupons sheet.
    * @returns {Object} Map of column names to 0-based indices
    */
@@ -52,22 +42,6 @@ const CouponService = (function () {
     const schema = allConfig['schema.data.SysCoupons'];
     if (!schema || !schema.headers) {
       throw new Error('Schema for SysCoupons not found in configuration.');
-    }
-    const headers = schema.headers.split(',');
-    const indices = {};
-    headers.forEach((h, i) => indices[h] = i);
-    return indices;
-  }
-
-  /**
-   * Gets column indices for SysCouponUsage sheet.
-   * @returns {Object} Map of column names to 0-based indices
-   */
-  function _getUsageColumnIndices() {
-    const allConfig = ConfigService.getAllConfig();
-    const schema = allConfig['schema.data.SysCouponUsage'];
-    if (!schema || !schema.headers) {
-      throw new Error('Schema for SysCouponUsage not found in configuration.');
     }
     const headers = schema.headers.split(',');
     const indices = {};
@@ -251,79 +225,6 @@ const CouponService = (function () {
 
     clearCache();
     return couponData;
-  }
-
-  /**
-   * Records a coupon usage event.
-   * @param {Object} usage - Usage data
-   * @returns {string} Usage ID
-   */
-  function recordUsage(usage) {
-    const sheet = _getUsageSheet();
-    if (!sheet) {
-      throw new Error('SysCouponUsage sheet not found');
-    }
-
-    const indices = _getUsageColumnIndices();
-    const headers = Object.keys(indices);
-
-    const usageId = Utilities.getUuid();
-    const rowArray = new Array(headers.length).fill('');
-
-    rowArray[indices.scu_Id] = usageId;
-    rowArray[indices.scu_Code] = usage.scu_Code || '';
-    rowArray[indices.scu_Email] = (usage.scu_Email || '').toLowerCase().trim();
-    rowArray[indices.scu_OrderId] = usage.scu_OrderId || '';
-    rowArray[indices.scu_OrderDate] = usage.scu_OrderDate || new Date();
-    rowArray[indices.scu_DiscountAmount] = usage.scu_DiscountAmount || 0;
-    rowArray[indices.scu_OrderTotal] = usage.scu_OrderTotal || 0;
-    rowArray[indices.scu_WasFirstOrder] = usage.scu_WasFirstOrder || false;
-    rowArray[indices.scu_ConvertedToRepeat] = usage.scu_ConvertedToRepeat || false;
-
-    sheet.appendRow(rowArray);
-    return usageId;
-  }
-
-  /**
-   * Gets usage records for a coupon code.
-   * @param {string} code - Coupon code
-   * @returns {Array<Object>} Usage records
-   */
-  function getUsageByCode(code) {
-    const sheet = _getUsageSheet();
-    if (!sheet) return [];
-
-    const data = sheet.getDataRange().getValues();
-    if (data.length <= 1) return [];
-
-    const indices = _getUsageColumnIndices();
-    const records = [];
-
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (row[indices.scu_Code] === code) {
-        const record = {};
-        Object.keys(indices).forEach(col => {
-          record[col] = row[indices[col]];
-        });
-        records.push(record);
-      }
-    }
-
-    return records;
-  }
-
-  /**
-   * Calculates conversion rate for a coupon.
-   * @param {string} code - Coupon code
-   * @returns {number|null} Conversion rate (0-100) or null if no data
-   */
-  function calculateConversionRate(code) {
-    const usages = getUsageByCode(code);
-    if (usages.length === 0) return null;
-
-    const conversions = usages.filter(u => u.scu_ConvertedToRepeat).length;
-    return Math.round((conversions / usages.length) * 100);
   }
 
   /**
@@ -513,9 +414,6 @@ const CouponService = (function () {
     getActiveCoupons: getActiveCoupons,
     getCoupons: getCoupons,
     upsertCoupon: upsertCoupon,
-    recordUsage: recordUsage,
-    getUsageByCode: getUsageByCode,
-    calculateConversionRate: calculateConversionRate,
     importFromCsv: importFromCsv,
     pullFromApi: pullFromApi,
     // Expose for testing

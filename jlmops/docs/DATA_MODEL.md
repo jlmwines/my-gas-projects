@@ -46,7 +46,6 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `SysContactActivity`   | `sca_` |
 | `SysCoupons`           | `sco_` |
 | `SysCampaigns`         | `scm_` |
-| `SysCouponUsage`       | `scu_` |
 | `SysBrands`            | `sbr_` |
 | `SysCategories`        | `sct_` |
 
@@ -654,23 +653,8 @@ This section defines the sheets used for customer relationship management, conta
     *   **System:**
         *   `scm_LastImported`: Last sync date.
 
-### 5. `SysCouponUsage` (Coupon Redemption Tracking)
-*   **Purpose:** Tracks each coupon use for conversion analysis.
-*   **Prefix:** `scu_`
-*   **Primary Key:** `scu_Id`
-*   **Columns:**
-    *   `scu_Id`: **Primary Key.** Unique ID (UUID).
-    *   `scu_Code`: **Foreign Key** to `SysCoupons.sco_Code`.
-    *   `scu_Email`: **Foreign Key** to `SysContacts.sc_Email`.
-    *   `scu_OrderId`: Order ID where coupon was used.
-    *   `scu_OrderDate`: Order date.
-    *   `scu_DiscountAmount`: Discount given.
-    *   `scu_OrderTotal`: Order total after discount.
-    *   `scu_WasFirstOrder`: Boolean. Was this the customer's first order?
-    *   `scu_ConvertedToRepeat`: Boolean. Did they order again within 90 days?
-
-### 6. `SysKPISummary` (Business KPI Cache)
-*   **Purpose:** Fast-read cache for `business/KPI.md`'s 4 jlmops-source KPIs (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement). One row per period: `sk_Period='current'` (rolling 90-day snapshot, recomputed daily) or `YYYY-MM` (frozen monthly close, written once on the 1st of the following month and never rewritten — late-arriving data does not retroactively edit history; `KPISummaryService.backfillMonths` is the only path to correct a closed row). `jlmops-status.md`'s KPI block reads this sheet instead of walking `SysContacts`/`SysCouponUsage`/`SysCampaigns` directly (~30× fewer cells read).
+### 5. `SysKPISummary` (Business KPI Cache)
+*   **Purpose:** Fast-read cache for `business/KPI.md`'s 4 jlmops-source KPIs (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement). One row per period: `sk_Period='current'` (rolling 90-day snapshot, recomputed daily) or `YYYY-MM` (frozen monthly close, written once on the 1st of the following month and never rewritten — late-arriving data does not retroactively edit history; `KPISummaryService.backfillMonths` is the only path to correct a closed row). `jlmops-status.md`'s KPI block reads this sheet instead of walking `SysContacts`/orders/`SysCampaigns` directly (~30× fewer cells read). First-order conversion counts valid orders whose `wom_CouponItems`/`woma_CouponItems` contain a `kpi.first_purchase_coupons` code (50NEW only redeems on a first purchase).
 *   **Prefix:** `sk_`
 *   **Primary Key:** `sk_Period`
 *   **Columns:** `sk_Period`, `sk_AsOfTimestamp`, `sk_NewCustomersEN`/`HE`/`Total`, `sk_FirstOrderConvRate`, `sk_FirstOrderAOV`, `sk_Return90Rate`, `sk_TotalCoreCustomers`, `sk_Subscribers`, `sk_SubscriberGrowthMoM` (only populated by `closeMonth()`, always blank on the `current` row), `sk_CampaignsSent`, `sk_AvgOpenRate`, `sk_AvgClickRate`, `sk_Notes`.
