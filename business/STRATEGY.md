@@ -13,7 +13,7 @@ If something here would need to change because a feature shipped or a sprint end
 
 ## Period Focus
 
-**Acquisition — online and offline.** Online channels: organic content (blog → SEO authority via the Israeli Wine Guide architecture), email list reactivation, welcome-trigger conversion. Offline: printed newsletter insert; flyer + tasting events queued as wishlist.
+**Acquisition — online and offline.** Online channels: organic content (blog → SEO authority via the Israeli Wine Guide architecture), email list reactivation, welcome-trigger conversion. Offline: printed newsletter insert; flyers done (Round 1, Talbiye; Round 2 replaced by the website popup + `50NEW`); manager-led Thursday tastings planned, not yet running. No paid ads.
 
 Retention and optimization continue alongside but are not the lever this period. Specifically: campaign-engagement work, KPI-tab build, mobile LCP tuning are de-prioritized relative to acquisition channel activity.
 
@@ -71,7 +71,7 @@ Connections between areas where a directional decision in one constrains another
 
 - **Build-less-data, ship-more-action.** Affects every initiative — verification track design, campaign launches, KPI-tab decision (kept deferred). The default answer to "should we add a data surface?" is "no, unless an action surface needs it."
 - **Cross-sell loop** — schema exists, calculation not built. Decision deferred until campaign-engagement data justifies the work.
-- **Offline → online attribution** — flyer + tasting will need coupon codes + UTM-tagged QR. Attribution scheme is parked (Inbox `defer:2026-08-10`) because those channels aren't shipping yet.
+- **Offline → online attribution** — waits until tastings start; then a QR code to order, tracked as a campaign (`plans/STATUS.md` Next Action 4).
 
 ---
 
