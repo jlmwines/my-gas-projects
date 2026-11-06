@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-11-06 — Daily review; first-order conversion KPI fixed (@625-@626)
+- Shipped: KPI #3 now counts valid 50NEW orders from `wom_CouponItems` (reuses StatusReportService order reader); live 60% / AOV ₪447, tests 63/63. @626 removed dead SysCouponUsage code (never had config).
+- Health snapshot "stale" flag was wrong: 15-min refresh is business hours only (Sun-Thu 08-20, Fri 08-13, `BusinessHours.js`). Don't flag overnight gaps.
+- clasp needed `clasp login` again (invalid_rapt), second day running.
+- Next: user feedback on Publishing Board List/Month, then delete retired Calendar/Deficiency code; Golan Heights lock (post 11-16).
+
 ## 2026-11-05 (b) — Publishing Board phase 4 (@617-@620)
 - Shipped: row Doc links + Attach (lists unattached files in the canonical folder for one tap), List/Month promoted to top tabs (Calendar last for admin), manager defaults to Tasks, schedule form (add calendar row via new `addCalendarRow`, re-date via `updateCalendarDate`).
 - Phase 4 redefined by user: perfect the admin board before the manager gets it; "publishes in X days" for the manager dropped (his task due dates matter, not publish dates).

@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-11-05. Publishing List + Month tabs live for admin and manager; one-time CRM backfill code removed @624; product SEO titles standardized (Name | JLM Wines); Golan Heights awaits manager lock.
+**Updated:** 2026-11-06. First-order conversion KPI fixed and live @625-@626 (60%, AOV ₪447); Golan Heights awaits manager lock.
 
 ## At a glance
 
@@ -16,7 +16,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-11-04 |
+| Last Active | 2026-11-06 |
 | Revenue | Steady |
 | Deploy Version | jlmops @626 · theme v1.2.39 |
 | Deploy Date | jlmops 2026-11-06 · theme 2026-11-03 |
